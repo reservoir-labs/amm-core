@@ -1,4 +1,4 @@
-pragma solidity =0.8.12;
+pragma solidity =0.8.13;
 
 import './interfaces/IUniswapV2ERC20.sol';
 import './libraries/SafeMath.sol';
@@ -18,7 +18,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     mapping(address => uint) public nonces;
 
-    constructor() public {
+    constructor() {
         uint chainId;
         assembly {
             chainId := chainid()
@@ -68,7 +68,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     }
 
     function transferFrom(address from, address to, uint value) external returns (bool) {
-        if (allowance[from][msg.sender] != uint(-1)) {
+        if (allowance[from][msg.sender] != uint(2**256-1)) {
             allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
         }
         _transfer(from, to, value);
