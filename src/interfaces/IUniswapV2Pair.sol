@@ -1,4 +1,4 @@
-pragma solidity >=0.8.13;
+pragma solidity =0.8.13;
 
 interface IUniswapV2Pair {
     event Mint(address indexed sender, uint amount0, uint amount1);
