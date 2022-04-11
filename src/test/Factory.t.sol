@@ -11,8 +11,8 @@ contract FactoryTest is DSTest
 {
 	UniswapV2Factory private mFactory;
 	address private mFeeToSetter = address(1);
-	MintableERC20 private mTokenA = new MintableERC20("Token0", "T0");
-	MintableERC20 private mTokenB = new MintableERC20("Token1", "T1");
+	MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
+	MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
 	address private mSwapUser = address(2);
 
 	function CalculateOutput(
