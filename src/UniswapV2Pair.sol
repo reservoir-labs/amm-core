@@ -1,10 +1,10 @@
 pragma solidity =0.8.13;
 
+import '@openzeppelin/token/ERC20/IERC20.sol';
 import './interfaces/IUniswapV2Pair.sol';
 import './UniswapV2ERC20.sol';
 import './libraries/Math.sol';
 import './libraries/UQ112x112.sol';
-import './interfaces/IERC20.sol';
 import './interfaces/IUniswapV2Factory.sol';
 import './interfaces/IUniswapV2Callee.sol';
 
