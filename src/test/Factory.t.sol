@@ -22,7 +22,7 @@ contract FactoryTest is DSTest
         mFactory = new UniswapV2Factory(mFeeToSetter);
     }
 
-    function CalculateOutput(
+    function calculateOutput(
         uint256 aReserveIn,
         uint256 aReserveOut,
         uint256 aTokenIn,
@@ -40,17 +40,17 @@ contract FactoryTest is DSTest
         rExpectedOut = lNumerator / lDenominator;
     }
 
-    function GetToken0Token1(address aTokenA, address aTokenB) private pure returns (address rToken0, address rToken1)
+    function getToken0Token1(address aTokenA, address aTokenB) private pure returns (address rToken0, address rToken1)
     {
         (rToken0, rToken1) = aTokenA < aTokenB ? (aTokenA, aTokenB) : (aTokenB, aTokenA);
     }
 
-    function CreatePair() private returns (address rPairAddress)
+    function createPair() private returns (address rPairAddress)
     {
         rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB));
     }
 
-    function ProvideLiquidity(address aPairAddress) private
+    function provideLiquidity(address aPairAddress) private
     {
         mTokenA.mint(address(this), 100e18);
         mTokenB.mint(address(this), 100e18);
@@ -63,7 +63,7 @@ contract FactoryTest is DSTest
     function testCreatePair() public
     {
         // act
-        address pairAddress = CreatePair();
+        address pairAddress = createPair();
         
         // assert
         assertEq(mFactory.allPairs(0), pairAddress);
@@ -72,10 +72,10 @@ contract FactoryTest is DSTest
     function testLiquidityProvision() public
     {
         // arrange
-        address pairAddress = CreatePair();
+        address pairAddress = createPair();
 
         // act
-        ProvideLiquidity(pairAddress);
+        provideLiquidity(pairAddress);
 
         // assert
         uint256 lpTokenBalance = UniswapV2Pair(pairAddress).balanceOf(address(this));
@@ -87,18 +87,18 @@ contract FactoryTest is DSTest
     function testSwap() public
     {
         // arrange
-        address pairAddress = CreatePair();
-        ProvideLiquidity(pairAddress);
+        address pairAddress = createPair();
+        provideLiquidity(pairAddress);
 
         uint256 reserve0;
         uint256 reserve1;
         (reserve0, reserve1, ) = UniswapV2Pair(pairAddress).getReserves();
-        uint256 expectedOutput = CalculateOutput(reserve0, reserve1, 1e18, 30);
+        uint256 expectedOutput = calculateOutput(reserve0, reserve1, 1e18, 30);
 
         // act
         address token0;
         address token1;
-        (token0, token1) = GetToken0Token1(address(mTokenA), address(mTokenB));
+        (token0, token1) = getToken0Token1(address(mTokenA), address(mTokenB));
 
         MintableERC20(token0).mint(pairAddress, 1e18);
         UniswapV2Pair(pairAddress).swap(0, expectedOutput, address(this), "");
