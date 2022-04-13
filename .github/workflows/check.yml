@@ -7,9 +7,15 @@ jobs:
     name: Build, Lint, & test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out code with lib
+        uses: actions/checkout@v2
         with:
           submodules: recursive
+
+      - name: Use correct node version
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
 
       - name: Install Foundry
         uses: onbjerg/foundry-toolchain@v1
