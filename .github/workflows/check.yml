@@ -26,4 +26,10 @@ jobs:
         run: npm run lint:check
 
       - name: Run test
-        run: forge test
+        run: forge test -vvv
+
+      - name: Install js dependencies for v2-core-tests
+        run: cd v2-core-tests && npm run ci
+
+      - name: Run v2 regressoin tests
+        run: npm run test
