@@ -32,4 +32,4 @@ jobs:
         run: cd v2-core-tests && npm ci
 
       - name: Run v2 regressoin tests
-        run: npm run test
+        run: cd v2-core-tests && npm run test
