@@ -28,8 +28,8 @@ jobs:
       - name: Run test
         run: forge test -vvv
 
-      - name: Install js dependencies for v2-core-tests
-        run: cd v2-core-tests && npm ci
+      - name: Print node version
+        run: node -v
 
-      - name: Run v2 regressoin tests
-        run: cd v2-core-tests && npm run test
+      - name: Install js dependencies for v2-core-tests and run them
+        run: cd v2-core-tests && npm ci && npm run test
