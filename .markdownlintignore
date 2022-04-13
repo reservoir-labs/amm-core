@@ -1,0 +1,8 @@
+# .gitignore
+/out
+/ref
+/node_modules
+
+# unique
+/lib
+/v2-core-tests
