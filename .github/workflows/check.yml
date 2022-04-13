@@ -34,8 +34,5 @@ jobs:
       - name: Run test
         run: forge test -vvv
 
-      - name: Print node version
-        run: node -v
-
       - name: Install js dependencies for v2-core-tests and run them
         run: cd v2-core-tests && npm ci && npm run test
