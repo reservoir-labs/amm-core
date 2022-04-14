@@ -7,12 +7,12 @@ jobs:
     name: Build, Lint, & test
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code with lib
+      - name: Check out code with dependencies
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: Use correct node version
+      - name: Use configured NodeJS
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
@@ -34,5 +34,5 @@ jobs:
       - name: Run test
         run: forge test -vvv
 
-      - name: Install js dependencies for v2-core-tests and run them
+      - name: Uniswap v2-core regression tests
         run: cd v2-core-tests && npm ci && npm run test
