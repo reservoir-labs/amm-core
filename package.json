@@ -1,0 +1,22 @@
+{
+  "name": "v3-core",
+  "version": "0.1.0",
+  "description": "Core smart contracts for Vexchange V3",
+  "scripts": {
+    "mdlint": "markdownlint . --fix",
+    "mdlint:check": "markdownlint .",
+    "prettier": "prettier --write '**/*.json'",
+    "prettier:list": "prettier --list-different '**/*.json'",
+    "prettier:check": "prettier --check '**/*.json'",
+    "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
+    "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
+    "lint": "npm run mdlint && npm run prettier && npm run solhint",
+    "lint:check": "npm run mdlint:check && npm run prettier:check && npm run solhint:check"
+  },
+  "devDependencies": {
+    "markdownlint": "0.25.1",
+    "markdownlint-cli": "0.31.1",
+    "prettier": "2.6.2",
+    "solhint": "3.3.7"
+  }
+}
