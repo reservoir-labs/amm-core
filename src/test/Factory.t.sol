@@ -9,17 +9,18 @@ import "src/UniswapV2Pair.sol";
 
 contract FactoryTest is DSTest
 {
-    address private mFeeToSetter = address(1);
+    address private mOwner = address(1);
     address private mSwapUser = address(2);
+    address private mRecover = address(3);
 
     MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
- 
-    UniswapV2Factory private mFactory;   
 
-    function setUp() public 
+    UniswapV2Factory private mFactory;
+
+    function setUp() public
     {
-        mFactory = new UniswapV2Factory(mFeeToSetter);
+        mFactory = new UniswapV2Factory(30, 0, address(1), address(3));
     }
 
     function calculateOutput(
@@ -64,7 +65,7 @@ contract FactoryTest is DSTest
     {
         // act
         address pairAddress = createPair();
-        
+
         // assert
         assertEq(mFactory.allPairs(0), pairAddress);
     }

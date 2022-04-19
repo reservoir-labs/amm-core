@@ -14,7 +14,20 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
+    // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
+    uint256 public constant SQUARED_ACCURACY = 10e75;
+    // Accuracy: 100_000_000_000_000_000_000_000_000_000_000_000_000
+    uint256 public constant ACCURACY         = 10e37;
+    uint256 public constant FEE_ACCURACY     = 10_000;
 
+    uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
+    uint public constant MIN_SWAP_FEE     = 5;      //  0.05%
+    uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
+
+    uint public swapFee;
+    uint public platformFee;
+
+    address public recoverer;
     address public factory;
     address public token0;
     address public token1;
@@ -34,6 +47,42 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _;
         unlocked = 1;
     }
+    modifier onlyFactory() {
+        require(msg.sender == factory, "UniswapV2: FORBIDDEN");
+        _;
+    }
+
+    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
+    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
+    event RecovererChanged(address oldRecoverer, address newRecoverer);
+
+    constructor() {
+        factory = msg.sender;
+    }
+
+    function platformFeeOn() external view returns (bool _platformFeeOn)
+    {
+        _platformFeeOn = platformFee > 0;
+    }
+
+    function setSwapFee(uint _swapFee) external onlyFactory {
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
+
+        emit SwapFeeChanged(swapFee, _swapFee);
+        swapFee = _swapFee;
+    }
+
+    function setPlatformFee(uint _platformFee) external onlyFactory {
+        require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
+
+        emit PlatformFeeChanged(platformFee, _platformFee);
+        platformFee = _platformFee;
+    }
+
+    function setRecoverer(address _recoverer) external onlyFactory {
+        emit RecovererChanged(recoverer, _recoverer);
+        recoverer = _recoverer;
+    }
 
     function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
         _reserve0 = reserve0;
@@ -46,15 +95,12 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         require(success && (data.length == 0 || abi.decode(data, (bool))), "UniswapV2: TRANSFER_FAILED");
     }
 
-    constructor() {
-        factory = msg.sender;
-    }
-
     // called once by the factory at time of deployment
-    function initialize(address _token0, address _token1) external {
-        require(msg.sender == factory, "UniswapV2: FORBIDDEN"); // sufficient check
+    function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external onlyFactory {
         token0 = _token0;
         token1 = _token1;
+        swapFee = _swapFee;
+        platformFee = _platformFee;
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -74,23 +120,55 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         emit Sync(reserve0, reserve1);
     }
 
-    // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
+    /**
+     * _calcFee calculates the appropriate platform fee in terms of tokens that will be minted, based on the growth
+     * in sqrt(k), the amount of liquidity in the pool, and the set variable fee in basis points.
+     *
+     * This function implements the equation defined in the Uniswap V2 whitepaper for calculating platform fees, on
+     * which their fee calculation implementation is based. This is a refactored form of equation 6, on page 5 of the
+     * Uniswap whitepaper; see https://uniswap.org/whitepaper.pdf for further details.
+     *
+     * The specific difference between the Uniswap V2 implementation and this fee calculation is the fee variable,
+     * which remains a variable with range 0-50% here, but is fixed at (1/6)% in Uniswap V2.
+     *
+     * The mathematical equation:
+     * If 'Fee' is the platform fee, and the previous and new values of the square-root of the invariant k, are
+     * K1 and K2 respectively; this equation, in the form coded here can be expressed as:
+     *
+     *   _sharesToIssue = totalSupply * Fee * (1 - K1/K2) / ( 1 - Fee * (1 - K1/K2) )
+     *
+     * A reader of the whitepaper will note that this equation is not a literally the same as equation (6), however
+     * with some straight-forward algebraic manipulation they can be shown to be mathematically equivalent.
+     */
+    function _calcFee(uint _sqrtNewK, uint _sqrtOldK, uint _platformFee, uint _circulatingShares) internal pure returns (uint _sharesToIssue) {
+        // Assert newK & oldK        < uint112
+        // Assert _platformFee       < FEE_ACCURACY
+        // Assert _circulatingShares < uint112
+
+        uint256 _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK;                         // ASSERT: < UINT256
+        uint256 _scaledMultiplier = ACCURACY - (SQUARED_ACCURACY / _scaledGrowth);          // ASSERT: < UINT128
+        uint256 _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
+
+        _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT: _scaledTargetOwnership < ACCURACY
+    }
+
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
-        address feeTo = IUniswapV2Factory(factory).feeTo();
-        feeOn = feeTo != address(0);
-        uint _kLast = kLast; // gas savings
+        feeOn = platformFee > 0;
+
         if (feeOn) {
-            if (_kLast != 0) {
-                uint rootK = Math.sqrt(uint(_reserve0) * _reserve1);
-                uint rootKLast = Math.sqrt(_kLast);
-                if (rootK > rootKLast) {
-                    uint numerator = totalSupply * (rootK - rootKLast);
-                    uint denominator = rootK * 5 + rootKLast;
-                    uint liquidity = numerator / denominator;
-                    if (liquidity > 0) _mint(feeTo, liquidity);
+            uint _sqrtOldK = Math.sqrt(kLast); // gas savings
+
+            if (_sqrtOldK != 0) {
+                uint _sqrtNewK = Math.sqrt(uint(_reserve0) * _reserve1);
+
+                if (_sqrtNewK > _sqrtOldK) {
+                    uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
+
+                    address platformFeeTo = IUniswapV2Factory(factory).platformFeeTo();
+                    if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
-        } else if (_kLast != 0) {
+        } else if (kLast != 0) {
             kLast = 0;
         }
     }
@@ -153,22 +231,22 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         uint balance0;
         uint balance1;
         { // scope for _token{0,1}, avoids stack too deep errors
-        address _token0 = token0;
-        address _token1 = token1;
-        require(to != _token0 && to != _token1, "UniswapV2: INVALID_TO");
-        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
-        balance0 = IERC20(_token0).balanceOf(address(this));
-        balance1 = IERC20(_token1).balanceOf(address(this));
+            address _token0 = token0;
+            address _token1 = token1;
+            require(to != _token0 && to != _token1, "UniswapV2: INVALID_TO");
+            if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
+            if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
+            if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+            balance0 = IERC20(_token0).balanceOf(address(this));
+            balance1 = IERC20(_token1).balanceOf(address(this));
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
         require(amount0In > 0 || amount1In > 0, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
-        uint balance0Adjusted = balance0 * 1000 - (amount0In * 3);
-        uint balance1Adjusted = balance1 * 1000 - (amount1In * 3);
-        require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * 1000**2, "UniswapV2: K");
+            uint balance0Adjusted = (balance0 * 10000) - (amount0In * swapFee);
+            uint balance1Adjusted = (balance1 * 10000) - (amount1In * swapFee);
+            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (10000**2), "UniswapV2: K");
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -181,6 +259,16 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         address _token1 = token1; // gas savings
         _safeTransfer(_token0, to, IERC20(_token0).balanceOf(address(this)) - reserve0);
         _safeTransfer(_token1, to, IERC20(_token1).balanceOf(address(this)) - reserve1);
+    }
+
+    function recoverToken(address token) external {
+        require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
+        require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
+        require(recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");
+
+        uint _amountToRecover = IERC20(token).balanceOf(address(this));
+
+        _safeTransfer(token, recoverer, _amountToRecover);
     }
 
     // force reserves to match balances
