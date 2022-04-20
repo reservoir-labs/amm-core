@@ -25,7 +25,7 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     event DefaultRecovererChanged(address oldDefaultRecoverer, address newDefaultRecoverer);
 
     constructor(uint _defaultSwapFee, uint _defaultPlatformFee, address _platformFeeTo, address _defaultRecoverer) {
-        require(_platformFeeTo != address(0), "UniswapV2: PLATFORMFEETO_ZERO_ADDRESS");
+        require(_platformFeeTo != address(0), "UniswapV2: FEETO_ZERO_ADDRESS");
         require(_defaultSwapFee >= MIN_SWAP_FEE && _defaultSwapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
         require(_defaultPlatformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
 
@@ -69,7 +69,7 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     }
 
     function setPlatformFeeTo(address _platformFeeTo) external onlyOwner {
-        require(_platformFeeTo != address(0), "UniswapV2: PLATFORMFEETO_ZERO_ADDRESS");
+        require(_platformFeeTo != address(0), "UniswapV2: FEETO_ZERO_ADDRESS");
         emit PlatformFeeToChanged(platformFeeTo, _platformFeeTo);
         platformFeeTo = _platformFeeTo;
     }
