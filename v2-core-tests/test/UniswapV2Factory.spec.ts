@@ -1,6 +1,5 @@
 import chai, { expect } from 'chai'
 import { Contract } from 'ethers'
-import { AddressZero } from 'ethers/constants'
 import {BigNumber, bigNumberify} from 'ethers/utils'
 import { solidity, MockProvider, createFixtureLoader } from 'ethereum-waffle'
 
@@ -33,7 +32,6 @@ describe('UniswapV2Factory', () => {
   beforeEach(async () => {
     const fixture = await loadFixture(factoryFixture)
     factory = fixture.factory
-
     expectedDefaultSwapFee = fixture.defaultSwapFee
     expectedDefaultPlatformFee = fixture.defaultPlatformFee
     expectedPlatformFeeTo = fixture.platformFeeTo
@@ -74,7 +72,7 @@ describe('UniswapV2Factory', () => {
     expect(await pair.token1()).to.eq(TEST_ADDRESSES[1])
   }
 
-  it('retreivePairInitCode', async () => {
+  it('retrievePairInitCode', async () => {
     // Retrieve the VexchangeV2Pair init-code from the factory
     const initCode: BigNumber = await factory.getPairInitHash()
 
