@@ -75,7 +75,7 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     }
 
     function setDefaultSwapFee(uint _swapFee) external onlyOwner {
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "VexchangeV2: INVALID_SWAP_FEE");
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
 
         emit DefaultSwapFeeChanged(defaultSwapFee, _swapFee);
         defaultSwapFee = _swapFee;
@@ -86,7 +86,7 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     }
 
     function setDefaultPlatformFee(uint _platformFee) external onlyOwner {
-        require(_platformFee <= MAX_PLATFORM_FEE, "VexchangeV2: INVALID_PLATFORM_FEE");
+        require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
 
         emit DefaultPlatformFeeChanged(defaultPlatformFee, _platformFee);
         defaultPlatformFee = _platformFee;
