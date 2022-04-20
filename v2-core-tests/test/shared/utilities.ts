@@ -27,6 +27,21 @@ export function expandTo18Decimals(n: number): BigNumber {
 }
 
 /**
+ * Assertion / comparison function for BigNumber integer comparison.
+ *
+ * Includes a tolerance to accomodate rounding inaccuracy in BigNumber calculations.
+ *
+ * @param valueToTest the value to compare
+ * @param valueExpected the expected value to compare to
+ * @param allowableVariance the amount of variance to tolerate (defaults to 1).
+ * @returns true of valueToTest is close-enough to valueExpected
+ */
+export function closeTo( valueToTest : BigNumber, valueExpected : BigNumber, allowableVariance : BigNumber = bigNumberify(1) ) {
+    return ( valueToTest == valueExpected ) ||
+        ( valueToTest.gte( valueExpected.sub(allowableVariance) ) && valueToTest.lte( valueExpected.add(allowableVariance) ) );
+}
+
+/**
  * verifyGas verify if gas parameter is valid, and if not will log the
  * errant value to console (prefixed by aContext) and return false.
  * @param gas value to test
