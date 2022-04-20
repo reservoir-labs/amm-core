@@ -81,7 +81,7 @@ describe('UniswapV2Factory', () => {
     // Expected init-code (hard coded value is used in dependent modules as a gas optimisation, so also verified here).
     // Note: changing the hard-coded expected init-code value implies you will need to also update the dependency.
     // See dependency @ vexchange-v2-periphery/contracts/libraries/VexchangeV2Library.sol
-    expect(initCode, 'VexchangeV2Pair init-code').to.eq('0x597842963dd96a7950f4a0e1fc043055599d6e4e7154f8190d1ff640509e5900')
+    expect(initCode, 'VexchangeV2Pair init-code').to.eq('0x6963c9a419be375f57b148393ad2a9a1789fc1b09b28c2c9513018505c6b3bec')
   })
 
   it('createPair', async () => {
@@ -95,7 +95,7 @@ describe('UniswapV2Factory', () => {
   it('createPair:gas', async () => {
     const tx = await factory.createPair(...TEST_ADDRESSES)
     const receipt = await tx.wait()
-    expect(receipt.gasUsed).to.eq(1959277)
+    expect(receipt.gasUsed).to.eq(2289629)
   })
 
   it('setPlatformFeeTo', async () => {
