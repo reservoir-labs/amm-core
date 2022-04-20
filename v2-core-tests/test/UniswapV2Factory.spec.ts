@@ -99,7 +99,7 @@ describe('UniswapV2Factory', () => {
   })
 
   it('setPlatformFeeTo', async () => {
-    await expect(factory.connect(other).setPlatformFeeTo(other.address)).to.be.revertedWith('UniswapV2: FORBIDDEN')
+    await expect(factory.connect(other).setPlatformFeeTo(other.address)).to.be.revertedWith('Ownable: caller is not the owner')
     await factory.setPlatformFeeTo(wallet.address)
     expect(await factory.platformFeeTo()).to.eq(wallet.address)
   })
