@@ -811,13 +811,13 @@ describe('UniswapV2Pair', () => {
     // Confirm we cannot add even just another little wafer ... expect an overflow revert.
     await token0.transfer(pair.address, bigNumberify(1))
     await token1.transfer(pair.address, bigNumberify(1))
-    await expect( pair.mint(wallet.address, overrides), 'mint with too much balance' ).to.be.revertedWith( 'VexchangeV2: OVERFLOW' )
+    await expect( pair.mint(wallet.address, overrides), 'mint with too much balance' ).to.be.revertedWith( 'UniswapV2: OVERFLOW' )
 
     // Reconfirm established liquidity
     expect(await pair.totalSupply(), "Total supply post failed mint").to.eq(expectedLiquidity)
 
     // Also try and swap the wafer
-    await expect( pair.swap(bigNumberify(1), 0, wallet.address, '0x', overrides), 'swap with too much balance').to.be.revertedWith( 'VexchangeV2: OVERFLOW' )
+    await expect( pair.swap(bigNumberify(1), 0, wallet.address, '0x', overrides), 'swap with too much balance').to.be.revertedWith( 'UniswapV2: OVERFLOW' )
   })
 
   /**
