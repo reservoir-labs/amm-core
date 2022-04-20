@@ -737,9 +737,10 @@ describe('UniswapV2Pair', () => {
       const swapTx = await pair.swap(expectedSwapAmount, 0, wallet.address, '0x', overrides)
       const swapReceipt = await swapTx.wait()
 
+
       // Gas price seems to be inconsistent for the swap
       expect(swapReceipt.gasUsed, "swap gas fee").to.satisfy( function(gas: BigNumber) {
-        return verifyGas( gas.toNumber(), [63031, 63043, 105047, 105059], "swap gas fee" ); })
+        return verifyGas( gas.toNumber(), [62695, 62707, 105535, 105547], "swap gas fee" ); })
 
       // Calculate the expected platform fee
       const token0PairBalanceAfterSwap = await token0.balanceOf(pair.address);
@@ -760,7 +761,7 @@ describe('UniswapV2Pair', () => {
 
       // Check the (inconsistent) gas fee
       expect(burnReceipt.gasUsed, "burn gas fee").to.satisfy(
-          function(gas: BigNumber) { return verifyGas( gas.toNumber(), [145110, 187126], "burn gas fee" ); })
+          function(gas: BigNumber) { return verifyGas( gas.toNumber(), [176002, 218842], "burn gas fee" ); })
 
       // Check that the fee receiver (account set to platformFeeTo) received the fees
       expect(await pair.balanceOf(other.address), "Fee receiver balance").to.eq( expectedPlatformFee )

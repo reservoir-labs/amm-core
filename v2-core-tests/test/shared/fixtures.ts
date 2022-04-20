@@ -3,7 +3,7 @@ import { Web3Provider } from 'ethers/providers'
 import { deployContract } from 'ethereum-waffle'
 import { SimpleContractJSON } from "ethereum-waffle/dist/esm/ContractJSON"
 
-import {expandTo18Decimals, MAX_UINT_128} from './utilities'
+import { MAX_UINT_128 } from './utilities'
 import ERC20 from '../../../out/ERC20.sol/ERC20.json'
 import UniswapV2Factory from '../../../out/UniswapV2Factory.sol/UniswapV2Factory.json'
 import UniswapV2Pair from '../../../out/UniswapV2Pair.sol/UniswapV2Pair.json'
@@ -53,8 +53,8 @@ export async function pairFixture(provider: Web3Provider, [wallet]: Wallet[]): P
   // is expanded for overflow testing of new platformFee tests to max-uint 128bit.
   const tokenSupply: BigNumber = MAX_UINT_128;
 
-  const tokenA = await deployContract(wallet, ERC20Rebuilt, [expandTo18Decimals(10000)], overrides)
-  const tokenB = await deployContract(wallet, ERC20Rebuilt, [expandTo18Decimals(10000)], overrides)
+  const tokenA = await deployContract(wallet, ERC20Rebuilt, [tokenSupply], overrides)
+  const tokenB = await deployContract(wallet, ERC20Rebuilt, [tokenSupply], overrides)
   const tokenC = await deployContract(wallet, ERC20Rebuilt, [tokenSupply], overrides)
 
   await factory.createPair(tokenA.address, tokenB.address, overrides)
