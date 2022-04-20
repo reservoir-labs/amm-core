@@ -18,7 +18,7 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
 
-    event PairCreated(address indexed token0, address indexed token1, address pair, uint, uint swapFee, uint platformFee);
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint allPairsLength, uint swapFee, uint platformFee);
     event PlatformFeeToChanged(address oldFeeTo, address newFeeTo);
     event DefaultSwapFeeChanged(uint oldDefaultSwapFee, uint newDefaultSwapFee);
     event DefaultPlatformFeeChanged(uint oldDefaultPlatformFee, uint newDefaultPlatformFee);
