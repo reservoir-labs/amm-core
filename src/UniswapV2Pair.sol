@@ -15,9 +15,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint public constant MINIMUM_LIQUIDITY = 10**3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
     // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
-    uint256 public constant SQUARED_ACCURACY = 10e75;
+    uint256 public constant SQUARED_ACCURACY = 1e76;
     // Accuracy: 100_000_000_000_000_000_000_000_000_000_000_000_000
-    uint256 public constant ACCURACY         = 10e37;
+    uint256 public constant ACCURACY         = 1e38;
     uint256 public constant FEE_ACCURACY     = 10_000;
 
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
@@ -47,6 +47,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _;
         unlocked = 1;
     }
+
     modifier onlyFactory() {
         require(msg.sender == factory, "UniswapV2: FORBIDDEN");
         _;
@@ -145,9 +146,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         // Assert _platformFee       < FEE_ACCURACY
         // Assert _circulatingShares < uint112
 
-        uint256 _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK;                         // ASSERT: < UINT256
+        uint256 _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK;                           // ASSERT: < UINT256
         uint256 _scaledMultiplier = ACCURACY - (SQUARED_ACCURACY / _scaledGrowth);          // ASSERT: < UINT128
-        uint256 _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
+        uint256 _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY;   // ASSERT: < UINT144 during maths, ends < UINT128
 
         _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT: _scaledTargetOwnership < ACCURACY
     }

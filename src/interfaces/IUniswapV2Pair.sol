@@ -29,6 +29,11 @@ interface IUniswapV2Pair {
     function skim(address to) external;
     function sync() external;
 
+    function swapFee() external view returns (uint);
+    function platformFee() external view returns (uint);
+    function platformFeeOn() external view returns (bool);
+    function recoverer() external view returns (address);
+
     function setSwapFee(uint _swapFee) external;
     function setPlatformFee(uint _platformFee) external;
     function setRecoverer(address _recoverer) external;
