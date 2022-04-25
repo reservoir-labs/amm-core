@@ -1,12 +1,11 @@
 pragma solidity =0.8.13;
 
 interface IUniswapV2Factory {
+    /* solhint-disable func-name-mixedcase */
     function MAX_PLATFORM_FEE() external view returns (uint);
     function MIN_SWAP_FEE() external view returns (uint);
     function MAX_SWAP_FEE() external view returns (uint);
-
-    function owner() external view returns (address);
-    function transferOwnership(address newOwner) external;
+    /* solhint-enable func-name-mixedcase */
 
     function platformFeeTo() external view returns (address);
     function setPlatformFeeTo(address) external;
