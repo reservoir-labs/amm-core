@@ -49,7 +49,7 @@ export async function pairFixture(provider: Web3Provider, [wallet]: Wallet[]): P
     bytecode: ERC20.bytecode.object
   }
 
-  // Setup initial liquidity of pair's tokens; 10000 x 10^8  originally used in vexchangeV2 tests, this
+  // Setup initial liquidity of pair's tokens; 10000 x 10^8  originally used in tests, this
   // is expanded for overflow testing of new platformFee tests to max-uint 128bit.
   const tokenSupply: BigNumber = MAX_UINT_128;
 
