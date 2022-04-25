@@ -279,7 +279,7 @@ describe('UniswapV2Pair', () => {
     const receipt = await tx.wait()
 
     // Gas price seems to be inconsistent for the swap
-    expect(receipt.gasUsed).to.satisfy( function(gas: BigNumber) {
+    expect(receipt.gasUsed).to.satisfy(function(gas: BigNumber) {
       return verifyGas(gas.toNumber(), [62707, 63043, 97219, 105059, 105547], "platformFee off swap gas");
     })
 
@@ -413,9 +413,12 @@ describe('UniswapV2Pair', () => {
    * The tests in platformFeeRange then iterate over a transaction involving a specific swap then burn, verifying final total supply and
    * balances are as expected, based on expected fees per the calcPlatformFee() function.
    */
-  function calcPlatformFee(aPlatformFee: BigNumber,
-                           aToken0Balance: BigNumber, aToken1Balance: BigNumber,
-                           aNewToken0Balance: BigNumber, aNewToken1Balance: BigNumber) : BigNumber
+  function calcPlatformFee(
+    aPlatformFee: BigNumber,
+    aToken0Balance: BigNumber,
+    aToken1Balance: BigNumber,
+    aNewToken0Balance: BigNumber,
+    aNewToken1Balance: BigNumber) : BigNumber
   {
     // Constants from VexchangeV2Pair _calcFee
     const ACCURACY_SQRD : BigNumber = bigNumberify('10000000000000000000000000000000000000000000000000000000000000000000000000000')
