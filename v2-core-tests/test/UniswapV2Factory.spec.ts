@@ -79,6 +79,7 @@ describe('UniswapV2Factory', () => {
     // Expected init-code (hard coded value is used in dependent modules as a gas optimisation, so also verified here).
     // Note: changing the hard-coded expected init-code value implies you will need to also update the dependency.
     // See dependency @ v2-periphery/contracts/libraries/UniswapV2Library.sol
+    // todo: update this comment once we have built out the router
     expect(initCode, 'UniswapV2Pair init-code').to.eq('0x6963c9a419be375f57b148393ad2a9a1789fc1b09b28c2c9513018505c6b3bec')
   })
 
