@@ -686,6 +686,10 @@ describe('UniswapV2Pair', () => {
    * Test Values: swapFee, platformFee (in basis points)
    */
   const swapAndPlatformFeeTestCases: BigNumber[][] = [
+    [1, 500],
+    [1, 1667],
+    [1, 2500],
+    [1, 5000],
     [5, 500],
     [5, 1667],
     [5, 2500],
@@ -720,8 +724,8 @@ describe('UniswapV2Pair', () => {
       const [swapFee, platformFee] = swapAndPlatformTestCase
 
       // Setup the platform and swap fee
-      await factory.setSwapFeeForPair( pair.address, swapFee );
-      await factory.setPlatformFeeForPair( pair.address, platformFee );
+      await factory.setSwapFeeForPair(pair.address, swapFee);
+      await factory.setPlatformFeeForPair(pair.address, platformFee);
       await factory.setPlatformFeeTo(other.address)
 
       const swapAmount : BigNumber = bigNumberify(expandTo18Decimals(1));
@@ -739,7 +743,6 @@ describe('UniswapV2Pair', () => {
       await token1.transfer(pair.address, swapAmount)
       const swapTx = await pair.swap(expectedSwapAmount, 0, wallet.address, '0x', overrides)
       const swapReceipt = await swapTx.wait()
-
 
       // Gas price seems to be inconsistent for the swap
       expect(swapReceipt.gasUsed, "swap gas fee").to.satisfy(function(gas: BigNumber) {
