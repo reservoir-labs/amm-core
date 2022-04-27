@@ -21,7 +21,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint256 public constant FEE_ACCURACY     = 10_000;
 
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint public constant MIN_SWAP_FEE     = 5;      //  0.05%
+    uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     uint public swapFee;
