@@ -34,9 +34,7 @@ interface IUniswapV2Pair {
     function platformFeeOn() external view returns (bool);
     function recoverer() external view returns (address);
 
-    function setSwapFee(uint _swapFee) external;
-    function setPlatformFee(uint _platformFee) external;
-    function setRecoverer(address _recoverer) external;
+    function setCustomFee(uint _customFee) external;
 
     function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external;
 }
