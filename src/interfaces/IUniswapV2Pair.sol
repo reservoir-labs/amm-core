@@ -36,7 +36,10 @@ interface IUniswapV2Pair {
 
     function setSwapFee(uint _swapFee) external;
     function setPlatformFee(uint _platformFee) external;
+    function turnOffCustomFee() external;
+    function updateFeeToGlobal() external;
     function setRecoverer(address _recoverer) external;
+
 
     function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external;
 }

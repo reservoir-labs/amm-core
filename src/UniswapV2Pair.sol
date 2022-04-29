@@ -24,6 +24,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
+    bool public customFee;
     uint public swapFee;
     uint public platformFee;
 
@@ -61,8 +62,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         factory = msg.sender;
     }
 
-    function platformFeeOn() external view returns (bool _platformFeeOn)
-    {
+    function platformFeeOn() external view returns (bool _platformFeeOn) {
         _platformFeeOn = platformFee > 0;
     }
 
@@ -71,6 +71,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
+        customFee = true;
     }
 
     function setPlatformFee(uint _platformFee) external onlyFactory {
@@ -78,6 +79,21 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
+        customFee = true;
+    }
+
+    function turnOffCustomFee() external onlyFactory {
+        customFee = false;
+    }
+
+    function updateFeeToGlobal() external {
+        require(customFee == false, "UniswapV2: CUSTOM_FEE_SET");
+
+        emit SwapFeeChanged(swapFee, IUniswapV2Factory.defaultSwapFee());
+        swapFee = IUniswapV2Factory.defaultSwapFee();
+
+        emit PlatformFeeChanged(platformFee, IUniswapV2Factory.defaultPlatformFee());
+        platformFee = IUniswapV2Factory.defaultPlatformFee();
     }
 
     function setRecoverer(address _recoverer) external onlyFactory {

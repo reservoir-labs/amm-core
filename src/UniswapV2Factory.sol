@@ -107,6 +107,10 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
         IUniswapV2Pair(_pair).setPlatformFee(_platformFee);
     }
 
+    function turnOffCustomFeeForPair(address _pair) external onlyOwner {
+        IUniswapV2Pair(_pair).turnOffCustomFee();
+    }
+
     function setRecovererForPair(address _pair, address _recoverer) external onlyOwner {
         IUniswapV2Pair(_pair).setRecoverer(_recoverer);
     }
