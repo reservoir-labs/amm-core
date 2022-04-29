@@ -9,13 +9,74 @@ import {
   toUtf8Bytes,
   solidityPack
 } from 'ethers/utils'
+import {MaxUint256} from "ethers/constants";
 
 const PERMIT_TYPEHASH = keccak256(
   toUtf8Bytes('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)')
 )
 
+export const MAX_UINT_64: BigNumber = bigNumberify(2).pow(64).sub(1);
+export const MAX_UINT_100: BigNumber = bigNumberify(2).pow(100).sub(1);
+export const MAX_UINT_112: BigNumber = bigNumberify(2).pow(112).sub(1);
+export const MAX_UINT_114: BigNumber = bigNumberify(2).pow(114).sub(1);
+export const MAX_UINT_128: BigNumber = bigNumberify(2).pow(128).sub(1);
+export const MAX_UINT_256: BigNumber = MaxUint256
+
 export function expandTo18Decimals(n: number): BigNumber {
   return bigNumberify(n).mul(bigNumberify(10).pow(18))
+}
+
+/**
+ * Assertion / comparison function for BigNumber integer comparison.
+ *
+ * Includes a tolerance to accomodate rounding inaccuracy in BigNumber calculations.
+ *
+ * @param valueToTest the value to compare
+ * @param valueExpected the expected value to compare to
+ * @param allowableVariance the amount of variance to tolerate (defaults to 1).
+ * @returns true of valueToTest is close-enough to valueExpected
+ */
+export function closeTo( valueToTest : BigNumber, valueExpected : BigNumber, allowableVariance : BigNumber = bigNumberify(1) ) {
+    return ( valueToTest == valueExpected ) ||
+        ( valueToTest.gte( valueExpected.sub(allowableVariance) ) && valueToTest.lte( valueExpected.add(allowableVariance) ) );
+}
+
+/**
+ * verifyGas verify if gas parameter is valid, and if not will log the
+ * errant value to console (prefixed by aContext) and return false.
+ * @param gas value to test
+ * @param validGasValues array of expected valid gas values
+ * @param aContext Contextual log message in case of error
+ * @returns true if the passed in gas matches one of the expected values
+ */
+export function verifyGas( gas: number, validGasValues: number[], aContext : String ) {
+    for (const idx in validGasValues) {
+        if (gas == validGasValues[idx]) return true;
+    }
+
+    console.log(`${aContext}; gas = ${gas}`)
+    return false
+}
+
+/**
+ * Rudimentary implementation of BigNumber square-root mathematical operation.
+ * (since the current BigNumber library is lacking)
+ *
+ * @param aValue value to take the square root of
+ * @returns the square root of aValue, as a BigNumber
+ */
+export function bigNumberSqrt(aValue: BigNumber) : BigNumber {
+    const ONE: BigNumber = bigNumberify(1)
+    const TWO: BigNumber = bigNumberify(2)
+
+    let x = bigNumberify(aValue);
+    let z = x.add(ONE).div(TWO);
+    let y = x;
+    while (z.sub(y).lt(0)) {
+        y = z;
+        z = x.div(z).add(z).div(TWO);
+    }
+    return y;
 }
 
 function getDomainSeparator(name: string, tokenAddress: string) {

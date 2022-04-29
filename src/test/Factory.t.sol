@@ -9,17 +9,18 @@ import "src/UniswapV2Pair.sol";
 
 contract FactoryTest is DSTest
 {
-    address private mFeeToSetter = address(1);
+    address private mOwner = address(1);
     address private mSwapUser = address(2);
+    address private mRecoverer = address(3);
 
     MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
- 
-    UniswapV2Factory private mFactory;   
 
-    function setUp() public 
+    UniswapV2Factory private mFactory;
+
+    function setUp() public
     {
-        mFactory = new UniswapV2Factory(mFeeToSetter);
+        mFactory = new UniswapV2Factory(30, 0, mOwner, mRecoverer);
     }
 
     function calculateOutput(
@@ -29,10 +30,6 @@ contract FactoryTest is DSTest
         uint256 aFee
     ) private pure returns (uint256 rExpectedOut)
     {
-        // the following formula is taken from VexchangeV2Library, see:
-        //
-        // https://github.com/vexchange/vexchange-contracts/blob/183e8eef29dc9a28e0f84539bc2c66bb3f6103bf/
-        // vexchange-v2-periphery/contracts/libraries/VexchangeV2Library.sol#L49
         uint256 lAmountInWithFee = aTokenIn * (10_000 - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
         uint256 lDenominator = aReserveIn * 10_000 + lAmountInWithFee;
@@ -64,7 +61,7 @@ contract FactoryTest is DSTest
     {
         // act
         address pairAddress = createPair();
-        
+
         // assert
         assertEq(mFactory.allPairs(0), pairAddress);
     }
