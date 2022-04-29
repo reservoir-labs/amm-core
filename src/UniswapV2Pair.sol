@@ -89,11 +89,11 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function updateFeeToGlobal() external {
         require(customFee == false, "UniswapV2: CUSTOM_FEE_SET");
 
-        emit SwapFeeChanged(swapFee, IUniswapV2Factory.defaultSwapFee());
-        swapFee = IUniswapV2Factory.defaultSwapFee();
+        emit SwapFeeChanged(swapFee, IUniswapV2Factory(factory).defaultSwapFee());
+        swapFee = IUniswapV2Factory(factory).defaultSwapFee();
 
-        emit PlatformFeeChanged(platformFee, IUniswapV2Factory.defaultPlatformFee());
-        platformFee = IUniswapV2Factory.defaultPlatformFee();
+        emit PlatformFeeChanged(platformFee, IUniswapV2Factory(factory).defaultPlatformFee());
+        platformFee = IUniswapV2Factory(factory).defaultPlatformFee();
     }
 
     function setRecoverer(address _recoverer) external onlyFactory {
