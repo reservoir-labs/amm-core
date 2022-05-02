@@ -99,15 +99,11 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
         defaultRecoverer = _recoverer;
     }
 
-    function setSwapFeeForPair(address _pair, uint _swapFee) external onlyOwner {
-        IUniswapV2Pair(_pair).setSwapFee(_swapFee);
+    function setCustomSwapFeeForPair(address _pair, uint _swapFee) external onlyOwner {
+        IUniswapV2Pair(_pair).setCustomSwapFee(_swapFee);
     }
 
-    function setPlatformFeeForPair(address _pair, uint _platformFee) external onlyOwner {
-        IUniswapV2Pair(_pair).setPlatformFee(_platformFee);
-    }
-
-    function setRecovererForPair(address _pair, address _recoverer) external onlyOwner {
-        IUniswapV2Pair(_pair).setRecoverer(_recoverer);
+    function setCustomPlatformFeeForPair(address _pair, uint _platformFee) external onlyOwner {
+        IUniswapV2Pair(_pair).setCustomPlatformFee(_platformFee);
     }
 }

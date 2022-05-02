@@ -24,9 +24,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
-    uint public customFee;
     uint public swapFee;
+    uint public customSwapFee;
     uint public platformFee;
+    uint public customPlatformFee;
 
     address public factory;
     address public token0;
@@ -54,9 +55,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
-    event CustomFeeChanged(uint oldCustomFee, uint newCustomFee);
+    event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
     event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
-    event RecovererChanged(address oldRecoverer, address newRecoverer);
+    event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
 
     constructor() {
         factory = msg.sender;
@@ -67,19 +68,30 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _platformFeeOn = platformFee > 0;
     }
 
-    function setCustomFee(uint _customFee) external onlyFactory {
-        require(_customFee >= MIN_SWAP_FEE && _customFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
+    function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
+        // here we do not check if the customSwapFee < MIN_SWAP_FEE
+        // because we are using 0 to indicate that there is no customSwapFee
+        require(_customSwapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
 
         // we assume the factory won't spam events, so no early check & return
-        emit CustomFeeChanged(customFee, _customFee);
-        customFee = _customFee;
+        emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
+        customSwapFee = _customSwapFee;
 
         updateSwapFee();
     }
 
+    function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
+        require(_customPlatformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
+
+        emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
+        customPlatformFee = _customPlatformFee;
+
+        updatePlatformFee();
+    }
+
     function updateSwapFee() public {
-        uint256 _swapFee = customFee > 0
-            ? customFee
+        uint256 _swapFee = customSwapFee > 0
+            ? customSwapFee
             : IUniswapV2Factory(factory).defaultSwapFee();
 
         if (_swapFee == swapFee) { return; }
@@ -88,8 +100,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         swapFee = _swapFee;
     }
 
-    function updatePlatformFee() external {
-        uint256 _platformFee = IUniswapV2Factory(factory).defaultPlatformFee();
+    function updatePlatformFee() public {
+        uint256 _platformFee = customPlatformFee > 0
+            ? customPlatformFee
+            : IUniswapV2Factory(factory).defaultPlatformFee();
 
         if (_platformFee == platformFee) { return; }
 

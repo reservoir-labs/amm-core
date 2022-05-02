@@ -24,8 +24,4 @@ interface IUniswapV2Factory {
     function setDefaultSwapFee(uint) external;
     function setDefaultPlatformFee(uint) external;
     function setDefaultRecoverer(address) external;
-
-    function setSwapFeeForPair(address, uint) external;
-    function setPlatformFeeForPair(address, uint) external;
-    function setRecovererForPair(address, address) external;
 }
