@@ -9,7 +9,6 @@ import "src/test/__fixtures/MintableERC20.sol";
 
 contract PairTest is DSTest
 {
-
     Vm private vm = Vm(HEVM_ADDRESS);
 
     address private mOwner = address(1);
@@ -30,7 +29,17 @@ contract PairTest is DSTest
         rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB));
     }
 
-    function testSetCustomSwapFee() public
+    function testCustomSwapFeeOffByDefault() public
+    {
+        // arrange
+        address pairAddress = createPair();
+
+        // assert
+        assertEq(UniswapV2Pair(pairAddress).customSwapFee(), 0);
+        assertEq(UniswapV2Pair(pairAddress).swapFee(), 30);
+    }
+
+    function testSetCustomSwapFeeBasic() public
     {
         // arrange
         address pairAddress = createPair();
@@ -43,7 +52,7 @@ contract PairTest is DSTest
         assertEq(UniswapV2Pair(pairAddress).swapFee(), 100);
     }
 
-    function testSetCustomSwapFeeOff() public
+    function testSetCustomSwapFeeOnThenOff() public
     {
         // arrange
         address pairAddress = createPair();
@@ -65,5 +74,22 @@ contract PairTest is DSTest
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
         mFactory.setCustomSwapFeeForPair(pairAddress, 4000);
+    }
+
+    function testUpdateDefaultFees() public
+    {
+        // arrange
+        address pairAddress = createPair();
+
+        // act
+        mFactory.setDefaultSwapFee(200);
+        mFactory.setDefaultPlatformFee(5000);
+
+        UniswapV2Pair(pairAddress).updateSwapFee();
+        UniswapV2Pair(pairAddress).updatePlatformFee();
+
+        // assert
+        assertEq(UniswapV2Pair(pairAddress).swapFee(), 200);
+        assertEq(UniswapV2Pair(pairAddress).platformFee(), 5000);
     }
 }
