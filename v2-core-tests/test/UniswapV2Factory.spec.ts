@@ -7,6 +7,7 @@ import { getCreate2Address } from './shared/utilities'
 import { factoryFixture } from './shared/fixtures'
 
 import UniswapV2Pair from '../../out/UniswapV2Pair.sol/UniswapV2Pair.json'
+import { AddressZero } from "ethers/constants";
 
 chai.use(solidity)
 
@@ -41,7 +42,7 @@ describe('UniswapV2Factory', () => {
     expect(await factory.defaultSwapFee()).to.eq(expectedDefaultSwapFee)
     expect(await factory.defaultPlatformFee()).to.eq(expectedDefaultPlatformFee)
     expect(await factory.platformFeeTo()).to.eq(expectedPlatformFeeTo)
-    expect(await factory.defaultRecoverer()).to.eq(wallet.address)
+    expect(await factory.defaultRecoverer()).to.eq(AddressZero)
     expect(await factory.allPairsLength()).to.eq(0)
   })
 
