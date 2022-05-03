@@ -8,6 +8,7 @@ import ERC20 from '../../../out/ERC20.sol/ERC20.json'
 import UniswapV2Factory from '../../../out/UniswapV2Factory.sol/UniswapV2Factory.json'
 import UniswapV2Pair from '../../../out/UniswapV2Pair.sol/UniswapV2Pair.json'
 import {BigNumber, bigNumberify} from "ethers/utils";
+import { AddressZero } from "ethers/constants";
 
 interface FactoryFixture {
   factory: Contract
@@ -30,7 +31,7 @@ export async function factoryFixture(_: Web3Provider, [wallet]: Wallet[]): Promi
     bytecode: UniswapV2Factory.bytecode.object
   }
 
-  const factory = await deployContract(wallet, UniswapV2FactoryRebuilt, [defaultSwapFee, defaultPlatformFee, platformFeeTo, wallet.address], overrides)
+  const factory = await deployContract(wallet, UniswapV2FactoryRebuilt, [defaultSwapFee, defaultPlatformFee, platformFeeTo, AddressZero], overrides)
   return { factory, defaultSwapFee, defaultPlatformFee, platformFeeTo }
 }
 
