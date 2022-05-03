@@ -100,10 +100,15 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     }
 
     function setSwapFeeForPair(address _pair, uint _swapFee) external onlyOwner {
+        // we allow _customSwapFee to be 0 to indicate that there is no custom fee
+        require(_swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
+
         IUniswapV2Pair(_pair).setCustomSwapFee(_swapFee);
     }
 
     function setPlatformFeeForPair(address _pair, uint _platformFee) external onlyOwner {
+        require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
+
         IUniswapV2Pair(_pair).setCustomPlatformFee(_platformFee);
     }
 }

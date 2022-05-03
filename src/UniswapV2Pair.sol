@@ -20,9 +20,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint256 public constant ACCURACY         = 1e38;
     uint256 public constant FEE_ACCURACY     = 10_000;
 
-    uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
-
     uint public swapFee;
     uint public customSwapFee;
 
@@ -69,10 +66,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
-        // here we do not check if the customSwapFee < MIN_SWAP_FEE
-        // because we are using 0 to indicate that there is no customSwapFee
-        require(_customSwapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
-
         // we assume the factory won't spam events, so no early check & return
         emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
         customSwapFee = _customSwapFee;
@@ -81,8 +74,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
-        require(_customPlatformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
-
         emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
         customPlatformFee = _customPlatformFee;
 
