@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.13;
 
-import "@openzeppelin/utils/math/SafeMath.sol";
-
 /**
  * @title MathUtils library
  * @notice A library to be used in conjunction with SafeMath. Contains functions for calculating

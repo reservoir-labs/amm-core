@@ -10,7 +10,6 @@ import "./SwapUtils.sol";
  * This library assumes the struct is fully validated.
  */
 library AmplificationUtils {
-    using SafeMath for uint256;
 
     event RampA(
         uint256 oldA,
@@ -33,7 +32,7 @@ library AmplificationUtils {
      * @return A parameter
      */
     function getA(SwapUtils.Swap storage self) external view returns (uint256) {
-        return _getAPrecise(self).div(A_PRECISION);
+        return _getAPrecise(self) / A_PRECISION;
     }
 
     /**
@@ -70,14 +69,14 @@ library AmplificationUtils {
             if (a1 > a0) {
                 // a0 + (a1 - a0) * (block.timestamp - t0) / (t1 - t0)
                 return
-                a0.add(
-                    a1.sub(a0).mul(block.timestamp.sub(t0)).div(t1.sub(t0))
+                a0 + (
+                    (a1 - a0) * (block.timestamp - t0) / (t1 - t0)
                 );
             } else {
                 // a0 - (a0 - a1) * (block.timestamp - t0) / (t1 - t0)
                 return
-                a0.sub(
-                    a0.sub(a1).mul(block.timestamp.sub(t0)).div(t1.sub(t0))
+                a0 - (
+                    (a0 - a1) * (block.timestamp - t0) / (t1 - t0)
                 );
             }
         } else {
@@ -99,11 +98,11 @@ library AmplificationUtils {
         uint256 futureTime_
     ) external {
         require(
-            block.timestamp >= self.initialATime.add(1 days),
+            block.timestamp >= self.initialATime + 1 days,
             "Wait 1 day before starting ramp"
         );
         require(
-            futureTime_ >= block.timestamp.add(MIN_RAMP_TIME),
+            futureTime_ >= block.timestamp + MIN_RAMP_TIME,
             "Insufficient ramp time"
         );
         require(
@@ -112,16 +111,16 @@ library AmplificationUtils {
         );
 
         uint256 initialAPrecise = _getAPrecise(self);
-        uint256 futureAPrecise = futureA_.mul(A_PRECISION);
+        uint256 futureAPrecise = futureA_ * A_PRECISION;
 
         if (futureAPrecise < initialAPrecise) {
             require(
-                futureAPrecise.mul(MAX_A_CHANGE) >= initialAPrecise,
+                futureAPrecise * MAX_A_CHANGE >= initialAPrecise,
                 "futureA_ is too small"
             );
         } else {
             require(
-                futureAPrecise <= initialAPrecise.mul(MAX_A_CHANGE),
+                futureAPrecise <= initialAPrecise * MAX_A_CHANGE,
                 "futureA_ is too large"
             );
         }
