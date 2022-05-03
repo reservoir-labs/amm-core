@@ -45,7 +45,7 @@ contract PairTest is DSTest
         address pairAddress = createPair();
 
         // act
-        mFactory.setCustomSwapFeeForPair(pairAddress, 100);
+        mFactory.setSwapFeeForPair(pairAddress, 100);
 
         // assert
         assertEq(UniswapV2Pair(pairAddress).customSwapFee(), 100);
@@ -56,10 +56,10 @@ contract PairTest is DSTest
     {
         // arrange
         address pairAddress = createPair();
-        mFactory.setCustomSwapFeeForPair(pairAddress, 100);
+        mFactory.setSwapFeeForPair(pairAddress, 100);
 
         // act
-        mFactory.setCustomSwapFeeForPair(pairAddress, 0);
+        mFactory.setSwapFeeForPair(pairAddress, 0);
 
         // assert
         assertEq(UniswapV2Pair(pairAddress).customSwapFee(), 0);
@@ -73,7 +73,7 @@ contract PairTest is DSTest
 
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
-        mFactory.setCustomSwapFeeForPair(pairAddress, 4000);
+        mFactory.setSwapFeeForPair(pairAddress, 4000);
     }
 
     function testCustomPlatformFeeOffByDefault() public
@@ -92,7 +92,7 @@ contract PairTest is DSTest
         address pairAddress = createPair();
 
         // act
-        mFactory.setCustomPlatformFeeForPair(pairAddress, 100);
+        mFactory.setPlatformFeeForPair(pairAddress, 100);
 
         // assert
         assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 100);
@@ -103,10 +103,10 @@ contract PairTest is DSTest
     {
         // arrange
         address pairAddress = createPair();
-        mFactory.setCustomPlatformFeeForPair(pairAddress, 100);
+        mFactory.setPlatformFeeForPair(pairAddress, 100);
 
         // act
-        mFactory.setCustomPlatformFeeForPair(pairAddress, 0);
+        mFactory.setPlatformFeeForPair(pairAddress, 0);
 
         // assert
         assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 0);
@@ -120,7 +120,7 @@ contract PairTest is DSTest
 
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
-        mFactory.setCustomPlatformFeeForPair(pairAddress, 9000);
+        mFactory.setPlatformFeeForPair(pairAddress, 9000);
     }
 
     function testUpdateDefaultFees() public

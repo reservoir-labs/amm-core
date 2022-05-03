@@ -25,6 +25,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     uint public swapFee;
     uint public customSwapFee;
+
     uint public platformFee;
     uint public customPlatformFee;
 
