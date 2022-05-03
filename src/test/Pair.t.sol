@@ -21,7 +21,7 @@ contract PairTest is DSTest
 
     function setUp() public
     {
-        mFactory = new UniswapV2Factory(30, 0, mOwner, mRecoverer);
+        mFactory = new UniswapV2Factory(30, 2500, mOwner, mRecoverer);
     }
 
     function createPair() private returns (address rPairAddress)
@@ -74,6 +74,53 @@ contract PairTest is DSTest
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
         mFactory.setCustomSwapFeeForPair(pairAddress, 4000);
+    }
+
+    function testCustomPlatformFeeOffByDefault() public
+    {
+        // arrange
+        address pairAddress = createPair();
+
+        // assert
+        assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 0);
+        assertEq(UniswapV2Pair(pairAddress).platformFee(), 2500);
+    }
+
+    function testSetCustomPlatformFeeBasic() public
+    {
+        // arrange
+        address pairAddress = createPair();
+
+        // act
+        mFactory.setCustomPlatformFeeForPair(pairAddress, 100);
+
+        // assert
+        assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 100);
+        assertEq(UniswapV2Pair(pairAddress).platformFee(), 100);
+    }
+
+    function testSetCustomPlatformFeeOnThenOff() public
+    {
+        // arrange
+        address pairAddress = createPair();
+        mFactory.setCustomPlatformFeeForPair(pairAddress, 100);
+
+        // act
+        mFactory.setCustomPlatformFeeForPair(pairAddress, 0);
+
+        // assert
+        assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 0);
+        assertEq(UniswapV2Pair(pairAddress).platformFee(), 2500);
+    }
+
+    function testSetCustomPlatformFeeMoreThanMaxPlatformFee() public
+    {
+        // arrange
+        address pairAddress = createPair();
+
+        // act & assert
+        vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
+        mFactory.setCustomPlatformFeeForPair(pairAddress, 9000);
     }
 
     function testUpdateDefaultFees() public
