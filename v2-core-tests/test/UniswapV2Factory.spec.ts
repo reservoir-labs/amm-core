@@ -7,6 +7,7 @@ import { getCreate2Address } from './shared/utilities'
 import { factoryFixture } from './shared/fixtures'
 
 import UniswapV2Pair from '../../out/UniswapV2Pair.sol/UniswapV2Pair.json'
+import { AddressZero } from "ethers/constants";
 
 chai.use(solidity)
 
@@ -41,7 +42,7 @@ describe('UniswapV2Factory', () => {
     expect(await factory.defaultSwapFee()).to.eq(expectedDefaultSwapFee)
     expect(await factory.defaultPlatformFee()).to.eq(expectedDefaultPlatformFee)
     expect(await factory.platformFeeTo()).to.eq(expectedPlatformFeeTo)
-    expect(await factory.defaultRecoverer()).to.eq(wallet.address)
+    expect(await factory.defaultRecoverer()).to.eq(AddressZero)
     expect(await factory.allPairsLength()).to.eq(0)
   })
 
@@ -80,7 +81,7 @@ describe('UniswapV2Factory', () => {
     // Note: changing the hard-coded expected init-code value implies you will need to also update the dependency.
     // See dependency @ v2-periphery/contracts/libraries/UniswapV2Library.sol
     // todo: update this comment once we have built out the router
-    expect(initCode, 'UniswapV2Pair init-code').to.eq('0xc60deb646b5d4d9c43786233693760cccecca52a036ecf7a74ec778f9884e804')
+    expect(initCode, 'UniswapV2Pair init-code').to.eq('0x532432c7a4aa1f8ce4121791e8a5937d0f66162b0eb19d7b134c8e5e1de69155')
   })
 
   it('createPair', async () => {
@@ -94,7 +95,7 @@ describe('UniswapV2Factory', () => {
   it('createPair:gas', async () => {
     const tx = await factory.createPair(...TEST_ADDRESSES)
     const receipt = await tx.wait()
-    expect(receipt.gasUsed).to.eq(2289629)
+    expect(receipt.gasUsed).to.eq(2327131)
   })
 
   it('setPlatformFeeTo', async () => {
