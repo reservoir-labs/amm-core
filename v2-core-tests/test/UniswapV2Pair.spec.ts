@@ -340,7 +340,7 @@ describe('UniswapV2Pair', () => {
     // Gas price seems to be inconsistent for the swap; most likely due to test framework. (TBC)
     // Every ~ 1 in 10 runs will see the higher gas cost.
     expect(burnReceipt.gasUsed, "Check burn op gas cost").to.satisfy( function(gas: BigNumber) {
-      return verifyGas(gas.toNumber(), [135736, 154846, 177752, 197686], "Burn gas cost");
+      return verifyGas(gas.toNumber(), [135736, 154824, 177752, 197686], "Burn gas cost");
     })
 
     // Expected fee @ 1/6 or 0.1667% is calculated at 249800449363715 which is a ~0.02% error off the original uniswap.
@@ -768,7 +768,7 @@ describe('UniswapV2Pair', () => {
 
       // Check the (inconsistent) gas fee
       expect(burnReceipt.gasUsed, "burn gas fee").to.satisfy(function(gas: BigNumber) {
-        return verifyGas(gas.toNumber(), [176002, 218842], "burn gas fee");
+        return verifyGas(gas.toNumber(), [175980, 176002, 218820, 218842], "burn gas fee");
       })
 
       // Check that the fee receiver (account set to platformFeeTo) received the fees
