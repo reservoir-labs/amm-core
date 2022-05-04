@@ -2,7 +2,7 @@ pragma solidity =0.8.13;
 
 import "@openzeppelin/access/Ownable.sol";
 import "./interfaces/IUniswapV2Factory.sol";
-import "./UniswapV2Pair.sol";
+import "./curve/constant-product/UniswapV2Pair.sol";
 
 contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%

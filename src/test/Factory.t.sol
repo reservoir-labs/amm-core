@@ -5,7 +5,7 @@ import "forge-std/Vm.sol";
 
 import "src/UniswapV2Factory.sol";
 import "src/test/__fixtures/MintableERC20.sol";
-import "src/UniswapV2Pair.sol";
+import "src/curve/constant-product/UniswapV2Pair.sol";
 
 contract FactoryTest is DSTest
 {
