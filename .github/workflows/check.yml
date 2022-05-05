@@ -2,10 +2,6 @@ name: check
 
 on: [push, pull_request]
 
-env:
-  ## Purely for hardhat testing in saddle-tests
-  ACCOUNT_PRIVATE_KEYS: ["0x0000000000000000000000000000000000000000000000000000000000000000"]
-
 jobs:
   build-lint-test:
     name: Build, Lint, & test
