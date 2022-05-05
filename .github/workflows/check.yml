@@ -36,3 +36,8 @@ jobs:
 
       - name: Uniswap v2-core regression tests
         run: cd v2-core-tests && npm ci && npm run test
+
+      - name: Saddle Stableswap v2 regression tests
+        run: cd saddle-tests && 
+              npm ci && 
+              npx typechain --out-dir build/typechain/ --target ethers-v5 '../out/*.sol/*.json' && npm test
