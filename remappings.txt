@@ -1,3 +1,4 @@
 ds-test/=lib/ds-test/src/
 @openzeppelin/=lib/openzeppelin-contracts/contracts/
+@balancer-labs/=src/curve/stable/
 src/=src/
