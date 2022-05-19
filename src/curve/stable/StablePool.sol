@@ -111,9 +111,9 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         // Immutable variables cannot be initialized inside an if statement, so we must do conditional assignments
         _token0 = tokens[0];
         _token1 = tokens[1];
-        _token2 = totalTokens > 2 ? tokens[2] : IERC20(0);
-        _token3 = totalTokens > 3 ? tokens[3] : IERC20(0);
-        _token4 = totalTokens > 4 ? tokens[4] : IERC20(0);
+        _token2 = totalTokens > 2 ? tokens[2] : IERC20(address(0));
+        _token3 = totalTokens > 3 ? tokens[3] : IERC20(address(0));
+        _token4 = totalTokens > 4 ? tokens[4] : IERC20(address(0));
 
         _scalingFactor0 = _computeScalingFactor(tokens[0]);
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
