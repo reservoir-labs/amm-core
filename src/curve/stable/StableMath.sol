@@ -29,7 +29,7 @@ library StableMath {
     uint256 internal constant _MAX_AMP = 5000;
     uint256 internal constant _AMP_PRECISION = 1e3;
 
-    uint256 internal constant _MAX_STABLE_TOKENS = 5;
+    uint256 internal constant _MAX_STABLE_TOKENS = 2;
 
     // Note on unchecked arithmetic:
     // This contract performs a large number of additions, subtractions, multiplications and divisions, often inside

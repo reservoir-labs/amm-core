@@ -43,18 +43,16 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
     uint256 private constant _MIN_UPDATE_TIME = 1 days;
     uint256 private constant _MAX_AMP_UPDATE_DAILY_RATE = 2;
 
+    uint256 private constant _TOTAL_TOKENS = 2;
+
     bytes32 private _packedAmplificationData;
 
     event AmpUpdateStarted(uint256 startValue, uint256 endValue, uint256 startTime, uint256 endTime);
     event AmpUpdateStopped(uint256 currentValue);
 
-    uint256 private immutable _totalTokens;
 
     IERC20 internal immutable _token0;
     IERC20 internal immutable _token1;
-    IERC20 internal immutable _token2;
-    IERC20 internal immutable _token3;
-    IERC20 internal immutable _token4;
 
     // All token balances are normalized to behave as if the token had 18 decimals. We assume a token's decimals will
     // not change throughout its lifetime, and store the corresponding scaling factor for each at construction time.
@@ -62,9 +60,6 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
 
     uint256 internal immutable _scalingFactor0;
     uint256 internal immutable _scalingFactor1;
-    uint256 internal immutable _scalingFactor2;
-    uint256 internal immutable _scalingFactor3;
-    uint256 internal immutable _scalingFactor4;
 
     // To track how many tokens are owed to the Vault as protocol fees, we measure and store the value of the invariant
     // after every join and exit. All invariant growth that happens between join and exit events is due to swap fees.
@@ -91,7 +86,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
             // Because we're inheriting from both BaseGeneralPool and LegacyBaseMinimalSwapInfoPool we can choose any
             // specialization setting. Since this Pool never registers or deregisters any tokens after construction,
             // picking Two Token when the Pool only has two tokens is free gas savings.
-            tokens.length == 2 ? IVault.PoolSpecialization.TWO_TOKEN : IVault.PoolSpecialization.GENERAL,
+            IVault.PoolSpecialization.TWO_TOKEN,
             name,
             symbol,
             tokens,
@@ -106,20 +101,14 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         _require(amplificationParameter <= StableMath._MAX_AMP, Errors.MAX_AMP);
 
         uint256 totalTokens = tokens.length;
-        _totalTokens = totalTokens;
+        _require(totalTokens == 2, Errors.MAX_STABLE_TOKENS);
 
         // Immutable variables cannot be initialized inside an if statement, so we must do conditional assignments
         _token0 = tokens[0];
         _token1 = tokens[1];
-        _token2 = totalTokens > 2 ? tokens[2] : IERC20(address(0));
-        _token3 = totalTokens > 3 ? tokens[3] : IERC20(address(0));
-        _token4 = totalTokens > 4 ? tokens[4] : IERC20(address(0));
 
         _scalingFactor0 = _computeScalingFactor(tokens[0]);
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
-        _scalingFactor2 = totalTokens > 2 ? _computeScalingFactor(tokens[2]) : 0;
-        _scalingFactor3 = totalTokens > 3 ? _computeScalingFactor(tokens[3]) : 0;
-        _scalingFactor4 = totalTokens > 4 ? _computeScalingFactor(tokens[4]) : 0;
 
         uint256 initialAmp = Math.mul(amplificationParameter, StableMath._AMP_PRECISION);
         _setAmplificationData(initialAmp);
@@ -183,8 +172,6 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
     ) internal virtual override returns (uint256) {
-        _require(_getTotalTokens() == 2, Errors.NOT_TWO_TOKENS);
-
         (uint256[] memory balances, uint256 indexIn, uint256 indexOut) = _getSwapBalanceArrays(
             swapRequest,
             balanceTokenIn,
@@ -199,8 +186,6 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
     ) internal virtual override returns (uint256) {
-        _require(_getTotalTokens() == 2, Errors.NOT_TWO_TOKENS);
-
         (uint256[] memory balances, uint256 indexIn, uint256 indexOut) = _getSwapBalanceArrays(
             swapRequest,
             balanceTokenIn,
@@ -256,7 +241,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         _require(kind == StablePoolUserData.JoinKind.INIT, Errors.UNINITIALIZED);
 
         uint256[] memory amountsIn = userData.initialAmountsIn();
-        InputHelpers.ensureInputLengthMatch(amountsIn.length, _getTotalTokens());
+        InputHelpers.ensureInputLengthMatch(amountsIn.length, _TOTAL_TOKENS);
         _upscaleArray(amountsIn, scalingFactors);
 
         (uint256 currentAmp, ) = _getAmplificationParameter();
@@ -330,7 +315,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         bytes memory userData
     ) private view returns (uint256, uint256[] memory) {
         (uint256[] memory amountsIn, uint256 minBPTAmountOut) = userData.exactTokensInForBptOut();
-        InputHelpers.ensureInputLengthMatch(_getTotalTokens(), amountsIn.length);
+        InputHelpers.ensureInputLengthMatch(_TOTAL_TOKENS, amountsIn.length);
 
         _upscaleArray(amountsIn, scalingFactors);
 
@@ -356,9 +341,9 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         (uint256 bptAmountOut, uint256 tokenIndex) = userData.tokenInForExactBptOut();
         // Note that there is no maximum amountIn parameter: this is handled by `IVault.joinPool`.
 
-        _require(tokenIndex < _getTotalTokens(), Errors.OUT_OF_BOUNDS);
+        _require(tokenIndex < _TOTAL_TOKENS, Errors.OUT_OF_BOUNDS);
 
-        uint256[] memory amountsIn = new uint256[](_getTotalTokens());
+        uint256[] memory amountsIn = new uint256[](_TOTAL_TOKENS);
         (uint256 currentAmp, ) = _getAmplificationParameter();
         amountsIn[tokenIndex] = StableMath._calcTokenInGivenExactBptOut(
             currentAmp,
@@ -407,7 +392,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         } else {
             // If the contract is paused, swap protocol fee amounts are not charged to avoid extra calculations and
             // reduce the potential for errors.
-            dueProtocolFeeAmounts = new uint256[](_getTotalTokens());
+            dueProtocolFeeAmounts = new uint256[](_TOTAL_TOKENS);
         }
 
         (bptAmountIn, amountsOut) = _doExit(balances, scalingFactors, userData);
@@ -448,10 +433,10 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         (uint256 bptAmountIn, uint256 tokenIndex) = userData.exactBptInForTokenOut();
         // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
 
-        _require(tokenIndex < _getTotalTokens(), Errors.OUT_OF_BOUNDS);
+        _require(tokenIndex < _TOTAL_TOKENS, Errors.OUT_OF_BOUNDS);
 
         // We exit in a single token, so initialize amountsOut with zeros
-        uint256[] memory amountsOut = new uint256[](_getTotalTokens());
+        uint256[] memory amountsOut = new uint256[](_TOTAL_TOKENS);
 
         // And then assign the result to the selected token
         (uint256 currentAmp, ) = _getAmplificationParameter();
@@ -492,7 +477,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         // This exit function is disabled if the contract is paused.
 
         (uint256[] memory amountsOut, uint256 maxBPTAmountIn) = userData.bptInForExactTokensOut();
-        InputHelpers.ensureInputLengthMatch(amountsOut.length, _getTotalTokens());
+        InputHelpers.ensureInputLengthMatch(amountsOut.length, _TOTAL_TOKENS);
         _upscaleArray(amountsOut, scalingFactors);
 
         (uint256 currentAmp, ) = _getAmplificationParameter();
@@ -528,7 +513,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         returns (uint256[] memory)
     {
         // Initialize with zeros
-        uint256[] memory dueProtocolFeeAmounts = new uint256[](_getTotalTokens());
+        uint256[] memory dueProtocolFeeAmounts = new uint256[](_TOTAL_TOKENS);
 
         // Early return if the protocol swap fee percentage is zero, saving gas.
         if (protocolSwapFeePercentage == 0) {
@@ -542,7 +527,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         // The protocol fee is charged using the token with the highest balance in the pool.
         uint256 chosenTokenIndex = 0;
         uint256 maxBalance = balances[0];
-        for (uint256 i = 1; i < _getTotalTokens(); ++i) {
+        for (uint256 i = 1; i < _TOTAL_TOKENS; ++i) {
             uint256 currentBalance = balances[i];
             if (currentBalance > maxBalance) {
                 chosenTokenIndex = i;
@@ -598,7 +583,7 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
         uint256[] memory arguments,
         function(uint256, uint256) pure returns (uint256) mutation
     ) private view {
-        for (uint256 i = 0; i < _getTotalTokens(); ++i) {
+        for (uint256 i = 0; i < _TOTAL_TOKENS; ++i) {
             toMutate[i] = mutation(toMutate[i], arguments[i]);
         }
     }
@@ -708,32 +693,25 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
     }
 
     function _getTotalTokens() internal view virtual override returns (uint256) {
-        return _totalTokens;
+        return _TOTAL_TOKENS;
     }
 
     function _scalingFactor(IERC20 token) internal view virtual override returns (uint256) {
         // prettier-ignore
         if (_isToken0(token)) { return _getScalingFactor0(); }
         else if (_isToken1(token)) { return _getScalingFactor1(); }
-        else if (token == _token2) { return _getScalingFactor2(); }
-        else if (token == _token3) { return _getScalingFactor3(); }
-        else if (token == _token4) { return _getScalingFactor4(); }
         else {
             _revert(Errors.INVALID_TOKEN);
         }
     }
 
     function _scalingFactors() internal view virtual override returns (uint256[] memory) {
-        uint256 totalTokens = _getTotalTokens();
-        uint256[] memory scalingFactors = new uint256[](totalTokens);
+        uint256[] memory scalingFactors = new uint256[](_TOTAL_TOKENS);
 
         // prettier-ignore
         {
             scalingFactors[0] = _getScalingFactor0();
             scalingFactors[1] = _getScalingFactor1();
-            if (totalTokens > 2) { scalingFactors[2] = _getScalingFactor2(); } else { return scalingFactors; }
-            if (totalTokens > 3) { scalingFactors[3] = _getScalingFactor3(); } else { return scalingFactors; }
-            if (totalTokens > 4) { scalingFactors[4] = _getScalingFactor4(); } else { return scalingFactors; }
         }
 
         return scalingFactors;
@@ -797,17 +775,5 @@ contract StablePool is BaseGeneralPool, LegacyBaseMinimalSwapInfoPool, IRateProv
 
     function _getScalingFactor1() internal view returns (uint256) {
         return _scalingFactor1;
-    }
-
-    function _getScalingFactor2() internal view returns (uint256) {
-        return _scalingFactor2;
-    }
-
-    function _getScalingFactor3() internal view returns (uint256) {
-        return _scalingFactor3;
-    }
-
-    function _getScalingFactor4() internal view returns (uint256) {
-        return _scalingFactor4;
     }
 }
