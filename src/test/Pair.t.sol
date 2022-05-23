@@ -26,7 +26,7 @@ contract PairTest is DSTest
 
     function createPair() private returns (address rPairAddress)
     {
-        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB));
+        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB), false);
     }
 
     function testCustomSwapFeeOffByDefault() public
