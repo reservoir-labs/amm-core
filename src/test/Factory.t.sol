@@ -44,7 +44,7 @@ contract FactoryTest is DSTest
 
     function createPair() private returns (address rPairAddress)
     {
-        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB), false);
+        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB), 0);
     }
 
     function provideLiquidity(address aPairAddress) private

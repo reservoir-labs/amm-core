@@ -25,11 +25,13 @@ contract StablePairTest is DSTest {
 
     function createStablePair() private returns (address rPairAddress)
     {
-        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB), true);
+        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB), 1);
     }
 
     function testCreatePair() public
     {
-        createStablePair();
+        address pairAddress = createStablePair();
+        (uint ampParam, ,) = UniswapV2StablePair(pairAddress).getAmplificationParameter();
+        assertEq(ampParam, 50000);
     }
 }
