@@ -35,4 +35,4 @@ jobs:
         run: forge test -vvv
 
       - name: Uniswap v2-core regression tests
-        run: cd v2-core-tests && npm ci && npm run test
+        run: cd reference/uniswap-v2-core && npm ci && npm run test
