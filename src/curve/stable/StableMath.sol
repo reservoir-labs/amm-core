@@ -18,7 +18,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
-// should be fixed. Additionally, some variables have non mixed case names (e.g. P_D) that relate to the mathematical
+// should be fixed. Additionally, some variables have non mixed case names (e.g. P_D) that relate to the BalancerMathematical
 // derivations.
 // solhint-disable private-vars-leading-underscore, var-name-mixedcase
 
@@ -35,7 +35,7 @@ library StableMath {
     // This contract performs a large number of additions, subtractions, multiplications and divisions, often inside
     // loops. Since many of these operations are gas-sensitive (as they happen e.g. during a swap), it is important to
     // not make any unnecessary checks. We rely on a set of invariants to avoid having to use checked arithmetic (the
-    // Math library), including:
+    // BalancerMath library), including:
     //  - the number of tokens is bounded by _MAX_STABLE_TOKENS
     //  - the amplification parameter is bounded by _MAX_AMP * _AMP_PRECISION, which fits in 23 bits
     //  - the token balances are bounded by 2^112 (guaranteed by the Vault) times 1e18 (the maximum scaling factor),
@@ -84,16 +84,16 @@ library StableMath {
         for (uint256 i = 0; i < 255; i++) {
             uint256 P_D = balances[0] * numTokens;
             for (uint256 j = 1; j < numTokens; j++) {
-                P_D = Math.div(Math.mul(Math.mul(P_D, balances[j]), numTokens), invariant, roundUp);
+                P_D = BalancerMath.div(BalancerMath.mul(BalancerMath.mul(P_D, balances[j]), numTokens), invariant, roundUp);
             }
             prevInvariant = invariant;
-            invariant = Math.div(
-                Math.mul(Math.mul(numTokens, invariant), invariant).add(
-                    Math.div(Math.mul(Math.mul(ampTimesTotal, sum), P_D), _AMP_PRECISION, roundUp)
+            invariant = BalancerMath.div(
+                BalancerMath.mul(BalancerMath.mul(numTokens, invariant), invariant).add(
+                    BalancerMath.div(BalancerMath.mul(BalancerMath.mul(ampTimesTotal, sum), P_D), _AMP_PRECISION, roundUp)
                 ),
-                Math.mul(numTokens + 1, invariant).add(
+                BalancerMath.mul(numTokens + 1, invariant).add(
                     // No need to use checked arithmetic for the amp precision, the amp is guaranteed to be at least 1
-                    Math.div(Math.mul(ampTimesTotal - _AMP_PRECISION, P_D), _AMP_PRECISION, !roundUp)
+                    BalancerMath.div(BalancerMath.mul(ampTimesTotal - _AMP_PRECISION, P_D), _AMP_PRECISION, !roundUp)
                 ),
                 roundUp
             );
@@ -474,32 +474,32 @@ library StableMath {
         uint256 sum = balances[0];
         uint256 P_D = balances[0] * balances.length;
         for (uint256 j = 1; j < balances.length; j++) {
-            P_D = Math.divDown(Math.mul(Math.mul(P_D, balances[j]), balances.length), invariant);
+            P_D = BalancerMath.divDown(BalancerMath.mul(BalancerMath.mul(P_D, balances[j]), balances.length), invariant);
             sum = sum.add(balances[j]);
         }
-        // No need to use safe math, based on the loop above `sum` is greater than or equal to `balances[tokenIndex]`
+        // No need to use safe BalancerMath, based on the loop above `sum` is greater than or equal to `balances[tokenIndex]`
         sum = sum - balances[tokenIndex];
 
-        uint256 inv2 = Math.mul(invariant, invariant);
+        uint256 inv2 = BalancerMath.mul(invariant, invariant);
         // We remove the balance from c by multiplying it
-        uint256 c = Math.mul(
-            Math.mul(Math.divUp(inv2, Math.mul(ampTimesTotal, P_D)), _AMP_PRECISION),
+        uint256 c = BalancerMath.mul(
+            BalancerMath.mul(BalancerMath.divUp(inv2, BalancerMath.mul(ampTimesTotal, P_D)), _AMP_PRECISION),
             balances[tokenIndex]
         );
-        uint256 b = sum.add(Math.mul(Math.divDown(invariant, ampTimesTotal), _AMP_PRECISION));
+        uint256 b = sum.add(BalancerMath.mul(BalancerMath.divDown(invariant, ampTimesTotal), _AMP_PRECISION));
 
         // We iterate to find the balance
         uint256 prevTokenBalance = 0;
         // We multiply the first iteration outside the loop with the invariant to set the value of the
         // initial approximation.
-        uint256 tokenBalance = Math.divUp(inv2.add(c), invariant.add(b));
+        uint256 tokenBalance = BalancerMath.divUp(inv2.add(c), invariant.add(b));
 
         for (uint256 i = 0; i < 255; i++) {
             prevTokenBalance = tokenBalance;
 
-            tokenBalance = Math.divUp(
-                Math.mul(tokenBalance, tokenBalance).add(c),
-                Math.mul(tokenBalance, 2).add(b).sub(invariant)
+            tokenBalance = BalancerMath.divUp(
+                BalancerMath.mul(tokenBalance, tokenBalance).add(c),
+                BalancerMath.mul(tokenBalance, 2).add(b).sub(invariant)
             );
 
             if (tokenBalance > prevTokenBalance) {

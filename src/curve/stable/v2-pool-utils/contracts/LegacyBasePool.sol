@@ -493,7 +493,7 @@ abstract contract LegacyBasePool is IBasePool, BasePoolAuthorization, BalancerPo
         uint256 tokenDecimals = ERC20(address(token)).decimals();
 
         // Tokens with more than 18 decimals are not supported.
-        uint256 decimalsDifference = Math.sub(18, tokenDecimals);
+        uint256 decimalsDifference = BalancerMath.sub(18, tokenDecimals);
         return FixedPoint.ONE * 10**decimalsDifference;
     }
 

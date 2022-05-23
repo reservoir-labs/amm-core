@@ -8,7 +8,7 @@ import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerEr
  * @dev Wrappers over Solidity's arithmetic operations with added overflow checks.
  * Adapted from OpenZeppelin's SafeMath library.
  */
-library Math {
+library BalancerMath {
     /**
      * @dev Returns the absolute value of a signed integer.
      */
