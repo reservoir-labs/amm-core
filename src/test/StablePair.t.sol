@@ -13,8 +13,8 @@ contract StablePairTest is DSTest {
     address private mOwner = address(1);
     address private mRecoverer = address(3);
 
-    MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
-    MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
+    MintableERC20 private mTokenA = new MintableERC20("StableA", "TA", 18);
+    MintableERC20 private mTokenB = new MintableERC20("StableB", "TB", 6);
 
     UniswapV2Factory private mFactory;
 
@@ -30,8 +30,28 @@ contract StablePairTest is DSTest {
 
     function testCreatePair() public
     {
+        // arrange
         address pairAddress = createStablePair();
         (uint ampParam, ,) = UniswapV2StablePair(pairAddress).getAmplificationParameter();
+
+        // assert
         assertEq(ampParam, 50000);
+        assertEq(UniswapV2StablePair(pairAddress)._getScalingFactor0(), 1e30);
+        assertEq(UniswapV2StablePair(pairAddress)._getScalingFactor1(), 1e18);
+    }
+
+    function testAddLiquidity() public
+    {
+
+    }
+
+    function testBasicSwap() public
+    {
+
+    }
+
+    function testRemoveLiquidity() public
+    {
+
     }
 }

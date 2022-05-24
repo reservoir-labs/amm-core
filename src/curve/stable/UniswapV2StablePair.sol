@@ -54,47 +54,73 @@ contract UniswapV2StablePair is UniswapV2Pair {
         _setAmplificationData(initialAmp);
     }
 
-    function mint() external lock returns (uint liquidity) {
+    function mint(address to) external override lock returns (uint liquidity) {
+        // both reserves and balances are not scaled
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        uint balance0 = IERC20(token0).balanceOf(address(this));
+        uint balance1 = IERC20(token1).balanceOf(address(this));
+        // thus amount is also not scaled
+        uint amount0 = balance0 - _reserve0;
+        uint amount1 = balance1 - _reserve1;
+
+        uint scaledAmount0;
+        uint scaledAmount1;
+
+        // Might need to change this platformFee logic
+        bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint _totalSupply = totalSupply;
+        if (_totalSupply == 0) {
+            (scaledAmount0, scaledAmount1, liquidity) = onFirstMint(amount0, amount1);
+            // to refer to LegacyBasePool::onJoinPool as well
+
+            // note: Uniswap's MINIMUM_LIQUIDITY is 1e3, balancer's is 1e6
+            // might need to reconcile this difference
+            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+        }
+        else {
+            // get scaled amounts and reserves
+            scaledAmount0 = _upscale(amount0, _scalingFactor0);
+            scaledAmount1 = _upscale(amount1, _scalingFactor1);
+            uint scaledReserve0 = _upscale(_reserve0, _scalingFactor0);
+            uint scaledReserve1 = _upscale(_reserve1, _scalingFactor1);
+
+            liquidity = Math.min(scaledAmount0 * _totalSupply / scaledReserve0, scaledAmount1 * _totalSupply / scaledReserve1);
+        }
+
+        require(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
+        _mint(to, liquidity);
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        // not using this kLast invariant anymore now are we?
+        // if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        emit Mint(msg.sender, amount0, amount1);
+    }
+
+    function onFirstMint(uint _amount0, uint _amount1) internal returns (uint liquidityTokenAmount, uint scaledAmount0, uint scaledAmount1) {
         // TODO: Code below is from StablePool::_onInitializePool
         // which is called when there is no liquidity in the pool
         // to review and cut as necessary
-//        StablePoolUserData.JoinKind kind = userData.joinKind();
-//        _require(kind == StablePoolUserData.JoinKind.INIT, Errors.UNINITIALIZED);
-//
-//        uint256[] memory amountsIn = userData.initialAmountsIn();
-//        InputHelpers.ensureInputLengthMatch(amountsIn.length, _getTotalTokens());
-//        _upscaleArray(amountsIn, scalingFactors);
-//
-//        (uint256 currentAmp, ) = _getAmplificationParameter();
-//        uint256 invariantAfterJoin = StableMath._calculateInvariant(currentAmp, amountsIn, true);
-//
-//        // Set the initial BPT to the value of the invariant.
-//        uint256 bptAmountOut = invariantAfterJoin;
-//
-//        _updateLastInvariant(invariantAfterJoin, currentAmp);
+
+        scaledAmount0 = _upscale(_amount0, _scalingFactor0);
+        scaledAmount1 = _upscale(_amount1, _scalingFactor1);
+
+        (uint256 currentAmp, ) = _getAmplificationParameter();
+        uint256[] memory balances = new uint256[](2);
+        balances[0] = scaledAmount0;
+        balances[1] = scaledAmount1;
+
+        uint256 invariantAfterJoin = StableMath._calculateInvariant(currentAmp, balances, true);
+
+        // Set the initial BPT to the value of the invariant.
+        liquidityTokenAmount = invariantAfterJoin;
+
+        _updateLastInvariant(invariantAfterJoin, currentAmp);
     }
 
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external override lock {
         require(amount0Out > 0 || amount1Out > 0, "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         require(amount0Out < _reserve0 && amount1Out < _reserve1, "UniswapV2: INSUFFICIENT_LIQUIDITY");
-    }
-
-    /**
-     * @dev Returns a scaling factor that, when multiplied to a token amount for `token`, normalizes its balance as if
-     * it had 18 decimals.
-     */
-    function _computeScalingFactor(IERC20 token) internal view returns (uint256) {
-        if (address(token) == address(this)) {
-            return FixedPoint.ONE;
-        }
-
-        // Tokens that don't implement the `decimals` method are not supported.
-        uint256 tokenDecimals = ERC20(address(token)).decimals();
-
-        // Tokens with more than 18 decimals are not supported.
-        uint256 decimalsDifference = BalancerMath.sub(18, tokenDecimals);
-        return FixedPoint.ONE * 10**decimalsDifference;
     }
 
     function _setAmplificationData(uint256 value) private {
@@ -229,10 +255,55 @@ contract UniswapV2StablePair is UniswapV2Pair {
     }
 
     /**
+     * @dev Applies `scalingFactor` to `amount`, resulting in a larger or equal value depending on whether it needed
+     * scaling or not.
+     */
+    function _upscale(uint256 amount, uint256 scalingFactor) internal pure returns (uint256) {
+        // Upscale rounding wouldn't necessarily always go in the same direction: in a swap for example the balance of
+        // token in should be rounded up, and that of token out rounded down. This is the only place where we round in
+        // the same direction for all amounts, as the impact of this rounding is expected to be minimal (and there's no
+        // rounding error unless `_scalingFactor()` is overriden).
+        return FixedPoint.mulDown(amount, scalingFactor);
+    }
+
+    /**
+     * @dev Reverses the `scalingFactor` applied to `amount`, resulting in a smaller or equal value depending on
+     * whether it needed scaling or not. The result is rounded down.
+     */
+    function _downscaleDown(uint256 amount, uint256 scalingFactor) internal pure returns (uint256) {
+        return FixedPoint.divDown(amount, scalingFactor);
+    }
+
+    /**
      * @dev Hardcoded to 2 as we only support two assets in the pool
      */
     function _getTotalTokens() internal pure returns (uint256) {
         return 2;
+    }
+
+    /**
+     * @dev Returns a scaling factor that, when multiplied to a token amount for `token`, normalizes its balance as if
+     * it had 18 decimals.
+     */
+    function _computeScalingFactor(IERC20 token) internal view returns (uint256) {
+        if (address(token) == address(this)) {
+            return FixedPoint.ONE;
+        }
+
+        // Tokens that don't implement the `decimals` method are not supported.
+        uint256 tokenDecimals = ERC20(address(token)).decimals();
+
+        // Tokens with more than 18 decimals are not supported.
+        uint256 decimalsDifference = BalancerMath.sub(18, tokenDecimals);
+        return FixedPoint.ONE * 10**decimalsDifference;
+    }
+
+    function _getScalingFactor0() public view returns (uint256) {
+        return _scalingFactor0;
+    }
+
+    function _getScalingFactor1() public view returns (uint256) {
+        return _scalingFactor1;
     }
 
     /// ************* ROUTING FUNCTIONS **************** ////////

@@ -14,8 +14,8 @@ contract PairTest is DSTest
     address private mOwner = address(1);
     address private mRecoverer = address(3);
 
-    MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
-    MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
+    MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA", 18);
+    MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB", 18);
 
     UniswapV2Factory private mFactory;
 

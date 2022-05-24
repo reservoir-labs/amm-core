@@ -122,7 +122,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     // update reserves and, on the first call per block, price accumulators
-    function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
+    function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) internal {
         require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "UniswapV2: OVERFLOW");
         // solhint-disable-next-line not-rely-on-time
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
@@ -170,7 +170,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT: _scaledTargetOwnership < ACCURACY
     }
 
-    function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
+    function _mintFee(uint112 _reserve0, uint112 _reserve1) internal returns (bool feeOn) {
         feeOn = platformFee > 0;
 
         if (feeOn) {
@@ -192,7 +192,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function mint(address to) external lock returns (uint liquidity) {
+    function mint(address to) external virtual lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
