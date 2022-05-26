@@ -54,28 +54,37 @@ contract UniswapV2StablePair is UniswapV2Pair {
         _setAmplificationData(initialAmp);
     }
 
+    function getLastInvariant() external view returns (uint256 lastInvariant, uint256 lastInvariantAmp) {
+        lastInvariant = _lastInvariant;
+        lastInvariantAmp = _lastInvariantAmp;
+    }
+
     function mint(address to) external override lock returns (uint liquidity) {
+        // to refer to LegacyBasePool::onJoinPool as well
+
         // both reserves and balances are not scaled
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
-        // thus amount is also not scaled
+        // thus amounts are also not scaled
         uint amount0 = balance0 - _reserve0;
         uint amount1 = balance1 - _reserve1;
 
         uint scaledAmount0;
         uint scaledAmount1;
 
-        // Might need to change this platformFee logic
-        bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply;
         if (_totalSupply == 0) {
-            (scaledAmount0, scaledAmount1, liquidity) = onFirstMint(amount0, amount1);
-            // to refer to LegacyBasePool::onJoinPool as well
+            (liquidity, scaledAmount0, scaledAmount1) = onFirstMint(amount0, amount1);
 
             // note: Uniswap's MINIMUM_LIQUIDITY is 1e3, balancer's is 1e6
             // might need to reconcile this difference
+            // also, balancer subtracts MINIMUM_LIQUIDITY from liquidity while uniswap doesn't
+            // we are going to go with uniswap's approach since it is a really small number and would not
+            // affect the users' shares and balances in any meaningful way
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+
+            // platformFee not applicable for first joining
         }
         else {
             // get scaled amounts and reserves
@@ -85,6 +94,8 @@ contract UniswapV2StablePair is UniswapV2Pair {
             uint scaledReserve1 = _upscale(_reserve1, _scalingFactor1);
 
             liquidity = Math.min(scaledAmount0 * _totalSupply / scaledReserve0, scaledAmount1 * _totalSupply / scaledReserve1);
+
+            // TODO: calculate how much platformFee to send
         }
 
         require(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
@@ -96,11 +107,9 @@ contract UniswapV2StablePair is UniswapV2Pair {
         emit Mint(msg.sender, amount0, amount1);
     }
 
-    function onFirstMint(uint _amount0, uint _amount1) internal returns (uint liquidityTokenAmount, uint scaledAmount0, uint scaledAmount1) {
-        // TODO: Code below is from StablePool::_onInitializePool
+    function onFirstMint(uint _amount0, uint _amount1) internal returns (uint liquidity, uint scaledAmount0, uint scaledAmount1) {
+        // the code below is from StablePool::_onInitializePool
         // which is called when there is no liquidity in the pool
-        // to review and cut as necessary
-
         scaledAmount0 = _upscale(_amount0, _scalingFactor0);
         scaledAmount1 = _upscale(_amount1, _scalingFactor1);
 
@@ -111,10 +120,38 @@ contract UniswapV2StablePair is UniswapV2Pair {
 
         uint256 invariantAfterJoin = StableMath._calculateInvariant(currentAmp, balances, true);
 
-        // Set the initial BPT to the value of the invariant.
-        liquidityTokenAmount = invariantAfterJoin;
+        // Set the initial liquidity to the value of the invariant.
+        liquidity = invariantAfterJoin;
 
         _updateLastInvariant(invariantAfterJoin, currentAmp);
+    }
+
+    function burn(address to) external override lock returns (uint amount0, uint amount1) {
+
+        // Below is adapted from StablePool::_onExitPool
+        // Exits are not completely disabled while the contract is paused: proportional exits (exact BPT in for tokens
+        // out) remain functional.
+//        if (_isNotPaused()) {
+//            // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
+//            // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
+//            // spending gas calculating fee amounts during each individual swap
+//            dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(balances, protocolSwapFeePercentage);
+//
+//            // Update current balances by subtracting the protocol fee amounts
+//            _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+//        } else {
+//            // If the contract is paused, swap protocol fee amounts are not charged to avoid extra calculations and
+//            // reduce the potential for errors.
+//            dueProtocolFeeAmounts = new uint256[](_getTotalTokens());
+//        }
+//
+//        (bptAmountIn, amountsOut) = _doExit(balances, scalingFactors, userData);
+//
+//        // Update the invariant with the balances the Pool will have after the exit, in order to compute the
+//        // protocol swap fee amounts due in future joins and exits.
+//        _updateInvariantAfterExit(balances, amountsOut);
+//
+//        return (bptAmountIn, amountsOut, dueProtocolFeeAmounts);
     }
 
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external override lock {
@@ -152,14 +189,14 @@ contract UniswapV2StablePair is UniswapV2Pair {
     }
 
     function _getAmplificationData()
-    private
-    view
-    returns (
-        uint256 startValue,
-        uint256 endValue,
-        uint256 startTime,
-        uint256 endTime
-    )
+        private
+        view
+        returns (
+            uint256 startValue,
+            uint256 endValue,
+            uint256 startTime,
+            uint256 endTime
+        )
     {
         startValue = _packedAmplificationData.decodeUint64(0);
         endValue = _packedAmplificationData.decodeUint64(64);
@@ -199,6 +236,50 @@ contract UniswapV2StablePair is UniswapV2Pair {
     function _updateLastInvariant(uint256 invariant, uint256 amplificationParameter) internal {
         _lastInvariant = invariant;
         _lastInvariantAmp = amplificationParameter;
+    }
+
+    /**
+     * @dev Returns the amount of protocol fees to pay, given the value of the last stored invariant and the current
+     * balances.
+     */
+    function _getDueProtocolFeeAmounts(uint256[] memory balances, uint256 protocolSwapFeePercentage)
+        private
+        view
+        returns (uint256[] memory)
+    {
+        // Initialize with zeros
+        uint256[] memory dueProtocolFeeAmounts = new uint256[](_getTotalTokens());
+
+        // Early return if the platform fee percentage is zero, saving gas.
+        if (platformFee == 0) {
+            return dueProtocolFeeAmounts;
+        }
+
+        // Instead of paying the protocol swap fee in all tokens proportionally, we will pay it in a single one. This
+        // will reduce gas costs for single asset joins and exits, as at most only two Pool balances will change (the
+        // token joined/exited, and the token in which fees will be paid).
+
+        // The protocol fee is charged using the token with the highest balance in the pool.
+        uint256 chosenTokenIndex = 0;
+        uint256 maxBalance = balances[0];
+        for (uint256 i = 1; i < _getTotalTokens(); ++i) {
+            uint256 currentBalance = balances[i];
+            if (currentBalance > maxBalance) {
+                chosenTokenIndex = i;
+                maxBalance = currentBalance;
+            }
+        }
+
+        // Set the fee amount to pay in the selected token
+        dueProtocolFeeAmounts[chosenTokenIndex] = StableMath._calcDueTokenProtocolSwapFeeAmount(
+            _lastInvariantAmp,
+            balances,
+            _lastInvariant,
+            chosenTokenIndex,
+            protocolSwapFeePercentage
+        );
+
+        return dueProtocolFeeAmounts;
     }
 
     /**
