@@ -75,7 +75,7 @@ contract UniswapV2StablePair is UniswapV2Pair {
 
         uint _totalSupply = totalSupply;
         if (_totalSupply == 0) {
-            (liquidity, scaledAmount0, scaledAmount1) = onFirstMint(amount0, amount1);
+            (liquidity, scaledAmount0, scaledAmount1) = _onFirstMint(amount0, amount1);
 
             // note: Uniswap's MINIMUM_LIQUIDITY is 1e3, balancer's is 1e6
             // might need to reconcile this difference
@@ -93,12 +93,17 @@ contract UniswapV2StablePair is UniswapV2Pair {
             uint scaledReserve0 = _upscale(_reserve0, _scalingFactor0);
             uint scaledReserve1 = _upscale(_reserve1, _scalingFactor1);
 
-            liquidity = Math.min(scaledAmount0 * _totalSupply / scaledReserve0, scaledAmount1 * _totalSupply / scaledReserve1);
+            (platformFeeToken, platformFeeAmount) = _onJoinPool(scaledAmount0, scaledAmount1, scaledReserve0, scaledReserve1);
 
-            // TODO: calculate how much platformFee to send
+            // pay platformFee if any
+            if (platformFeeAmount > 0) {
+                // platformFeeAmount is not scaled
+                _safeTransfer(platformFeeToken, IUniswapV2Factory(factory).platformFeeTo(), platformFeeAmount);
+            }
         }
 
         require(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
+//        if (platformFeeLiquidity > 0) { _mint(IUniswapV2Factory(factory).platformFeeTo(), platformFeeLiquidity); }
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -107,7 +112,7 @@ contract UniswapV2StablePair is UniswapV2Pair {
         emit Mint(msg.sender, amount0, amount1);
     }
 
-    function onFirstMint(uint _amount0, uint _amount1) internal returns (uint liquidity, uint scaledAmount0, uint scaledAmount1) {
+    function _onFirstMint(uint _amount0, uint _amount1) internal returns (uint liquidity, uint scaledAmount0, uint scaledAmount1) {
         // the code below is from StablePool::_onInitializePool
         // which is called when there is no liquidity in the pool
         scaledAmount0 = _upscale(_amount0, _scalingFactor0);
@@ -124,6 +129,51 @@ contract UniswapV2StablePair is UniswapV2Pair {
         liquidity = invariantAfterJoin;
 
         _updateLastInvariant(invariantAfterJoin, currentAmp);
+    }
+
+    function _onJoinPool(uint scaledAmount0, uint scaledAmount1, uint scaledReserve0, uint scaledReserve1) internal returns (address platformFeeToken, uint platformFeeAmount, uint liquidity) {
+
+        // calculate how much platformFee to pay and in which token
+        (platformFeeToken, platformFeeAmount) = _calculateDuePlatformFee(scaledReserve0, scaledReserve1);
+
+        // subtract platformFee from the liquidity that the user should obtain
+        if (platformFeeToken == token0) { scaledAmount0 = scaledAmount0 - platformFeeLiquidity; }
+        else { scaledAmount1 = scaledAmount1 - platformFeeLiquidity; }
+
+        uint256[] memory amountsIn = new uint256[](2);
+        amountsIn[0] = scaledAmount0;
+        amountsIn[1] = scaledAmount1;
+
+        // calculate how much LP tokens to mint, after subtracting platformFees
+        liquidity = _doJoin();
+
+        // scale & round down the platformFees
+        _downscaleDown(platformFeeAmount, platformFeeToken == token0 ? _scalingFactor0 : _scalingFactor1);
+        _updateInvariantAfterJoin(balances, amountsIn);
+    }
+
+    function _calculateDuePlatformFee(uint scaledReserve0, uint scaledReserve1) internal returns (address platformFeeToken, uint amount) {
+        platformFeeToken = address(0);
+        amount = 0;
+        if (platformFee == 0) { return (platformFeeToken, amount); }
+
+        // we pay the platformFee in the more abundant token
+        platformFeeToken = scaledReserve0 > scaledReserve1 ? token0 : token1;
+
+        uint256[] memory balances = new uint256[](2);
+        balances[0] = scaledReserve0;
+        balances[1] = scaledReserve1;
+
+        amount = StableMath._calcDueTokenProtocolSwapFeeAmount(
+                    _lastInvariantAmp,
+                    balances,
+                    _lastInvariant,
+                    platformFeeToken == token0 ? 0 : 1,
+                    platformFee);
+    }
+
+    function _doJoin() internal returns (uint lpTokenAmount) {
+
     }
 
     function burn(address to) external override lock returns (uint amount0, uint amount1) {

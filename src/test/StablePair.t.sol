@@ -84,10 +84,11 @@ contract StablePairTest is DSTest {
         // act
         mTokenA.mint(pairAddress, 100e18);
         mTokenB.mint(pairAddress, 5e6);
-        UniswapV2StablePair(pairAddress).mint(address(this));
+        uint lpTokenAmount = UniswapV2StablePair(pairAddress).mint(address(this));
 
         // assert
         assertEq(IERC20(pairAddress).balanceOf(address(this)), 100e18);
+        emit log_uint(lpTokenAmount);
     }
 
     function testSwapBasic() public
