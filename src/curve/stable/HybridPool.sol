@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity >=0.8.0;
+pragma solidity 0.8.13;
 
-import "@rari-capital/solmate/src/tokens/ERC20.sol";
-import "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "src/UniswapV2ERC20.sol";
+import "@openzeppelin/security/ReentrancyGuard.sol";
+import "@openzeppelin/token/ERC20/ERC20.sol";
 
 import "../../interfaces/IBentoBoxMinimal.sol";
 import "../../interfaces/IMasterDeployer.sol";
@@ -17,7 +17,7 @@ import "../../libraries/RebaseLibrary.sol";
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 /// @dev The reserves are stored as bento shares. However, the stableswap invariant is applied to the underlying amounts.
 ///      The API uses the underlying amounts.
-contract HybridPool is IPool, ERC20, ReentrancyGuard {
+contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
 
@@ -56,7 +56,7 @@ contract HybridPool is IPool, ERC20, ReentrancyGuard {
 
     bytes32 public constant override poolIdentifier = "Trident:HybridPool";
 
-    constructor(bytes memory _deployData, address _masterDeployer) ERC20("Sushi LP Token", "SLP", 18) {
+    constructor(bytes memory _deployData, address _masterDeployer) {
         (address _token0, address _token1, uint256 _swapFee, uint256 a) = abi.decode(_deployData, (address, address, uint256, uint256));
 
         // @dev Factory ensures that the tokens are sorted.
