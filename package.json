@@ -6,7 +6,7 @@
     "install": "npm run install:uniswap && npm run install:trident",
     "install:uniswap": "cd reference/uniswap-v2-core && npm ci",
     "install:trident": "cd reference/sushi-trident && yarn install --frozen-lockfile",
-    "build:trident": "yarn run build",
+    "build:trident": "cd reference/sushi-trident && yarn run build",
     "mdlint": "markdownlint . --fix",
     "mdlint:check": "markdownlint .",
     "prettier": "prettier --write '**/*.json'",
