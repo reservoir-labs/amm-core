@@ -36,3 +36,6 @@ jobs:
 
       - name: Uniswap v2-core regression tests
         run: cd reference/uniswap-v2-core && npm ci && npm run test
+
+      - name: Sushi-trident regression tests
+        run: cd reference/sushi-trident && npm install && npm test
