@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "description": "Core smart contracts for Vexchange V3",
   "scripts": {
+    "install": "npm run install:uniswap && npm run install:trident",
+    "install:uniswap": "cd reference/uniswap-v2-core && npm ci",
     "install:trident": "cd reference/sushi-trident && yarn install --frozen-lockfile",
     "build:trident": "yarn run build",
     "mdlint": "markdownlint . --fix",
@@ -14,6 +16,7 @@
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
     "lint": "npm run mdlint && npm run prettier && npm run solhint",
     "lint:check": "npm run mdlint:check && npm run prettier:check && npm run solhint:check",
+    "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
     "test:trident": "npm run build:trident && ts-node scripts/inject_trident.ts && cd reference/sushi-trident && yarn run test"
   },
   "devDependencies": {
