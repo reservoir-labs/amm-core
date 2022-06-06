@@ -4,7 +4,7 @@ import "ds-test/test.sol";
 import "forge-std/Vm.sol";
 
 import "src/UniswapV2Factory.sol";
-import "src/UniswapV2Pair.sol";
+import "src/curve/constant-product/UniswapV2Pair.sol";
 import "src/test/__fixtures/MintableERC20.sol";
 
 contract PairTest is DSTest
