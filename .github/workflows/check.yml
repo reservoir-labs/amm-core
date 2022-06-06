@@ -1,6 +1,6 @@
 name: check
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build-lint-test:
@@ -34,5 +34,11 @@ jobs:
       - name: Run test
         run: forge test -vvv
 
+      - name: Install reference dependencies
+        run: npm run install
+
       - name: Uniswap v2-core regression tests
-        run: cd reference/uniswap-v2-core && npm ci && npm run test
+        run: npm run test:uniswap
+
+      - name: Sushi-trident regression tests
+        run: npm run test:trident

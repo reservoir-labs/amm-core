@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Core smart contracts for Vexchange V3",
   "scripts": {
+    "install": "npm run install:uniswap && npm run install:trident",
+    "install:uniswap": "cd reference/uniswap-v2-core && npm ci",
+    "install:trident": "cd reference/sushi-trident && yarn install --frozen-lockfile",
+    "build:trident": "cd reference/sushi-trident && yarn run build",
     "mdlint": "markdownlint . --fix",
     "mdlint:check": "markdownlint .",
     "prettier": "prettier --write '**/*.json'",
@@ -11,12 +15,15 @@
     "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
     "lint": "npm run mdlint && npm run prettier && npm run solhint",
-    "lint:check": "npm run mdlint:check && npm run prettier:check && npm run solhint:check"
+    "lint:check": "npm run mdlint:check && npm run prettier:check && npm run solhint:check",
+    "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
+    "test:trident": "npm run build:trident && ts-node scripts/inject_trident.ts && cd reference/sushi-trident && yarn run test"
   },
   "devDependencies": {
     "markdownlint": "0.25.1",
     "markdownlint-cli": "0.31.1",
     "prettier": "2.6.2",
-    "solhint": "3.3.7"
+    "solhint": "3.3.7",
+    "ts-node": "10.8.1"
   }
 }
