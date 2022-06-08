@@ -30,12 +30,6 @@ interface IPool {
     /// @return An array of tokens supported by the pool.
     function getAssets() external view returns (address[] memory);
 
-    /// @notice Simulates a trade and returns the expected output.
-    /// @dev The pool does not need to include a trade simulator directly in itself - it can use a library.
-    /// @param data ABI-encoded params that the pool requires.
-    /// @return finalAmountOut The amount of output tokens that will be sent to the user if the trade is executed.
-    function getAmountOut(bytes calldata data) external view returns (uint256 finalAmountOut);
-
     /// @dev This event must be emitted on all swaps.
     event Swap(address indexed recipient, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
 
