@@ -2,17 +2,17 @@
 
 pragma solidity 0.8.13;
 
-import "src/UniswapV2ERC20.sol";
 import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/token/ERC20/ERC20.sol";
 
-import "../../interfaces/IBentoBoxMinimal.sol";
-import "../../interfaces/IMasterDeployer.sol";
-import "../../interfaces/IPool.sol";
-import "../../interfaces/ITridentCallee.sol";
-import "../../libraries/MathUtils.sol";
-import "../../libraries/RebaseLibrary.sol";
-
+import "src/UniswapV2ERC20.sol";
+import "src/interfaces/IBentoBoxMinimal.sol";
+import "src/interfaces/IMasterDeployer.sol";
+import "src/interfaces/IPool.sol";
+import "src/interfaces/ITridentCallee.sol";
+import "src/libraries/MathUtils.sol";
+import "src/libraries/RebaseLibrary.sol";
+import "src/libraries/StableMath.sol";
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 /// @dev The reserves are stored as bento shares. However, the stableswap invariant is applied to the underlying amounts.
@@ -54,8 +54,6 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     uint128 internal reserve1;
     uint256 internal dLast;
 
-    bytes32 public constant override poolIdentifier = "Trident:HybridPool";
-
     constructor(bytes memory _deployData, address _masterDeployer) {
         (address _token0, address _token1, uint256 _swapFee, uint256 a) = abi.decode(_deployData, (address, address, uint256, uint256));
 
@@ -88,9 +86,6 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         uint256 newLiq = _computeLiquidity(balance0, balance1);
         uint256 amount0 = balance0 - _reserve0;
         uint256 amount1 = balance1 - _reserve1;
-        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, _reserve0, _reserve1);
-        _reserve0 += uint112(fee0);
-        _reserve1 += uint112(fee1);
 
         (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
 
@@ -136,41 +131,6 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         emit Burn(msg.sender, amount0, amount1, recipient, liquidity);
     }
 
-    /// @dev Burns LP tokens sent to this contract and swaps one of the output tokens for another
-    /// - i.e., the user gets a single token out by burning LP tokens.
-    function burnSingle(bytes calldata data) public override nonReentrant returns (uint256 amountOut) {
-        (address tokenOut, address recipient, bool unwrapBento) = abi.decode(data, (address, address, bool));
-        (uint256 balance0, uint256 balance1) = _balance();
-        uint256 liquidity = balanceOf[address(this)];
-
-        (uint256 _totalSupply, ) = _mintFee(balance0, balance1);
-
-        uint256 amount0 = (liquidity * balance0) / _totalSupply;
-        uint256 amount1 = (liquidity * balance1) / _totalSupply;
-
-        _burn(address(this), liquidity);
-        dLast = _computeLiquidity(balance0 - amount0, balance1 - amount1);
-
-        // Swap tokens
-        if (tokenOut == token1) {
-            // @dev Swap `token0` for `token1`.
-            // @dev Calculate `amountOut` as if the user first withdrew balanced liquidity and then swapped `token0` for `token1`.
-            amount1 += _getAmountOut(amount0, balance0 - amount0, balance1 - amount1, true);
-            _transfer(token1, amount1, recipient, unwrapBento);
-            amountOut = amount1;
-            amount0 = 0;
-        } else {
-            // @dev Swap `token1` for `token0`.
-            require(tokenOut == token0, "INVALID_OUTPUT_TOKEN");
-            amount0 += _getAmountOut(amount1, balance0 - amount0, balance1 - amount1, false);
-            _transfer(token0, amount0, recipient, unwrapBento);
-            amountOut = amount0;
-            amount1 = 0;
-        }
-        _updateReserves();
-        emit Burn(msg.sender, amount0, amount1, recipient, liquidity);
-    }
-
     /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
     function swap(bytes calldata data) public override nonReentrant returns (uint256 amountOut) {
         (address tokenIn, address recipient, bool unwrapBento) = abi.decode(data, (address, address, bool));
@@ -209,7 +169,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         if (tokenIn == token0) {
             tokenOut = token1;
             amountIn = bento.toAmount(token0, amountIn, false);
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, N_A, A_PRECISION);
             _processSwap(token1, recipient, amountOut, context, unwrapBento);
             uint256 balance0 = bento.toAmount(token0, bento.balanceOf(token0, address(this)), false);
             require(balance0 - _reserve0 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
@@ -217,7 +177,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
             amountIn = bento.toAmount(token1, amountIn, false);
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, N_A, A_PRECISION);
             _processSwap(token0, recipient, amountOut, context, unwrapBento);
             uint256 balance1 = bento.toAmount(token1, bento.balanceOf(token1, address(this)), false);
             require(balance1 - _reserve1 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
@@ -289,24 +249,9 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         uint256 _reserve1,
         bool token0In
     ) internal view returns (uint256 dy) {
-    unchecked {
-        uint256 adjustedReserve0 = _reserve0 * token0PrecisionMultiplier;
-        uint256 adjustedReserve1 = _reserve1 * token1PrecisionMultiplier;
-        uint256 feeDeductedAmountIn = amountIn - (amountIn * swapFee) / MAX_FEE;
-        uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1);
-
-        if (token0In) {
-            uint256 x = adjustedReserve0 + (feeDeductedAmountIn * token0PrecisionMultiplier);
-            uint256 y = _getY(x, d);
-            dy = adjustedReserve1 - y - 1;
-            dy /= token1PrecisionMultiplier;
-        } else {
-            uint256 x = adjustedReserve1 + (feeDeductedAmountIn * token1PrecisionMultiplier);
-            uint256 y = _getY(x, d);
-            dy = adjustedReserve0 - y - 1;
-            dy /= token0PrecisionMultiplier;
-        }
-    }
+        return StableMath._getAmountOut(amountIn, _reserve0, _reserve1,
+                                        token0PrecisionMultiplier, token1PrecisionMultiplier,
+                                        token0In, swapFee, N_A, A_PRECISION);
     }
 
     function _transfer(
@@ -330,50 +275,8 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     unchecked {
         uint256 adjustedReserve0 = _reserve0 * token0PrecisionMultiplier;
         uint256 adjustedReserve1 = _reserve1 * token1PrecisionMultiplier;
-        liquidity = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1);
+        liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A, A_PRECISION);
     }
-    }
-
-    function _computeLiquidityFromAdjustedBalances(uint256 xp0, uint256 xp1) internal view returns (uint256 computed) {
-        uint256 s = xp0 + xp1;
-
-        if (s == 0) {
-            computed = 0;
-        }
-        uint256 prevD;
-        uint256 D = s;
-        for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
-            uint256 dP = (((D * D) / xp0) * D) / xp1 / 4;
-            prevD = D;
-            D = (((N_A * s) / A_PRECISION + 2 * dP) * D) / ((N_A / A_PRECISION - 1) * D + 3 * dP);
-            if (D.within1(prevD)) {
-                break;
-            }
-        }
-        computed = D;
-    }
-
-    /// @notice Calculate the new balances of the tokens given the indexes of the token
-    /// that is swapped from (FROM) and the token that is swapped to (TO).
-    /// This function is used as a helper function to calculate how much TO token
-    /// the user should receive on swap.
-    /// @dev Originally https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L432.
-    /// @param x The new total amount of FROM token.
-    /// @return y The amount of TO token that should remain in the pool.
-    function _getY(uint256 x, uint256 D) internal view returns (uint256 y) {
-        uint256 c = (D * D) / (x * 2);
-        c = (c * D) / ((N_A * 2) / A_PRECISION);
-        uint256 b = x + ((D * A_PRECISION) / N_A);
-        uint256 yPrev;
-        y = D;
-        // @dev Iterative approximation.
-        for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
-            yPrev = y;
-            y = (y * y + c) / (y * 2 + b - D);
-            if (y.within1(yPrev)) {
-                break;
-            }
-        }
     }
 
     function _mintFee(uint256 _reserve0, uint256 _reserve1) internal returns (uint256 _totalSupply, uint256 d) {
@@ -396,24 +299,6 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
-    function _nonOptimalMintFee(
-        uint256 _amount0,
-        uint256 _amount1,
-        uint256 _reserve0,
-        uint256 _reserve1
-    ) internal view returns (uint256 token0Fee, uint256 token1Fee) {
-        if (_reserve0 == 0 || _reserve1 == 0) return (0, 0);
-        uint256 amount1Optimal = (_amount0 * _reserve1) / _reserve0;
-
-        if (amount1Optimal <= _amount1) {
-            token1Fee = (swapFee * (_amount1 - amount1Optimal)) / (2 * MAX_FEE);
-        } else {
-            uint256 amount0Optimal = (_amount1 * _reserve0) / _reserve1;
-            token0Fee = (swapFee * (_amount0 - amount0Optimal)) / (2 * MAX_FEE);
-        }
-    }
-
     function getAssets() public view override returns (address[] memory assets) {
         assets = new address[](2);
         assets[0] = token0;
@@ -431,10 +316,6 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             finalAmountOut = bento.toShare(token0, _getAmountOut(amountIn, _reserve0, _reserve1, false), false);
         }
-    }
-
-    function getAmountIn(bytes calldata) public pure override returns (uint256) {
-        revert();
     }
 
     function getReserves() public view returns (uint256 _reserve0, uint256 _reserve1) {
