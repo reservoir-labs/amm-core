@@ -23,11 +23,8 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     event Sync(uint256 reserve0, uint256 reserve1);
 
     uint256 internal constant MINIMUM_LIQUIDITY = 10**3;
-    uint8 internal constant PRECISION = 112;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
-    /// @dev Constant value used as max loop limit.
-    uint256 private constant MAX_LOOP_LIMIT = 256;
     uint256 internal constant MAX_FEE = 10000; // @dev 100%.
     uint256 public swapFee;
     uint256 public platformFee;
@@ -44,7 +41,6 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
     uint256 public token0PrecisionMultiplier;
     uint256 public token1PrecisionMultiplier;
-
 
     uint128 internal reserve0;
     uint128 internal reserve1;
