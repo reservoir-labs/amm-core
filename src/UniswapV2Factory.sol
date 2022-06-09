@@ -1,24 +1,30 @@
 pragma solidity =0.8.13;
 
 import "@openzeppelin/access/Ownable.sol";
-import "./interfaces/IUniswapV2Factory.sol";
+import "src/interfaces/IUniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
+import "src/curve/stable/HybridPool.sol";
 
 contract UniswapV2Factory is IUniswapV2Factory, Ownable {
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
     uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
+    uint public constant MIN_AMP_COEFF    = 1;
+    uint public constant MAX_AMP_COEFF    = 5000;
 
     uint public defaultSwapFee;
     uint public defaultPlatformFee;
+    uint public defaultAmplificationCoefficient;
     address public platformFeeTo;
 
     address public defaultRecoverer;
 
-    mapping(address => mapping(address => address)) public getPair;
+    /// @dev maps the addresses of tokens and the curveId to the pair address
+    /// i.e. getPair[tokenA][tokenB][curveId] => pair
+    mapping(address => mapping(address => mapping(uint256=>address))) public getPair;
     address[] public allPairs;
 
-    event PairCreated(address indexed token0, address indexed token1, address pair, uint allPairsLength, uint swapFee, uint platformFee);
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint curveId, uint allPairsLength, uint swapFee, uint platformFee);
     event PlatformFeeToChanged(address oldFeeTo, address newFeeTo);
     event DefaultSwapFeeChanged(uint oldDefaultSwapFee, uint newDefaultSwapFee);
     event DefaultPlatformFeeChanged(uint oldDefaultPlatformFee, uint newDefaultPlatformFee);
@@ -40,31 +46,48 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
 
         emit DefaultRecovererChanged(defaultRecoverer, _defaultRecoverer);
         defaultRecoverer = _defaultRecoverer;
+
+        // for testing, to change to read from the argument
+        defaultAmplificationCoefficient = MAX_AMP_COEFF;
     }
 
     function allPairsLength() external view returns (uint) {
         return allPairs.length;
     }
 
-    function createPair(address tokenA, address tokenB) external returns (address pair) {
+    function createPair(address tokenA, address tokenB, uint curveId) external returns (address pair) {
         require(tokenA != tokenB, "UniswapV2: IDENTICAL_ADDRESSES");
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), "UniswapV2: ZERO_ADDRESS");
-        require(getPair[token0][token1] == address(0), "UniswapV2: PAIR_EXISTS"); // single check is sufficient
-        bytes memory bytecode = type(UniswapV2Pair).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        require(getPair[token0][token1][curveId] == address(0), "UniswapV2: PAIR_EXISTS"); // single check is sufficient
+        bytes memory bytecode;
+
+        if (curveId == 0) { bytecode = type(UniswapV2Pair).creationCode; }
+        else if (curveId == 1) { bytecode = type(HybridPool).creationCode; }
+        else { revert(); }
+
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1, curveId));
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        IUniswapV2Pair(pair).initialize(token0, token1, defaultSwapFee, defaultPlatformFee);
-        getPair[token0][token1] = pair;
-        getPair[token1][token0] = pair; // populate mapping in the reverse direction
+
+        if (curveId == 0) { IUniswapV2Pair(pair).initialize(token0, token1, defaultSwapFee, defaultPlatformFee); }
+        else if (curveId == 1) { HybridPool(pair).initialize(token0, token1, defaultSwapFee, defaultPlatformFee, defaultAmplificationCoefficient); }
+
+        getPair[token0][token1][curveId] = pair;
+        getPair[token1][token0][curveId] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
-        emit PairCreated(token0, token1, pair, allPairs.length, defaultSwapFee, defaultPlatformFee);
+        emit PairCreated(token0, token1, pair, curveId, allPairs.length, defaultSwapFee, defaultPlatformFee);
     }
 
-    function getPairInitHash() public pure returns(bytes32){
-        bytes memory rawInitCode = type(UniswapV2Pair).creationCode;
+    function getPairInitHash(uint curveId) public pure returns(bytes32){
+        bytes memory rawInitCode;
+        if (curveId == 0) {
+            rawInitCode = type(UniswapV2Pair).creationCode;
+        }
+        else if (curveId == 1) {
+            rawInitCode = type(HybridPool).creationCode;
+        }
 
         return keccak256(abi.encodePacked(rawInitCode));
     }

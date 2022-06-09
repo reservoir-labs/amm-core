@@ -6,17 +6,14 @@ import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/token/ERC20/ERC20.sol";
 
 import "src/UniswapV2ERC20.sol";
-import "src/interfaces/IBentoBoxMinimal.sol";
-import "src/interfaces/IMasterDeployer.sol";
 import "src/interfaces/IPool.sol";
 import "src/interfaces/ITridentCallee.sol";
+import "src/interfaces/IUniswapV2Factory.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-/// @dev The reserves are stored as bento shares. However, the stableswap invariant is applied to the underlying amounts.
-///      The API uses the underlying amounts.
 contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
@@ -27,59 +24,56 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
 
     uint256 internal constant MINIMUM_LIQUIDITY = 10**3;
     uint8 internal constant PRECISION = 112;
+    bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
     /// @dev Constant value used as max loop limit.
     uint256 private constant MAX_LOOP_LIMIT = 256;
     uint256 internal constant MAX_FEE = 10000; // @dev 100%.
-    uint256 public immutable swapFee;
+    uint256 public swapFee;
+    uint256 public platformFee;
 
-    IBentoBoxMinimal public immutable bento;
-    IMasterDeployer public immutable masterDeployer;
-    address public immutable barFeeTo;
-    address public immutable token0;
-    address public immutable token1;
-    uint256 public immutable A;
-    uint256 internal immutable N_A; // @dev 2 * A.
+    address public immutable factory;
+    address public token0;
+    address public token1;
+    uint256 public A;
+    uint256 internal N_A; // @dev 2 * A.
     uint256 internal constant A_PRECISION = 100;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint256 public immutable token0PrecisionMultiplier;
-    uint256 public immutable token1PrecisionMultiplier;
+    uint256 public token0PrecisionMultiplier;
+    uint256 public token1PrecisionMultiplier;
 
-    uint256 public barFee;
 
     uint128 internal reserve0;
     uint128 internal reserve1;
     uint256 internal dLast;
 
-    constructor(bytes memory _deployData, address _masterDeployer) {
-        (address _token0, address _token1, uint256 _swapFee, uint256 a) = abi.decode(_deployData, (address, address, uint256, uint256));
+    modifier onlyFactory() {
+        require(msg.sender == factory, "UniswapV2: FORBIDDEN");
+        _;
+    }
 
+    constructor() {
+        factory = msg.sender;
+    }
+
+    function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee, uint _a) external onlyFactory {
         // @dev Factory ensures that the tokens are sorted.
-        require(_token0 != address(0), "ZERO_ADDRESS");
-        require(_token0 != _token1, "IDENTICAL_ADDRESSES");
-        require(_swapFee <= MAX_FEE, "INVALID_SWAP_FEE");
-        require(a != 0, "ZERO_A");
-
         token0 = _token0;
         token1 = _token1;
         swapFee = _swapFee;
-        barFee = IMasterDeployer(_masterDeployer).barFee();
-        barFeeTo = IMasterDeployer(_masterDeployer).barFeeTo();
-        bento = IBentoBoxMinimal(IMasterDeployer(_masterDeployer).bento());
-        masterDeployer = IMasterDeployer(_masterDeployer);
-        A = a;
-        N_A = 2 * a;
+        platformFee = _platformFee;
+        A = _a;
+        N_A = 2 * _a;
         token0PrecisionMultiplier = uint256(10)**(18 - ERC20(_token0).decimals());
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(_token1).decimals());
     }
 
-    /// @dev Mints LP tokens - should be called via the router after transferring `bento` tokens.
+    /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(bytes calldata data) public override nonReentrant returns (uint256 liquidity) {
-        address recipient = abi.decode(data, (address));
+    function mint(address to) public nonReentrant returns (uint256 liquidity) {
         (uint256 _reserve0, uint256 _reserve1) = _getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
@@ -97,17 +91,16 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
             liquidity = ((newLiq - oldLiq) * _totalSupply) / oldLiq;
         }
         require(liquidity != 0, "INSUFFICIENT_LIQUIDITY_MINTED");
-        _mint(recipient, liquidity);
+        _mint(to, liquidity);
         _updateReserves();
 
         dLast = newLiq;
         uint256 liquidityForEvent = liquidity;
-        emit Mint(msg.sender, amount0, amount1, recipient, liquidityForEvent);
+        emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
     }
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(bytes calldata data) public override nonReentrant returns (IPool.TokenAmount[] memory withdrawnAmounts) {
-        (address recipient, bool unwrapBento) = abi.decode(data, (address, bool));
+    function burn(address to) public nonReentrant returns (IPool.TokenAmount[] memory withdrawnAmounts) {
         (uint256 balance0, uint256 balance1) = _balance();
         uint256 liquidity = balanceOf[address(this)];
 
@@ -117,8 +110,8 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         uint256 amount1 = (liquidity * balance1) / _totalSupply;
 
         _burn(address(this), liquidity);
-        _transfer(token0, amount0, recipient, unwrapBento);
-        _transfer(token1, amount1, recipient, unwrapBento);
+        _safeTransfer(token0, to, amount0);
+        _safeTransfer(token1, to, amount1);
 
         _updateReserves();
 
@@ -128,12 +121,12 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
 
         dLast = _computeLiquidity(balance0 - amount0, balance1 - amount1);
 
-        emit Burn(msg.sender, amount0, amount1, recipient, liquidity);
+        emit Burn(msg.sender, amount0, amount1, to, liquidity);
     }
 
     /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
     function swap(bytes calldata data) public override nonReentrant returns (uint256 amountOut) {
-        (address tokenIn, address recipient, bool unwrapBento) = abi.decode(data, (address, address, bool));
+        (address tokenIn, address recipient) = abi.decode(data, (address, address));
         (uint256 _reserve0, uint256 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
         uint256 amountIn;
         address tokenOut;
@@ -152,60 +145,55 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         }
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
-        _transfer(tokenOut, amountOut, recipient, unwrapBento);
+        _safeTransfer(tokenOut, recipient, amountOut);
         _updateReserves();
         emit Swap(recipient, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
     function flashSwap(bytes calldata data) public override nonReentrant returns (uint256 amountOut) {
-        (address tokenIn, address recipient, bool unwrapBento, uint256 amountIn, bytes memory context) = abi.decode(
+        (address tokenIn, address recipient, uint256 amountIn, bytes memory context) = abi.decode(
             data,
-            (address, address, bool, uint256, bytes)
+            (address, address, uint256, bytes)
         );
         (uint256 _reserve0, uint256 _reserve1) = _getReserves();
         address tokenOut;
 
         if (tokenIn == token0) {
             tokenOut = token1;
-            amountIn = bento.toAmount(token0, amountIn, false);
             amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, N_A, A_PRECISION);
-            _processSwap(token1, recipient, amountOut, context, unwrapBento);
-            uint256 balance0 = bento.toAmount(token0, bento.balanceOf(token0, address(this)), false);
+            _processSwap(token1, recipient, amountOut, context);
+            uint256 balance0 = ERC20(token0).balanceOf(address(this));
             require(balance0 - _reserve0 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
-            amountIn = bento.toAmount(token1, amountIn, false);
             amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, N_A, A_PRECISION);
-            _processSwap(token0, recipient, amountOut, context, unwrapBento);
-            uint256 balance1 = bento.toAmount(token1, bento.balanceOf(token1, address(this)), false);
+            _processSwap(token0, recipient, amountOut, context);
+            uint256 balance1 = ERC20(token1).balanceOf(address(this));
             require(balance1 - _reserve1 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
         }
         _updateReserves();
         emit Swap(recipient, tokenIn, tokenOut, amountIn, amountOut);
     }
 
-    /// @dev Updates `barFee` for Trident protocol.
-    function updateBarFee() public {
-        barFee = masterDeployer.barFee();
+    /// @dev Updates `platformFee` for Trident protocol.
+    function updatePlatformFee() public {
+        platformFee = IUniswapV2Factory(factory).defaultPlatformFee();
     }
 
     function _processSwap(
         address tokenOut,
         address to,
         uint256 amountOut,
-        bytes memory data,
-        bool unwrapBento
+        bytes memory data
     ) internal {
-        _transfer(tokenOut, amountOut, to, unwrapBento);
+        _safeTransfer(tokenOut, to, amountOut);
         if (data.length != 0) ITridentCallee(msg.sender).tridentSwapCallback(data);
     }
 
     function _getReserves() internal view returns (uint256 _reserve0, uint256 _reserve1) {
         (_reserve0, _reserve1) = (reserve0, reserve1);
-        _reserve0 = bento.toAmount(token0, _reserve0, false);
-        _reserve1 = bento.toAmount(token1, _reserve1, false);
     }
 
     function _getReservesAndBalances()
@@ -219,15 +207,17 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     )
     {
         (_reserve0, _reserve1) = (reserve0, reserve1);
-        balance0 = bento.balanceOf(token0, address(this));
-        balance1 = bento.balanceOf(token1, address(this));
-        Rebase memory total0 = bento.totals(token0);
-        Rebase memory total1 = bento.totals(token1);
+        balance0 = ERC20(token0).balanceOf(address(this));
+        balance1 = ERC20(token1).balanceOf(address(this));
 
-        _reserve0 = total0.toElastic(_reserve0);
-        _reserve1 = total1.toElastic(_reserve1);
-        balance0 = total0.toElastic(balance0);
-        balance1 = total1.toElastic(balance1);
+        // TODO: take into account calculation of rebase tokens
+        // Rebase memory total0 = bento.totals(token0);
+        // Rebase memory total1 = bento.totals(token1);
+
+        // _reserve0 = total0.toElastic(_reserve0);
+        // _reserve1 = total1.toElastic(_reserve1);
+        // balance0 = total0.toElastic(balance0);
+        // balance1 = total1.toElastic(balance1);
     }
 
     function _updateReserves() internal {
@@ -239,8 +229,8 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     }
 
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = bento.toAmount(token0, bento.balanceOf(token0, address(this)), false);
-        balance1 = bento.toAmount(token1, bento.balanceOf(token1, address(this)), false);
+        balance0 = ERC20(token0).balanceOf(address(this));
+        balance1 = ERC20(token1).balanceOf(address(this));
     }
 
     function _getAmountOut(
@@ -254,17 +244,9 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
                                         token0In, swapFee, N_A, A_PRECISION);
     }
 
-    function _transfer(
-        address token,
-        uint256 amount,
-        address to,
-        bool unwrapBento
-    ) internal {
-        if (unwrapBento) {
-            bento.withdraw(token, address(this), to, amount, 0);
-        } else {
-            bento.transfer(token, address(this), to, bento.toShare(token, amount, false));
-        }
+    function _safeTransfer(address token, address to, uint value) private {
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "UniswapV2: TRANSFER_FAILED");
     }
 
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
@@ -285,14 +267,14 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         if (_dLast != 0) {
             d = _computeLiquidity(_reserve0, _reserve1);
             if (d > _dLast) {
-                // @dev `barFee` % of increase in liquidity.
-                uint256 _barFee = barFee;
-                uint256 numerator = _totalSupply * (d - _dLast) * _barFee;
-                uint256 denominator = (MAX_FEE - _barFee) * d + _barFee * _dLast;
+                // @dev `platformFee` % of increase in liquidity.
+                uint256 _platformFee = platformFee;
+                uint256 numerator = _totalSupply * (d - _dLast) * _platformFee;
+                uint256 denominator = (MAX_FEE - _platformFee) * d + _platformFee * _dLast;
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    _mint(barFeeTo, liquidity);
+                    _mint(IUniswapV2Factory(factory).platformFeeTo(), liquidity);
                     _totalSupply += liquidity;
                 }
             }
@@ -308,13 +290,12 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     function getAmountOut(bytes calldata data) public view override returns (uint256 finalAmountOut) {
         (address tokenIn, uint256 amountIn) = abi.decode(data, (address, uint256));
         (uint256 _reserve0, uint256 _reserve1) = _getReserves();
-        amountIn = bento.toAmount(tokenIn, amountIn, false);
 
         if (tokenIn == token0) {
-            finalAmountOut = bento.toShare(token1, _getAmountOut(amountIn, _reserve0, _reserve1, true), false);
+            finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
-            finalAmountOut = bento.toShare(token0, _getAmountOut(amountIn, _reserve0, _reserve1, false), false);
+            finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
     }
 

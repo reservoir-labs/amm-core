@@ -10,11 +10,11 @@ interface IUniswapV2Factory {
     function platformFeeTo() external view returns (address);
     function setPlatformFeeTo(address) external;
 
-    function getPair(address tokenA, address tokenB) external view returns (address pair);
+    function getPair(address tokenA, address tokenB, uint curveId) external view returns (address pair);
     function allPairs(uint) external view returns (address pair);
     function allPairsLength() external view returns (uint);
 
-    function createPair(address tokenA, address tokenB) external returns (address pair);
+    function createPair(address tokenA, address tokenB, uint curveId) external returns (address pair);
 
     function defaultSwapFee() external view returns (uint);
     function defaultPlatformFee() external view returns (uint);

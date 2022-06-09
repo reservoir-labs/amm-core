@@ -15,18 +15,7 @@ interface IPool {
     /// @param data ABI-encoded params that the pool requires.
     /// @return finalAmountOut The amount of output tokens that were sent to the user.
     function flashSwap(bytes calldata data) external returns (uint256 finalAmountOut);
-
-    /// @notice Mints liquidity tokens.
-    /// @param data ABI-encoded params that the pool requires.
-    /// @return liquidity The amount of liquidity tokens that were minted for the user.
-    function mint(bytes calldata data) external returns (uint256 liquidity);
-
-    /// @notice Burns liquidity tokens.
-    /// @dev The input LP tokens must've already been sent to the pool.
-    /// @param data ABI-encoded params that the pool requires.
-    /// @return withdrawnAmounts The amount of various output tokens that were sent to the user.
-    function burn(bytes calldata data) external returns (TokenAmount[] memory withdrawnAmounts);
-
+    
     /// @return An array of tokens supported by the pool.
     function getAssets() external view returns (address[] memory);
 
