@@ -143,14 +143,14 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         unchecked {
             amountIn = balance0 - _reserve0;
         }
-            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, N_A, A_PRECISION);
+            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
         unchecked {
             amountIn = balance1 - _reserve1;
         }
-            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, N_A, A_PRECISION);
+            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
         _transfer(tokenOut, amountOut, recipient, unwrapBento);
         _updateReserves();
@@ -243,6 +243,17 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         balance1 = bento.toAmount(token1, bento.balanceOf(token1, address(this)), false);
     }
 
+    function _getAmountOut(
+        uint256 amountIn,
+        uint256 _reserve0,
+        uint256 _reserve1,
+        bool token0In
+    ) internal view returns (uint256 dy) {
+        return StableMath._getAmountOut(amountIn, _reserve0, _reserve1,
+                                        token0PrecisionMultiplier, token1PrecisionMultiplier,
+                                        token0In, swapFee, N_A, A_PRECISION);
+    }
+
     function _transfer(
         address token,
         uint256 amount,
@@ -292,6 +303,19 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         assets = new address[](2);
         assets[0] = token0;
         assets[1] = token1;
+    }
+
+    function getAmountOut(bytes calldata data) public view override returns (uint256 finalAmountOut) {
+        (address tokenIn, uint256 amountIn) = abi.decode(data, (address, uint256));
+        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        amountIn = bento.toAmount(tokenIn, amountIn, false);
+
+        if (tokenIn == token0) {
+            finalAmountOut = bento.toShare(token1, _getAmountOut(amountIn, _reserve0, _reserve1, true), false);
+        } else {
+            require(tokenIn == token1, "INVALID_INPUT_TOKEN");
+            finalAmountOut = bento.toShare(token0, _getAmountOut(amountIn, _reserve0, _reserve1, false), false);
+        }
     }
 
     function getReserves() public view returns (uint256 _reserve0, uint256 _reserve1) {
