@@ -47,7 +47,7 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
         emit DefaultRecovererChanged(defaultRecoverer, _defaultRecoverer);
         defaultRecoverer = _defaultRecoverer;
 
-        // for testing, to change to read from the argument
+        // TODO: for testing, to change to read from the argument
         defaultAmplificationCoefficient = MAX_AMP_COEFF;
     }
 
