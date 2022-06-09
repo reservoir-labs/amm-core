@@ -64,6 +64,8 @@ contract FactoryTest is DSTest
 
         // assert
         assertEq(mFactory.allPairs(0), pairAddress);
+        assertEq(mFactory.getPair(address(mTokenA), address(mTokenB), 0), pairAddress);
+        assertEq(mFactory.getPair(address(mTokenA), address(mTokenB), 1), address(0));
     }
 
     function testLiquidityProvision() public
