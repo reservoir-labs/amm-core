@@ -2,15 +2,18 @@
 pragma solidity =0.8.13;
 
 import "@openzeppelin/token/ERC20/IERC20.sol";
+import "@openzeppelin/utils/math/SafeCast.sol";
 import "src/UniswapV2ERC20.sol";
 import "src/libraries/Math.sol";
 import "src/libraries/UQ112x112.sol";
+import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IUniswapV2Pair.sol";
 import "src/interfaces/IUniswapV2Factory.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
 
 contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     using UQ112x112 for uint224;
+    using SafeCast for uint256;
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
@@ -60,8 +63,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         factory = msg.sender;
     }
 
-    function platformFeeOn() external view returns (bool _platformFeeOn)
-    {
+    function platformFeeOn() external view returns (bool _platformFeeOn) {
         _platformFeeOn = platformFee > 0;
     }
 
@@ -163,6 +165,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         // Assert _platformFee       < FEE_ACCURACY
         // Assert _circulatingShares < uint112
 
+        // perf: can be unchecked
         uint256 _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK;                           // ASSERT: < UINT256
         uint256 _scaledMultiplier = ACCURACY - (SQUARED_ACCURACY / _scaledGrowth);          // ASSERT: < UINT128
         uint256 _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY;   // ASSERT: < UINT144 during maths, ends < UINT128
@@ -194,8 +197,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint balance0 = IERC20(token0).balanceOf(address(this));
-        uint balance1 = IERC20(token1).balanceOf(address(this));
+        uint balance0 = _totalToken1();
+        uint balance1 = _totalToken0();
         uint amount0 = balance0 - _reserve0;
         uint amount1 = balance1 - _reserve1;
 
@@ -220,8 +223,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0;                                // gas savings
         address _token1 = token1;                                // gas savings
-        uint balance0 = IERC20(_token0).balanceOf(address(this));
-        uint balance1 = IERC20(_token1).balanceOf(address(this));
+        uint balance0 = _totalToken1();
+        uint balance1 = _totalToken0();
         uint liquidity = balanceOf[address(this)];
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
@@ -232,8 +235,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
-        balance0 = IERC20(_token0).balanceOf(address(this));
-        balance1 = IERC20(_token1).balanceOf(address(this));
+        balance0 = _totalToken0();
+        balance1 = _totalToken1();
 
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
@@ -255,8 +258,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
             if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
-            balance0 = IERC20(_token0).balanceOf(address(this));
-            balance1 = IERC20(_token1).balanceOf(address(this));
+            balance0 = _totalToken0();
+            balance1 = _totalToken1();
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
@@ -275,8 +278,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function skim(address to) external lock {
         address _token0 = token0; // gas savings
         address _token1 = token1; // gas savings
-        _safeTransfer(_token0, to, IERC20(_token0).balanceOf(address(this)) - reserve0);
-        _safeTransfer(_token1, to, IERC20(_token1).balanceOf(address(this)) - reserve1);
+        _safeTransfer(_token0, to, _totalToken0() - reserve0);
+        _safeTransfer(_token1, to, _totalToken1() - reserve1);
     }
 
     function recoverToken(address token) external {
@@ -292,6 +295,116 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // force reserves to match balances
     function sync() external lock {
-        _update(IERC20(token0).balanceOf(address(this)), IERC20(token1).balanceOf(address(this)), reserve0, reserve1);
+        _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    ASSET MANAGER
+    //////////////////////////////////////////////////////////////////////////*/
+
+    IAssetManager public assetManager;
+
+    function setManager(IAssetManager manager) external onlyFactory {
+        assetManager = manager;
+    }
+
+    modifier onlyManager() {
+        require(msg.sender == address(assetManager), "auth: not asset manager");
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    ASSET MANAGEMENT
+
+     Asset management is supported via a two-way interface. The pool is able to
+     ask the current asset manager for the latest view of the balances. In turn
+     the asset manager can move assets in/out of the pool. This section
+     implements the pool-side of the equation. The manager's side is abstracted
+     behind the IAssetManager interface.
+
+    //////////////////////////////////////////////////////////////////////////*/
+
+    uint256 public token0Invested;
+    uint256 public token1Invested;
+
+    function _token0Liquid() private returns (uint256) {
+        return reserve0 - token0Invested;
+    }
+
+    function _token1Liquid() private returns (uint256) {
+        return reserve1 - token1Invested;
+    }
+
+    function _totalToken0() private returns (uint256) {
+        return IERC20(token0).balanceOf(address(this)) + token0Invested;
+    }
+
+    function _totalToken1() private returns (uint256) {
+        return IERC20(token1).balanceOf(address(this)) + token1Invested;
+    }
+
+    event ProfitReported(address token, uint256 amount);
+    event LossReported(address token, uint256 amount);
+
+    function _handleReport(address token, uint256 prevBalance, uint256 currBalance) private {
+        if (currBalance > prevBalance) {
+            // report profit
+            uint256 lProfit = currBalance - prevBalance;
+
+            emit ProfitReported(token, lProfit);
+
+            token == token0
+                ? reserve0 += lProfit.toUint112()
+                : reserve1 += lProfit.toUint112();
+        }
+        else if (currBalance < prevBalance) {
+            // report loss
+            uint256 lLoss = prevBalance - currBalance;
+
+            emit LossReported(token, lLoss);
+
+            // nb: loss cannot exceed sum of assets
+            token == token0
+                ? reserve0 -= uint112(lLoss)
+                : reserve1 -= uint112(lLoss);
+        }
+        // else do nothing balance is equal
+    }
+
+    function syncBalances() external onlyManager {
+        uint256 lToken0Invested = assetManager.getBalance(token0);
+        uint256 lToken1Invested = assetManager.getBalance(token1);
+
+        _handleReport(token0, token0Invested, lToken0Invested);
+        _handleReport(token1, token1Invested, lToken1Invested);
+    }
+
+    function manageReserves(int256 token0Change, int256 token1Change) external onlyManager {
+        if (token0Change > 0) {
+            token0Invested -= uint256(token0Change);
+        }
+        else if (token0Change < 0) {
+            // todo
+            // push tokens to manager
+            // update internal accounting
+        }
+
+        if (token1Change > 0) {
+            // todo
+            // pull tokens from manager
+            // update internal accounting
+        }
+        else if (token1Change < 0) {
+            // todo
+            // push tokens to manager
+            // update internal accounting
+        }
+
+        _update(
+            _totalToken0(),
+            _totalToken1(),
+            reserve0,
+            reserve1
+        );
     }
 }
