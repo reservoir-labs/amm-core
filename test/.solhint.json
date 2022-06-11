@@ -4,6 +4,8 @@
     "compiler-version": ["error", ">=0.8.0"],
     "func-visibility": ["error", { "ignoreConstructors": true }],
     "avoid-low-level-calls": "off",
+    "not-rely-on-time": "off",
+    "func-name-mixedcase": "off",
     "no-inline-assembly": "off"
   }
 }

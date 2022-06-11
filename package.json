@@ -2,28 +2,78 @@
   "name": "v3-core",
   "version": "0.1.0",
   "description": "Core smart contracts for Vexchange V3",
+  "eslintConfig": {
+    "parserOptions": {
+      "project": [
+        "./scripts/tsconfig.json"
+      ],
+      "sourceType": "module"
+    },
+    "extends": [
+      "@proxima-oss/eslint-config/style/standard"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "*"
+        ],
+        "rules": {
+          "brace-style": [
+            "off"
+          ]
+        }
+      }
+    ]
+  },
   "scripts": {
+    "build": "forge build",
+    "build:trident": "cd reference/sushi-trident && yarn run build",
+    "ci": "forge build --force && npm run lint:check && npm run test:unit && npm run test:deployment && npm run gas:check && npm run slither:check",
+    "clean": "forge clean",
+    "eslint": "npm run eslint:check",
+    "eslint:check": "eslint scripts",
+    "eslint:fix": "eslint scripts --fix",
+    "gas:snapshot": "forge snapshot",
+    "gas:check": "forge snapshot --check",
+    "generate": "typechain --target ethers-v5 --out-dir typings 'out/**/*.json'",
     "install": "npm run install:uniswap && npm run install:trident",
     "install:uniswap": "cd reference/uniswap-v2-core && npm ci",
     "install:trident": "cd reference/sushi-trident && yarn install --frozen-lockfile",
-    "build:trident": "cd reference/sushi-trident && yarn run build",
-    "mdlint": "markdownlint . --fix",
-    "mdlint:check": "markdownlint .",
-    "prettier": "prettier --write '**/*.json'",
-    "prettier:list": "prettier --list-different '**/*.json'",
+    "lint": "npm run lint:check",
+    "lint:check": "npm run solhint:check && npm run prettier:check && npm run eslint:check && npm run mdlint:check",
+    "lint:fix": "npm run solhint:fix && npm run prettier:fix && npm run eslint:fix && npm run mdlint:fix",
+    "mdlint": "npm run mdlint:check",
+    "mdlint:check": "markdownlint --config .markdownlint.yaml .",
+    "mdlint:fix": "markdownlint --config .markdownlint.yaml . --fix",
+    "myth": "npm run myth:check",
+    "myth:check": "myth analyze src/**/*.sol --solc-json .mythril.json --execution-timeout 30",
+    "myth:deep-check": "myth analyze src/**/*.sol --solc-json .mythril.json --execution-timeout 3600 --parallel-solving",
+    "prettier": "npm run prettier:check",
     "prettier:check": "prettier --check '**/*.json'",
-    "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
-    "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
-    "lint": "npm run mdlint && npm run prettier && npm run solhint",
-    "lint:check": "npm run mdlint:check && npm run prettier:check && npm run solhint:check",
+    "prettier:fix": "prettier --write '**/*.json'",
+    "prettier:list": "prettier --list-different '**/*.json'",
+    "reinstall": "rm -rf node_modules package-lock.json && npm install",
+    "slither": "npm run slither:check",
+    "slither:check": "slither .",
+    "slither:triage": "slither . --triage-mode",
+    "slither:report": "slither . --checklist --markdown-root https://github.com/proximacapital/vault/blob/$(git rev-parse --verify HEAD)/ > slither-report.md",
+    "solhint": "npm run solhint:check",
+    "solhint:check": "solhint --config src/.solhint.json 'src/**/*.sol' && solhint --config test/.solhint.json 'test/**/*.sol'",
+    "solhint:fix": "solhint --config src/.solhint.json 'src/**/*.sol' --fix && solhint --config test/.solhint.json 'test/**/*.sol' --fix",
+    "submodule:check": "cd lib && find . -mindepth 1 -maxdepth 1 -type d -exec bash -c 'cd \"{}\" && pwd && ../../scripts/git-master-diff.sh && echo' \\;",
+    "submodule:reset": "git submodule update --recursive",
+    "test": "npm run test:unit",
+    "test:all": "npm run test:unit && npm run test:deployment && npm run test:saddle && npm run test:tectonic",
+    "test:deployment": "bash scripts/test-deployment.sh",
+    "test:trident": "npm run build:trident && ts-node scripts/inject_trident.ts && cd reference/sushi-trident && yarn run test",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
-    "test:trident": "npm run build:trident && ts-node scripts/inject_trident.ts && cd reference/sushi-trident && yarn run test"
+    "test:unit": "forge test"
   },
   "devDependencies": {
-    "markdownlint": "0.25.1",
+    "@proxima-oss/eslint-config": "6.0.1",
     "markdownlint-cli": "0.31.1",
     "prettier": "2.6.2",
-    "solhint": "3.3.7",
-    "ts-node": "10.8.1"
+    "ts-node": "10.8.1",
+    "solhint": "3.3.7"
   }
 }
