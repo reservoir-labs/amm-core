@@ -1,0 +1,4 @@
+{
+  "filter_paths": "lib|test",
+  "detectors_to_exclude": "boolean-equal,solc-version,naming-convention,similar-names,incorrect-equality,missing-zero-check"
+}

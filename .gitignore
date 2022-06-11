@@ -1,3 +1,17 @@
+# foundry
 /cache
 /out
 /node_modules
+
+# slither
+/slither-report.md
+
+# typechain
+/typings
+
+# all .env occurences
+.env
+
+# IDE settings
+/.vscode
+.DS_Store
