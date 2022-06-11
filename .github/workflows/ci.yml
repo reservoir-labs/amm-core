@@ -43,8 +43,6 @@ jobs:
 
       - name: Install js dependencies
         run: npm ci
-        env:
-          PROXIMA_PACKAGE_TOKEN: ${{ secrets.PROXIMA_CI }}
 
       - name: Run lint check
         run: npm run lint:check
@@ -80,6 +78,14 @@ jobs:
         with:
           version: nightly
 
+      - name: Use configured NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install js dependencies
+        run: npm ci
+
       - name: Setup Uniswap V2
         run: npm run install:uniswap
 
@@ -99,6 +105,14 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Use configured NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install js dependencies
+        run: npm ci
 
       - name: Setup Trident
         run: npm run install:trident
@@ -123,24 +137,24 @@ jobs:
       - name: Check gas snapshot
         run: npm run gas:check
 
-  slither:
-    name: Scan with Slither
-    runs-on: ubuntu-latest
+  # slither:
+  #   name: Scan with Slither
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+  #     - name: Install Foundry
+  #       uses: foundry-rs/foundry-toolchain@v1
+  #       with:
+  #         version: nightly
 
-      - name: Build contracts with extra output
-        run: forge build --extra-output abi --extra-output userdoc --extra-output devdoc --extra-output evm.methodIdentifiers --force
+  #     - name: Build contracts with extra output
+  #       run: forge build --extra-output abi --extra-output userdoc --extra-output devdoc --extra-output evm.methodIdentifiers --force
 
-      - name: Run Slither analysis
-        uses: crytic/slither-action@v0.1.1
-        with:
-          ignore-compile: true
+  #     - name: Run Slither analysis
+  #       uses: crytic/slither-action@v0.1.1
+  #       with:
+  #         ignore-compile: true
