@@ -86,6 +86,9 @@ jobs:
       - name: Install js dependencies
         run: npm ci
 
+      - name: Run build
+        run: forge build
+
       - name: Setup Uniswap V2
         run: npm run install:uniswap
 
@@ -113,6 +116,9 @@ jobs:
 
       - name: Install js dependencies
         run: npm ci
+
+      - name: Run build
+        run: forge build
 
       - name: Setup Trident
         run: npm run install:trident
