@@ -1,5 +1,5 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 
 // define sources and targets
 const lPoolPath = {
@@ -8,7 +8,9 @@ const lPoolPath = {
 };
 const lFactoryPath = {
     source: path.resolve("out/HybridPoolFactory.sol/HybridPoolFactory.json"),
-    target: path.resolve("reference/sushi-trident/artifacts/contracts/pool/hybrid/HybridPoolFactory.sol/HybridPoolFactory.json"),
+    target: path.resolve(
+        "reference/sushi-trident/artifacts/contracts/pool/hybrid/HybridPoolFactory.sol/HybridPoolFactory.json",
+    ),
 };
 
 // note: we may want to not directly inject the HybridPool in the future.

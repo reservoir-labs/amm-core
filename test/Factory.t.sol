@@ -3,8 +3,9 @@ pragma solidity =0.8.13;
 import "ds-test/test.sol";
 import "forge-std/Vm.sol";
 
+import "test/__fixtures/MintableERC20.sol";
+
 import "src/UniswapV2Factory.sol";
-import "src/test/__fixtures/MintableERC20.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
 contract FactoryTest is DSTest
