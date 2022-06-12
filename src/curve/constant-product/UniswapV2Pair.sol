@@ -197,8 +197,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint balance0 = _totalToken1();
-        uint balance1 = _totalToken0();
+        uint balance0 = _totalToken0();
+        uint balance1 = _totalToken1();
         uint amount0 = balance0 - _reserve0;
         uint amount1 = balance1 - _reserve1;
 
@@ -223,8 +223,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0;                                // gas savings
         address _token1 = token1;                                // gas savings
-        uint balance0 = _totalToken1();
-        uint balance1 = _totalToken0();
+        uint balance0 = _totalToken0();
+        uint balance1 = _totalToken1();
         uint liquidity = balanceOf[address(this)];
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
