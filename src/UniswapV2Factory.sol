@@ -21,6 +21,8 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
 
     /// @dev maps the addresses of tokens and the curveId to the pair address
     /// i.e. getPair[tokenA][tokenB][curveId] => pair
+    /// curveId 0 indicates a constant product pair
+    /// curveId 1 indicates a stable pair
     mapping(address => mapping(address => mapping(uint256=>address))) public getPair;
     address[] public allPairs;
 
