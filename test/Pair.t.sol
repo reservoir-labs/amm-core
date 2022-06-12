@@ -5,9 +5,11 @@ import "forge-std/Vm.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
+import "src/interfaces/IAssetManager.sol";
 import "src/UniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
+// todo: change all test function `public` -> `external`
 contract PairTest is DSTest
 {
     Vm private vm = Vm(HEVM_ADDRESS);
@@ -139,5 +141,58 @@ contract PairTest is DSTest
         // assert
         assertEq(UniswapV2Pair(pairAddress).swapFee(), 200);
         assertEq(UniswapV2Pair(pairAddress).platformFee(), 5000);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    ASSET MANAGEMENT
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function testManageReserves() external
+    {
+        // arrange
+        IUniswapV2Pair lPair = IUniswapV2Pair(createPair());
+
+        mTokenA.mint(address(lPair), 50e18);
+        mTokenB.mint(address(lPair), 50e18);
+        lPair.mint(address(this));
+
+        vm.prank(address(mFactory));
+        lPair.setManager(IAssetManager(address(this)));
+
+        // act
+        lPair.manageReserves(-20e18, -20e18);
+
+        // assert
+        assertEq(mTokenA.balanceOf(address(this)), 20e18);
+        assertEq(mTokenB.balanceOf(address(this)), 20e18);
+    }
+
+    function testManageReserves_KStillHolds() external
+    {
+        // arrange
+        IUniswapV2Pair lPair = IUniswapV2Pair(createPair());
+
+        vm.prank(address(mFactory));
+        lPair.setManager(IAssetManager(address(this)));
+
+        // initial liq
+        mTokenA.mint(address(lPair), 1e18);
+        mTokenB.mint(address(lPair), 1e18);
+        lPair.mint(address(this));
+
+        // first untaxed liq
+        mTokenA.mint(address(lPair), 50e18);
+        mTokenB.mint(address(lPair), 50e18);
+        uint256 lLiq1 = lPair.mint(address(this));
+
+        lPair.manageReserves(-50e18, -50e18);
+
+        // act
+        mTokenA.mint(address(lPair), 50e18);
+        mTokenB.mint(address(lPair), 50e18);
+        uint256 lLiq2 = lPair.mint(address(this));
+
+        // assert
+        assertEq(lLiq1, lLiq2);
     }
 }

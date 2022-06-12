@@ -380,24 +380,35 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function manageReserves(int256 token0Change, int256 token1Change) external onlyManager {
+        require(
+            token0Change != type(int256).min && token1Change != type(int256).min,
+            "cast would overflow"
+        );
+
         if (token0Change > 0) {
-            token0Invested -= uint256(token0Change);
+            revert("todo");
+            // pull tokens from manager
+            // update internal accounting
         }
         else if (token0Change < 0) {
-            // todo
-            // push tokens to manager
-            // update internal accounting
+            uint256 lAdditional = uint256(-token0Change);
+
+            token0Invested += lAdditional;
+
+            IERC20(token0).transfer(address(assetManager), lAdditional);
         }
 
         if (token1Change > 0) {
-            // todo
+            revert("todo");
             // pull tokens from manager
             // update internal accounting
         }
         else if (token1Change < 0) {
-            // todo
-            // push tokens to manager
-            // update internal accounting
+            uint256 lAdditional = uint256(-token1Change);
+
+            token1Invested += lAdditional;
+
+            IERC20(token1).transfer(address(assetManager), lAdditional);
         }
 
         _update(

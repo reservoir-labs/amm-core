@@ -1,5 +1,7 @@
 pragma solidity =0.8.13;
 
+import "src/interfaces/IAssetManager.sol";
+
 interface IUniswapV2Pair {
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
@@ -37,4 +39,10 @@ interface IUniswapV2Pair {
     function setCustomPlatformFee(uint _customPlatformFee) external;
 
     function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external;
+
+    function assetManager() external returns (IAssetManager);
+    function setManager(IAssetManager manager) external;
+
+    function syncBalances() external;
+    function manageReserves(int256 token0Change, int256 token1Change) external;
 }
