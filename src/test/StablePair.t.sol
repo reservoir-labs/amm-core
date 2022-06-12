@@ -76,17 +76,17 @@ contract StablePairTest is DSTest
     function testSwapBasic() public
     {
         // arrange
-        address pairAddress = createStablePair();
-        provideLiquidity(pairAddress);
+        address pair = createStablePair();
+        provideLiquidity(pair);
         uint256 swapAmount = 5e18;
 
         // act
         bytes memory getAmountOutArgs = abi.encode(address(mTokenA), swapAmount);
-        uint256 expectedAmount = HybridPool(pairAddress).getAmountOut(getAmountOutArgs);
+        uint256 expectedAmount = HybridPool(pair).getAmountOut(getAmountOutArgs);
 
-        mTokenA.mint(pairAddress, swapAmount);
+        mTokenA.mint(pair, swapAmount);
         bytes memory swapArgs = abi.encode(address(mTokenA), address(this));
-        HybridPool(pairAddress).swap(swapArgs);
+        HybridPool(pair).swap(swapArgs);
 
         // assert
         assertEq(mTokenB.balanceOf(address(this)), expectedAmount);
