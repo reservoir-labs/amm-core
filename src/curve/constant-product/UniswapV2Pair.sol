@@ -26,7 +26,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint public platformFee;
     uint public customPlatformFee;
 
-    address public factory;
+    IUniswapV2Factory public factory;
     address public token0;
     address public token1;
 
@@ -47,7 +47,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     modifier onlyFactory() {
-        require(msg.sender == factory, "UniswapV2: FORBIDDEN");
+        require(msg.sender == address(factory), "UniswapV2: FORBIDDEN");
         _;
     }
 
@@ -57,7 +57,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
 
     constructor() {
-        factory = msg.sender;
+        factory = IUniswapV2Factory(msg.sender);
     }
 
     function platformFeeOn() external view returns (bool _platformFeeOn)
@@ -83,7 +83,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function updateSwapFee() public {
         uint256 _swapFee = customSwapFee > 0
             ? customSwapFee
-            : IUniswapV2Factory(factory).defaultSwapFee();
+            : factory.defaultSwapFee();
 
         if (_swapFee == swapFee) { return; }
 
@@ -94,7 +94,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee > 0
             ? customPlatformFee
-            : IUniswapV2Factory(factory).defaultPlatformFee();
+            : factory.defaultPlatformFee();
 
         if (_platformFee == platformFee) { return; }
 
@@ -114,11 +114,11 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     // called once by the factory at time of deployment
-    function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external onlyFactory {
+    function initialize(address _token0, address _token1) external onlyFactory {
         token0 = _token0;
         token1 = _token1;
-        swapFee = _swapFee;
-        platformFee = _platformFee;
+        swapFee = factory.defaultSwapFee();
+        platformFee = factory.defaultPlatformFee();
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -182,7 +182,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = IUniswapV2Factory(factory).platformFeeTo();
+                    address platformFeeTo = factory.platformFeeTo();
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
@@ -280,7 +280,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = IUniswapV2Factory(factory).defaultRecoverer();
+        address _recoverer = factory.defaultRecoverer();
         require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");

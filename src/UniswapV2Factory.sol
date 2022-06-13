@@ -62,17 +62,11 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
         require(getPair[token0][token1][curveId] == address(0), "UniswapV2: PAIR_EXISTS"); // single check is sufficient
 
         bytes memory    bytecode;
-        bytes4          initSig;
-        bytes memory    initData;
         if (curveId == 0) {
             bytecode    = type(UniswapV2Pair).creationCode;
-            initSig     = bytes4(keccak256("initialize(address,address,uint256,uint256)"));
-            initData    = abi.encode(token0, token1, defaultSwapFee, defaultPlatformFee);
         }
         else if (curveId == 1) {
             bytecode    = type(HybridPool).creationCode;
-            initSig     = bytes4(keccak256("initialize(address,address,uint256,uint256,uint256)"));
-            initData    = abi.encode(token0, token1, defaultSwapFee, defaultPlatformFee, defaultAmplificationCoefficient);
         }
         else {
             revert("factory: invalid curveId");
@@ -83,9 +77,11 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
 
-        pair.call(
-            abi.encodePacked(initSig, initData)
-        );
+        pair.call(abi.encodeWithSignature(
+            "initialize(address,address)",
+            token0,
+            token1
+        ));
 
         getPair[token0][token1][curveId] = pair;
         getPair[token1][token0][curveId] = pair; // populate mapping in the reverse direction

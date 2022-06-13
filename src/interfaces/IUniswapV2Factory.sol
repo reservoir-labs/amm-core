@@ -18,6 +18,8 @@ interface IUniswapV2Factory {
 
     function defaultSwapFee() external view returns (uint);
     function defaultPlatformFee() external view returns (uint);
+    function defaultAmplificationCoefficient() external view returns (uint);
+
     function defaultRecoverer() external view returns (address);
     function defaultPlatformFeeOn() external view returns (bool);
 

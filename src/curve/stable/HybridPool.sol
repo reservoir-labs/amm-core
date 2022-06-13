@@ -29,7 +29,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     uint256 public swapFee;
     uint256 public platformFee;
 
-    address public immutable factory;
+    IUniswapV2Factory public immutable factory;
     address public token0;
     address public token1;
     uint256 public A;
@@ -47,22 +47,25 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     uint256 internal dLast;
 
     modifier onlyFactory() {
-        require(msg.sender == factory, "UniswapV2: FORBIDDEN");
+        require(msg.sender == address(factory), "UniswapV2: FORBIDDEN");
         _;
     }
 
     constructor() {
-        factory = msg.sender;
+        factory = IUniswapV2Factory(msg.sender);
     }
 
-    function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee, uint _a) external onlyFactory {
+    function initialize(address _token0, address _token1) external onlyFactory {
         // @dev Factory ensures that the tokens are sorted.
         token0 = _token0;
         token1 = _token1;
-        swapFee = _swapFee;
-        platformFee = _platformFee;
-        A = _a;
-        N_A = 2 * _a;
+        swapFee = factory.defaultSwapFee();
+        platformFee = factory.defaultPlatformFee();
+
+        uint256 lDefaultA = factory.defaultAmplificationCoefficient();
+        A = lDefaultA;
+        N_A = 2 * lDefaultA;
+
         token0PrecisionMultiplier = uint256(10)**(18 - ERC20(_token0).decimals());
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(_token1).decimals());
     }
@@ -175,7 +178,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
 
     /// @dev Updates `platformFee` for Trident protocol.
     function updatePlatformFee() public {
-        platformFee = IUniswapV2Factory(factory).defaultPlatformFee();
+        platformFee = factory.defaultPlatformFee();
     }
 
     function _processSwap(
@@ -270,7 +273,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    _mint(IUniswapV2Factory(factory).platformFeeTo(), liquidity);
+                    _mint(factory.platformFeeTo(), liquidity);
                     _totalSupply += liquidity;
                 }
             }
