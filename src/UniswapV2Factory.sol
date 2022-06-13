@@ -60,19 +60,32 @@ contract UniswapV2Factory is IUniswapV2Factory, Ownable {
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), "UniswapV2: ZERO_ADDRESS");
         require(getPair[token0][token1][curveId] == address(0), "UniswapV2: PAIR_EXISTS"); // single check is sufficient
-        bytes memory bytecode;
 
-        if (curveId == 0) { bytecode = type(UniswapV2Pair).creationCode; }
-        else if (curveId == 1) { bytecode = type(HybridPool).creationCode; }
-        else { revert(); }
+        bytes memory    bytecode;
+        bytes4          initSig;
+        bytes memory    initData;
+        if (curveId == 0) {
+            bytecode    = type(UniswapV2Pair).creationCode;
+            initSig     = bytes4(keccak256("initialize(address,address,uint256,uint256)"));
+            initData    = abi.encode(token0, token1, defaultSwapFee, defaultPlatformFee);
+        }
+        else if (curveId == 1) {
+            bytecode    = type(HybridPool).creationCode;
+            initSig     = bytes4(keccak256("initialize(address,address,uint256,uint256,uint256)"));
+            initData    = abi.encode(token0, token1, defaultSwapFee, defaultPlatformFee, defaultAmplificationCoefficient);
+        }
+        else {
+            revert("factory: invalid curveId");
+        }
 
         bytes32 salt = keccak256(abi.encodePacked(token0, token1, curveId));
         assembly {
             pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
 
-        if (curveId == 0) { IUniswapV2Pair(pair).initialize(token0, token1, defaultSwapFee, defaultPlatformFee); }
-        else if (curveId == 1) { HybridPool(pair).initialize(token0, token1, defaultSwapFee, defaultPlatformFee, defaultAmplificationCoefficient); }
+        pair.call(
+            abi.encodePacked(initSig, initData)
+        );
 
         getPair[token0][token1][curveId] = pair;
         getPair[token1][token0][curveId] = pair; // populate mapping in the reverse direction
