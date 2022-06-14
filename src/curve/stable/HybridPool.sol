@@ -252,6 +252,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), "UniswapV2: TRANSFER_FAILED");
     }
+
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
     /// See the StableSwap paper for details.
     /// @dev Originally https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
