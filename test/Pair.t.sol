@@ -1,7 +1,6 @@
 pragma solidity =0.8.13;
 
-import "ds-test/test.sol";
-import "forge-std/Vm.sol";
+import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 

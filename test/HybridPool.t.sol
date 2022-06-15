@@ -1,6 +1,5 @@
 pragma solidity 0.8.13;
 
-import "ds-test/test.sol";
 import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
@@ -55,7 +54,7 @@ contract HybridPoolTest is DSTest
         // act & assert
         bytes memory args = abi.encode(address(this));
         vm.expectRevert(stdError.divisionError);
-        uint256 liquidity = HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(args);
     }
 
     function testSwap() public
@@ -64,7 +63,7 @@ contract HybridPoolTest is DSTest
         mTokenA.mint(mPool, 100e18);
         mTokenB.mint(mPool, 100e18);
         bytes memory args = abi.encode(address(this));
-        uint256 liquidity = HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(args);
 
         // act
         mTokenA.mint(address(mPool), 5e18);
@@ -81,12 +80,12 @@ contract HybridPoolTest is DSTest
         mTokenA.mint(mPool, 100e18);
         mTokenB.mint(mPool, 100e18);
         bytes memory args = abi.encode(address(this));
-        uint256 liquidity = HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(args);
 
         // act & assert
         args = abi.encode(address(mTokenA), address(this));
         vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        uint256 amountOut = HybridPool(mPool).swap(args);
+        HybridPool(mPool).swap(args);
     }
 
     function testBurn() public
@@ -95,7 +94,7 @@ contract HybridPoolTest is DSTest
         mTokenA.mint(mPool, 100e18);
         mTokenB.mint(mPool, 100e18);
         bytes memory args = abi.encode(address(this));
-        uint256 liquidity = HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(args);
 
         // act
         HybridPool(mPool).transfer(mPool, HybridPool(mPool).balanceOf(address(this)));
