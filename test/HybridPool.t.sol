@@ -8,10 +8,8 @@ import "src/curve/stable/MasterDeployer.sol";
 import "src/curve/stable/HybridPoolFactory.sol";
 import "src/curve/stable/HybridPool.sol";
 
-contract HybridPoolTest is DSTest
+contract HybridPoolTest is Test
 {
-    Vm private vm = Vm(HEVM_ADDRESS);
-
     address private mPlatformFeeTo = address(1);
     address private mBentoPlaceholder = address(2);
     MasterDeployer private mMasterDeployer = new MasterDeployer(2500, mPlatformFeeTo, mBentoPlaceholder);

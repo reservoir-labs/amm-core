@@ -7,10 +7,8 @@ import "test/__fixtures/MintableERC20.sol";
 import "src/UniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
-contract PairTest is DSTest
+contract PairTest is Test
 {
-    Vm private vm = Vm(HEVM_ADDRESS);
-
     address private mOwner = address(1);
     address private mRecoverer = address(3);
 
