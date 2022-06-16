@@ -252,7 +252,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
 
     function _safeTransfer(address token, address to, uint value) private {
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(TRANSFER, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), "UniswapV2: TRANSFER_FAILED");
     }
 

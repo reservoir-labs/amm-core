@@ -37,8 +37,7 @@ contract HybridPoolTest is Test
         mTokenB.mint(mPool, 100e18);
 
         // act
-        bytes memory args = abi.encode(address(this));
-        uint256 liquidity = HybridPool(mPool).mint(args);
+        uint256 liquidity = HybridPool(mPool).mint(abi.encode(address(this)));
 
         // assert
         assertEq(HybridPool(mPool).balanceOf(address(this)), liquidity);
@@ -50,9 +49,8 @@ contract HybridPoolTest is Test
         mTokenA.mint(mPool, 100e18);
 
         // act & assert
-        bytes memory args = abi.encode(address(this));
         vm.expectRevert(stdError.divisionError);
-        HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(abi.encode(address(this)));
     }
 
     function testSwap() public
@@ -60,13 +58,11 @@ contract HybridPoolTest is Test
         // arrange
         mTokenA.mint(mPool, 100e18);
         mTokenB.mint(mPool, 100e18);
-        bytes memory args = abi.encode(address(this));
-        HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(abi.encode(address(this)));
 
         // act
         mTokenA.mint(address(mPool), 5e18);
-        args = abi.encode(address(mTokenA), address(this));
-        uint256 amountOut = HybridPool(mPool).swap(args);
+        uint256 amountOut = HybridPool(mPool).swap(abi.encode(address(mTokenA), address(this)));
 
         // assert
         assertEq(amountOut, mTokenB.balanceOf(address(this)));
@@ -77,13 +73,11 @@ contract HybridPoolTest is Test
         // arrange
         mTokenA.mint(mPool, 100e18);
         mTokenB.mint(mPool, 100e18);
-        bytes memory args = abi.encode(address(this));
-        HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(abi.encode(address(this)));
 
         // act & assert
-        args = abi.encode(address(mTokenA), address(this));
         vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        HybridPool(mPool).swap(args);
+        HybridPool(mPool).swap(abi.encode(address(mTokenA), address(this)));
     }
 
     function testBurn() public
@@ -91,13 +85,11 @@ contract HybridPoolTest is Test
         // arrange
         mTokenA.mint(mPool, 100e18);
         mTokenB.mint(mPool, 100e18);
-        bytes memory args = abi.encode(address(this));
-        HybridPool(mPool).mint(args);
+        HybridPool(mPool).mint(abi.encode(address(this)));
 
         // act
         HybridPool(mPool).transfer(mPool, HybridPool(mPool).balanceOf(address(this)));
-        args = abi.encode(address(this));
-        HybridPool(mPool).burn(args);
+        HybridPool(mPool).burn(abi.encode(address(this)));
 
         // assert
         assertEq(HybridPool(mPool).balanceOf(address(this)), 0);
