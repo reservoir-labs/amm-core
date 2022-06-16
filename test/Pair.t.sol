@@ -1,17 +1,14 @@
 pragma solidity =0.8.13;
 
-import "ds-test/test.sol";
-import "forge-std/Vm.sol";
+import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
 import "src/UniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
-contract PairTest is DSTest
+contract PairTest is Test
 {
-    Vm private vm = Vm(HEVM_ADDRESS);
-
     address private mOwner = address(1);
     address private mRecoverer = address(3);
 

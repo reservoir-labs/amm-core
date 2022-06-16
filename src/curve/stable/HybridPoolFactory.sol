@@ -8,6 +8,7 @@ import "./PoolDeployer.sol";
 /// @notice Contract for deploying Trident exchange Hybrid Pool with configurations.
 /// @author Mudit Gupta.
 contract HybridPoolFactory is PoolDeployer {
+    // solhint-disable-next-line no-empty-blocks
     constructor(address _masterDeployer) PoolDeployer(_masterDeployer) {}
 
     function deployPool(bytes memory _deployData) external returns (address pool) {
