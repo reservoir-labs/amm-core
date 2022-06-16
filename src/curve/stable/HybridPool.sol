@@ -23,7 +23,7 @@ contract HybridPool is IPool, UniswapV2ERC20, ReentrancyGuard {
     event Sync(uint256 reserve0, uint256 reserve1);
 
     uint256 internal constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
+    bytes4 private constant TRANSFER = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
     uint8 internal constant PRECISION = 112;
 
