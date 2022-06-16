@@ -16,8 +16,8 @@ library StableMath {
         uint256 token1PrecisionMultiplier,
         bool token0In,
         uint256 swapFee,
-        uint256 N_A,
-        uint256 A_PRECISION
+        uint256 N_A,        // solhint-disable-line var-name-mixedcase
+        uint256 A_PRECISION // solhint-disable-line var-name-mixedcase
     ) internal pure returns(uint256 dy) {
     unchecked {
         uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
@@ -42,8 +42,8 @@ library StableMath {
     function _computeLiquidityFromAdjustedBalances(
         uint256 xp0,
         uint256 xp1,
-        uint256 N_A,
-        uint256 A_PRECISION
+        uint256 N_A,        // solhint-disable-line var-name-mixedcase
+        uint256 A_PRECISION // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 computed) {
         uint256 s = xp0 + xp1;
 
@@ -51,6 +51,7 @@ library StableMath {
             computed = 0;
         }
         uint256 prevD;
+        // solhint-disable-next-line var-name-mixedcase
         uint256 D = s;
         for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
             uint256 dP = (((D * D) / xp0) * D) / xp1 / 4;
@@ -72,9 +73,9 @@ library StableMath {
     /// @return y The amount of TO token that should remain in the pool.
     function _getY(
         uint256 x,
-        uint256 D,
-        uint256 N_A,
-        uint256 A_PRECISION
+        uint256 D,          // solhint-disable-line var-name-mixedcase
+        uint256 N_A,        // solhint-disable-line var-name-mixedcase
+        uint256 A_PRECISION // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 y) {
         uint256 c = (D * D) / (x * 2);
         c = (c * D) / ((N_A * 2) / A_PRECISION);
