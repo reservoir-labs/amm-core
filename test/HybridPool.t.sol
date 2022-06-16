@@ -14,9 +14,9 @@ contract HybridPoolTest is Test
     address private mBentoPlaceholder = address(2);
     MasterDeployer private mMasterDeployer = new MasterDeployer(2500, mPlatformFeeTo, mBentoPlaceholder);
     HybridPoolFactory private mPoolFactory = new HybridPoolFactory(address(mMasterDeployer));
+    HybridPool private mPool;
     MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
-    HybridPool private mPool;
 
     function setUp() public
     {
