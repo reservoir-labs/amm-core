@@ -16,125 +16,104 @@ contract PairTest is Test
     MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
 
     UniswapV2Factory private mFactory;
+    UniswapV2Pair private mPair;
 
     function setUp() public
     {
         mFactory = new UniswapV2Factory(30, 2500, mOwner, mRecoverer);
+        createPair();
     }
 
-    function createPair() private returns (address rPairAddress)
+    function createPair() private
     {
-        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB));
+        mPair = UniswapV2Pair(mFactory.createPair(address(mTokenA), address(mTokenB)));
     }
 
     function testCustomSwapFeeOffByDefault() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // assert
-        assertEq(UniswapV2Pair(pairAddress).customSwapFee(), 0);
-        assertEq(UniswapV2Pair(pairAddress).swapFee(), 30);
+        assertEq(mPair.customSwapFee(), 0);
+        assertEq(mPair.swapFee(), 30);
     }
 
     function testSetCustomSwapFeeBasic() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // act
-        mFactory.setSwapFeeForPair(pairAddress, 100);
+        mFactory.setSwapFeeForPair(address(mPair), 100);
 
         // assert
-        assertEq(UniswapV2Pair(pairAddress).customSwapFee(), 100);
-        assertEq(UniswapV2Pair(pairAddress).swapFee(), 100);
+        assertEq(mPair.customSwapFee(), 100);
+        assertEq(mPair.swapFee(), 100);
     }
 
     function testSetCustomSwapFeeOnThenOff() public
     {
         // arrange
-        address pairAddress = createPair();
-        mFactory.setSwapFeeForPair(pairAddress, 100);
+        mFactory.setSwapFeeForPair(address(mPair), 100);
 
         // act
-        mFactory.setSwapFeeForPair(pairAddress, 0);
+        mFactory.setSwapFeeForPair(address(mPair), 0);
 
         // assert
-        assertEq(UniswapV2Pair(pairAddress).customSwapFee(), 0);
-        assertEq(UniswapV2Pair(pairAddress).swapFee(), 30);
+        assertEq(mPair.customSwapFee(), 0);
+        assertEq(mPair.swapFee(), 30);
     }
 
     function testSetCustomSwapFeeMoreThanMaxSwapFee() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
-        mFactory.setSwapFeeForPair(pairAddress, 4000);
+        mFactory.setSwapFeeForPair(address(mPair), 4000);
     }
 
     function testCustomPlatformFeeOffByDefault() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // assert
-        assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 0);
-        assertEq(UniswapV2Pair(pairAddress).platformFee(), 2500);
+        assertEq(mPair.customPlatformFee(), 0);
+        assertEq(mPair.platformFee(), 2500);
     }
 
     function testSetCustomPlatformFeeBasic() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // act
-        mFactory.setPlatformFeeForPair(pairAddress, 100);
+        mFactory.setPlatformFeeForPair(address(mPair), 100);
 
         // assert
-        assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 100);
-        assertEq(UniswapV2Pair(pairAddress).platformFee(), 100);
+        assertEq(mPair.customPlatformFee(), 100);
+        assertEq(mPair.platformFee(), 100);
     }
 
     function testSetCustomPlatformFeeOnThenOff() public
     {
         // arrange
-        address pairAddress = createPair();
-        mFactory.setPlatformFeeForPair(pairAddress, 100);
+        mFactory.setPlatformFeeForPair(address(mPair), 100);
 
         // act
-        mFactory.setPlatformFeeForPair(pairAddress, 0);
+        mFactory.setPlatformFeeForPair(address(mPair), 0);
 
         // assert
-        assertEq(UniswapV2Pair(pairAddress).customPlatformFee(), 0);
-        assertEq(UniswapV2Pair(pairAddress).platformFee(), 2500);
+        assertEq(mPair.customPlatformFee(), 0);
+        assertEq(mPair.platformFee(), 2500);
     }
 
     function testSetCustomPlatformFeeMoreThanMaxPlatformFee() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
-        mFactory.setPlatformFeeForPair(pairAddress, 9000);
+        mFactory.setPlatformFeeForPair(address(mPair), 9000);
     }
 
     function testUpdateDefaultFees() public
     {
-        // arrange
-        address pairAddress = createPair();
-
         // act
         mFactory.setDefaultSwapFee(200);
         mFactory.setDefaultPlatformFee(5000);
 
-        UniswapV2Pair(pairAddress).updateSwapFee();
-        UniswapV2Pair(pairAddress).updatePlatformFee();
+        mPair.updateSwapFee();
+        mPair.updatePlatformFee();
 
         // assert
-        assertEq(UniswapV2Pair(pairAddress).swapFee(), 200);
-        assertEq(UniswapV2Pair(pairAddress).platformFee(), 5000);
+        assertEq(mPair.swapFee(), 200);
+        assertEq(mPair.platformFee(), 5000);
     }
 }
