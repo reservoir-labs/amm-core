@@ -3,12 +3,14 @@ pragma solidity =0.8.13;
 import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
-
+import "src/libraries/Math.sol";
 import "src/UniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
 contract PairTest is Test
 {
+    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
+
     address private _owner = address(1);
     address private _recoverer = address(3);
 
@@ -31,11 +33,11 @@ contract PairTest is Test
 
     function _provideLiquidity(address aPair) private
     {
-        _tokenA.mint(address(this), 100e18);
-        _tokenB.mint(address(this), 100e18);
+        _tokenA.mint(address(this), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(this), INITIAL_MINT_AMOUNT);
 
-        _tokenA.transfer(aPair, 100e18);
-        _tokenB.transfer(aPair, 100e18);
+        _tokenA.transfer(aPair, INITIAL_MINT_AMOUNT);
+        _tokenB.transfer(aPair, INITIAL_MINT_AMOUNT);
         UniswapV2Pair(aPair).mint(address(this));
     }
 
@@ -153,9 +155,21 @@ contract PairTest is Test
 
         // assert
         uint256 lpTokenBalance = _pair.balanceOf(address(this));
-        assertEq(lpTokenBalance, 100e18 - _pair.MINIMUM_LIQUIDITY());
+        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _pair.MINIMUM_LIQUIDITY();
+        assertEq(lpTokenBalance, lExpectedLpTokenBalance);
         assertEq(_tokenA.balanceOf(address(this)), 0);
         assertEq(_tokenB.balanceOf(address(this)), 0);
+    }
+
+    function testMint_MinimumLiquidity() public
+    {
+        // arrange
+        _tokenA.mint(address(_pair), 1000);
+        _tokenB.mint(address(_pair), 1000);
+
+        // act & assert
+        vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
+        _pair.mint(address(this));
     }
 
     function testMint_UnderMinimumLiquidity() public
@@ -167,11 +181,6 @@ contract PairTest is Test
         // act & assert
         vm.expectRevert(stdError.arithmeticError);
         _pair.mint(address(this));
-    }
-
-    function testMint_InitialMint() public
-    {
-
     }
 
     function testSwap() public
@@ -201,6 +210,9 @@ contract PairTest is Test
     {
         // arrange
         _provideLiquidity(address(_pair));
+        uint256 lLpTokenBalance = _pair.balanceOf(address(this));
+        uint256 lLpTokenTotalSupply = _pair.totalSupply();
+        (uint112 lReserve0, uint112 lReserve1, ) = _pair.getReserves();
 
         // act
         _pair.transfer(address(_pair), _pair.balanceOf(address(this)));
@@ -208,7 +220,8 @@ contract PairTest is Test
 
         // assert
         assertEq(_pair.balanceOf(address(this)), 0);
-        assertEq(_tokenA.balanceOf(address(this)), 100e18 - _pair.MINIMUM_LIQUIDITY());
-        assertEq(_tokenB.balanceOf(address(this)), 100e18 - _pair.MINIMUM_LIQUIDITY());
+        (address lToken0, address lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
+        assertEq(UniswapV2Pair(lToken0).balanceOf(address(this)), lLpTokenBalance * lReserve0 / lLpTokenTotalSupply);
+        assertEq(UniswapV2Pair(lToken1).balanceOf(address(this)), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
     }
 }
