@@ -23,10 +23,10 @@ contract FactoryTest is Test
     function setUp() public
     {
         mFactory = new UniswapV2Factory(30, 0, mOwner, mRecoverer);
-        mPair = createPair(mTokenA, mTokenB);
+        mPair = _createPair(mTokenA, mTokenB);
     }
 
-    function createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)
+    function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)
     {
         rPair = UniswapV2Pair(mFactory.createPair(address(aTokenA), address(aTokenB)));
     }
@@ -34,7 +34,7 @@ contract FactoryTest is Test
     function testCreatePair() public
     {
         // act
-        UniswapV2Pair pair = createPair(mTokenA, mTokenC);
+        UniswapV2Pair pair = _createPair(mTokenA, mTokenC);
 
         // assert
         assertEq(mFactory.allPairs(1), address(pair));

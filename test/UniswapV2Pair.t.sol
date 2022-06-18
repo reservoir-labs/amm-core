@@ -153,9 +153,25 @@ contract PairTest is Test
 
         // assert
         uint256 lpTokenBalance = mPair.balanceOf(address(this));
-        assertEq(lpTokenBalance, 99999999999999999000);
+        assertEq(lpTokenBalance, 100e18 - mPair.MINIMUM_LIQUIDITY());
         assertEq(mTokenA.balanceOf(address(this)), 0);
         assertEq(mTokenB.balanceOf(address(this)), 0);
+    }
+
+    function testMint_UnderMinimumLiquidity() public
+    {
+        // arrange
+        mTokenA.mint(address(mPair), 10);
+        mTokenB.mint(address(mPair), 10);
+
+        // act & assert
+        vm.expectRevert(stdError.arithmeticError);
+        mPair.mint(address(this));
+    }
+
+    function testMint_InitialMint() public
+    {
+
     }
 
     function testSwap() public
@@ -183,6 +199,16 @@ contract PairTest is Test
 
     function testBurn() public
     {
+        // arrange
+        _provideLiquidity(address(mPair));
 
+        // act
+        mPair.transfer(address(mPair), mPair.balanceOf(address(this)));
+        mPair.burn(address(this));
+
+        // assert
+        assertEq(mPair.balanceOf(address(this)), 0);
+        assertEq(mTokenA.balanceOf(address(this)), 100e18 - mPair.MINIMUM_LIQUIDITY());
+        assertEq(mTokenB.balanceOf(address(this)), 100e18 - mPair.MINIMUM_LIQUIDITY());
     }
 }
