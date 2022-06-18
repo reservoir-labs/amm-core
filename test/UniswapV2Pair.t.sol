@@ -9,33 +9,33 @@ import "src/curve/constant-product/UniswapV2Pair.sol";
 
 contract PairTest is Test
 {
-    address private mOwner = address(1);
-    address private mRecoverer = address(3);
+    address private _owner = address(1);
+    address private _recoverer = address(3);
 
-    MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
-    MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
+    MintableERC20 private _tokenA = new MintableERC20("TokenA", "TA");
+    MintableERC20 private _tokenB = new MintableERC20("TokenB", "TB");
 
-    UniswapV2Factory private mFactory;
-    UniswapV2Pair private mPair;
+    UniswapV2Factory private _factory;
+    UniswapV2Pair private _pair;
 
     function setUp() public
     {
-        mFactory = new UniswapV2Factory(30, 2500, mOwner, mRecoverer);
-        mPair = _createPair(mTokenA, mTokenB);
+        _factory = new UniswapV2Factory(30, 2500, _owner, _recoverer);
+        _pair = _createPair(_tokenA, _tokenB);
     }
 
     function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)
     {
-        rPair = UniswapV2Pair(mFactory.createPair(address(aTokenA), address(aTokenB)));
+        rPair = UniswapV2Pair(_factory.createPair(address(aTokenA), address(aTokenB)));
     }
 
     function _provideLiquidity(address aPair) private
     {
-        mTokenA.mint(address(this), 100e18);
-        mTokenB.mint(address(this), 100e18);
+        _tokenA.mint(address(this), 100e18);
+        _tokenB.mint(address(this), 100e18);
 
-        mTokenA.transfer(aPair, 100e18);
-        mTokenB.transfer(aPair, 100e18);
+        _tokenA.transfer(aPair, 100e18);
+        _tokenB.transfer(aPair, 100e18);
         UniswapV2Pair(aPair).mint(address(this));
     }
 
@@ -61,112 +61,112 @@ contract PairTest is Test
     function testCustomSwapFeeOffByDefault() public
     {
         // assert
-        assertEq(mPair.customSwapFee(), 0);
-        assertEq(mPair.swapFee(), 30);
+        assertEq(_pair.customSwapFee(), 0);
+        assertEq(_pair.swapFee(), 30);
     }
 
     function testSetCustomSwapFeeBasic() public
     {
         // act
-        mFactory.setSwapFeeForPair(address(mPair), 100);
+        _factory.setSwapFeeForPair(address(_pair), 100);
 
         // assert
-        assertEq(mPair.customSwapFee(), 100);
-        assertEq(mPair.swapFee(), 100);
+        assertEq(_pair.customSwapFee(), 100);
+        assertEq(_pair.swapFee(), 100);
     }
 
     function testSetCustomSwapFeeOnThenOff() public
     {
         // arrange
-        mFactory.setSwapFeeForPair(address(mPair), 100);
+        _factory.setSwapFeeForPair(address(_pair), 100);
 
         // act
-        mFactory.setSwapFeeForPair(address(mPair), 0);
+        _factory.setSwapFeeForPair(address(_pair), 0);
 
         // assert
-        assertEq(mPair.customSwapFee(), 0);
-        assertEq(mPair.swapFee(), 30);
+        assertEq(_pair.customSwapFee(), 0);
+        assertEq(_pair.swapFee(), 30);
     }
 
     function testSetCustomSwapFeeMoreThanMaxSwapFee() public
     {
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
-        mFactory.setSwapFeeForPair(address(mPair), 4000);
+        _factory.setSwapFeeForPair(address(_pair), 4000);
     }
 
     function testCustomPlatformFeeOffByDefault() public
     {
         // assert
-        assertEq(mPair.customPlatformFee(), 0);
-        assertEq(mPair.platformFee(), 2500);
+        assertEq(_pair.customPlatformFee(), 0);
+        assertEq(_pair.platformFee(), 2500);
     }
 
     function testSetCustomPlatformFeeBasic() public
     {
         // act
-        mFactory.setPlatformFeeForPair(address(mPair), 100);
+        _factory.setPlatformFeeForPair(address(_pair), 100);
 
         // assert
-        assertEq(mPair.customPlatformFee(), 100);
-        assertEq(mPair.platformFee(), 100);
+        assertEq(_pair.customPlatformFee(), 100);
+        assertEq(_pair.platformFee(), 100);
     }
 
     function testSetCustomPlatformFeeOnThenOff() public
     {
         // arrange
-        mFactory.setPlatformFeeForPair(address(mPair), 100);
+        _factory.setPlatformFeeForPair(address(_pair), 100);
 
         // act
-        mFactory.setPlatformFeeForPair(address(mPair), 0);
+        _factory.setPlatformFeeForPair(address(_pair), 0);
 
         // assert
-        assertEq(mPair.customPlatformFee(), 0);
-        assertEq(mPair.platformFee(), 2500);
+        assertEq(_pair.customPlatformFee(), 0);
+        assertEq(_pair.platformFee(), 2500);
     }
 
     function testSetCustomPlatformFeeMoreThanMaxPlatformFee() public
     {
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
-        mFactory.setPlatformFeeForPair(address(mPair), 9000);
+        _factory.setPlatformFeeForPair(address(_pair), 9000);
     }
 
     function testUpdateDefaultFees() public
     {
         // act
-        mFactory.setDefaultSwapFee(200);
-        mFactory.setDefaultPlatformFee(5000);
+        _factory.setDefaultSwapFee(200);
+        _factory.setDefaultPlatformFee(5000);
 
-        mPair.updateSwapFee();
-        mPair.updatePlatformFee();
+        _pair.updateSwapFee();
+        _pair.updatePlatformFee();
 
         // assert
-        assertEq(mPair.swapFee(), 200);
-        assertEq(mPair.platformFee(), 5000);
+        assertEq(_pair.swapFee(), 200);
+        assertEq(_pair.platformFee(), 5000);
     }
 
     function testMint() public
     {
         // act
-        _provideLiquidity(address(mPair));
+        _provideLiquidity(address(_pair));
 
         // assert
-        uint256 lpTokenBalance = mPair.balanceOf(address(this));
-        assertEq(lpTokenBalance, 100e18 - mPair.MINIMUM_LIQUIDITY());
-        assertEq(mTokenA.balanceOf(address(this)), 0);
-        assertEq(mTokenB.balanceOf(address(this)), 0);
+        uint256 lpTokenBalance = _pair.balanceOf(address(this));
+        assertEq(lpTokenBalance, 100e18 - _pair.MINIMUM_LIQUIDITY());
+        assertEq(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_tokenB.balanceOf(address(this)), 0);
     }
 
     function testMint_UnderMinimumLiquidity() public
     {
         // arrange
-        mTokenA.mint(address(mPair), 10);
-        mTokenB.mint(address(mPair), 10);
+        _tokenA.mint(address(_pair), 10);
+        _tokenB.mint(address(_pair), 10);
 
         // act & assert
         vm.expectRevert(stdError.arithmeticError);
-        mPair.mint(address(this));
+        _pair.mint(address(this));
     }
 
     function testMint_InitialMint() public
@@ -177,20 +177,20 @@ contract PairTest is Test
     function testSwap() public
     {
         // arrange
-        _provideLiquidity(address(mPair));
+        _provideLiquidity(address(_pair));
 
         uint256 reserve0;
         uint256 reserve1;
-        (reserve0, reserve1, ) = mPair.getReserves();
+        (reserve0, reserve1, ) = _pair.getReserves();
         uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, 30);
 
         // act
         address token0;
         address token1;
-        (token0, token1) = _getToken0Token1(address(mTokenA), address(mTokenB));
+        (token0, token1) = _getToken0Token1(address(_tokenA), address(_tokenB));
 
-        MintableERC20(token0).mint(address(mPair), 1e18);
-        mPair.swap(0, expectedOutput, address(this), "");
+        MintableERC20(token0).mint(address(_pair), 1e18);
+        _pair.swap(0, expectedOutput, address(this), "");
 
         // assert
         assertEq(MintableERC20(token1).balanceOf(address(this)), expectedOutput);
@@ -200,15 +200,15 @@ contract PairTest is Test
     function testBurn() public
     {
         // arrange
-        _provideLiquidity(address(mPair));
+        _provideLiquidity(address(_pair));
 
         // act
-        mPair.transfer(address(mPair), mPair.balanceOf(address(this)));
-        mPair.burn(address(this));
+        _pair.transfer(address(_pair), _pair.balanceOf(address(this)));
+        _pair.burn(address(this));
 
         // assert
-        assertEq(mPair.balanceOf(address(this)), 0);
-        assertEq(mTokenA.balanceOf(address(this)), 100e18 - mPair.MINIMUM_LIQUIDITY());
-        assertEq(mTokenB.balanceOf(address(this)), 100e18 - mPair.MINIMUM_LIQUIDITY());
+        assertEq(_pair.balanceOf(address(this)), 0);
+        assertEq(_tokenA.balanceOf(address(this)), 100e18 - _pair.MINIMUM_LIQUIDITY());
+        assertEq(_tokenB.balanceOf(address(this)), 100e18 - _pair.MINIMUM_LIQUIDITY());
     }
 }

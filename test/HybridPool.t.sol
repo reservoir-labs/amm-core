@@ -10,13 +10,13 @@ import "src/curve/stable/HybridPool.sol";
 
 contract HybridPoolTest is Test
 {
-    address private mPlatformFeeTo = address(1);
-    address private mBentoPlaceholder = address(2);
-    MasterDeployer private mMasterDeployer = new MasterDeployer(2500, mPlatformFeeTo, mBentoPlaceholder);
-    HybridPoolFactory private mPoolFactory = new HybridPoolFactory(address(mMasterDeployer));
-    HybridPool private mPool;
-    MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
-    MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
+    address private _platformFeeTo = address(1);
+    address private _bentoPlaceholder = address(2);
+    MasterDeployer private _masterDeployer = new MasterDeployer(2500, _platformFeeTo, _bentoPlaceholder);
+    HybridPoolFactory private _poolFactory = new HybridPoolFactory(address(_masterDeployer));
+    HybridPool private _pool;
+    MintableERC20 private _tokenA = new MintableERC20("TokenA", "TA");
+    MintableERC20 private _tokenB = new MintableERC20("TokenB", "TB");
 
     function setUp() public
     {
@@ -25,75 +25,75 @@ contract HybridPoolTest is Test
 
     function _createPair() private
     {
-        mMasterDeployer.addToWhitelist(address(mPoolFactory));
-        bytes memory lDeployData = abi.encode(address(mTokenA), address(mTokenB), 25, 1000);
-        mPool = HybridPool(mMasterDeployer.deployPool(address(mPoolFactory), lDeployData));
+        _masterDeployer.addToWhitelist(address(_poolFactory));
+        bytes memory lDeployData = abi.encode(address(_tokenA), address(_tokenB), 25, 1000);
+        _pool = HybridPool(_masterDeployer.deployPool(address(_poolFactory), lDeployData));
     }
 
     function testMint() public
     {
         // arrange
-        mTokenA.mint(address(mPool), 100e18);
-        mTokenB.mint(address(mPool), 100e18);
+        _tokenA.mint(address(_pool), 100e18);
+        _tokenB.mint(address(_pool), 100e18);
 
         // act
-        uint256 lLiquidity = mPool.mint(abi.encode(address(this)));
+        uint256 lLiquidity = _pool.mint(abi.encode(address(this)));
 
         // assert
-        assertEq(mPool.balanceOf(address(this)), lLiquidity);
+        assertEq(_pool.balanceOf(address(this)), lLiquidity);
     }
 
     function testMint_OnlyTransferOneToken() public
     {
         // arrange
-        mTokenA.mint(address(mPool), 100e18);
+        _tokenA.mint(address(_pool), 100e18);
 
         // act & assert
         vm.expectRevert(stdError.divisionError);
-        mPool.mint(abi.encode(address(this)));
+        _pool.mint(abi.encode(address(this)));
     }
 
     function testSwap() public
     {
         // arrange
-        mTokenA.mint(address(mPool), 100e18);
-        mTokenB.mint(address(mPool), 100e18);
-        mPool.mint(abi.encode(address(this)));
+        _tokenA.mint(address(_pool), 100e18);
+        _tokenB.mint(address(_pool), 100e18);
+        _pool.mint(abi.encode(address(this)));
 
         // act
-        mTokenA.mint(address(address(mPool)), 5e18);
-        uint256 lAmountOut = mPool.swap(abi.encode(address(mTokenA), address(this)));
+        _tokenA.mint(address(address(_pool)), 5e18);
+        uint256 lAmountOut = _pool.swap(abi.encode(address(_tokenA), address(this)));
 
         // assert
-        assertEq(lAmountOut, mTokenB.balanceOf(address(this)));
+        assertEq(lAmountOut, _tokenB.balanceOf(address(this)));
     }
 
     function testSwap_NoTransferTokens() public
     {
         // arrange
-        mTokenA.mint(address(mPool), 100e18);
-        mTokenB.mint(address(mPool), 100e18);
-        mPool.mint(abi.encode(address(this)));
+        _tokenA.mint(address(_pool), 100e18);
+        _tokenB.mint(address(_pool), 100e18);
+        _pool.mint(abi.encode(address(this)));
 
         // act & assert
         vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        mPool.swap(abi.encode(address(mTokenA), address(this)));
+        _pool.swap(abi.encode(address(_tokenA), address(this)));
     }
 
     function testBurn() public
     {
         // arrange
-        mTokenA.mint(address(mPool), 100e18);
-        mTokenB.mint(address(mPool), 100e18);
-        mPool.mint(abi.encode(address(this)));
+        _tokenA.mint(address(_pool), 100e18);
+        _tokenB.mint(address(_pool), 100e18);
+        _pool.mint(abi.encode(address(this)));
 
         // act
-        mPool.transfer(address(mPool), mPool.balanceOf(address(this)));
-        mPool.burn(abi.encode(address(this)));
+        _pool.transfer(address(_pool), _pool.balanceOf(address(this)));
+        _pool.burn(abi.encode(address(this)));
 
         // assert
-        assertEq(mPool.balanceOf(address(this)), 0);
-        assertEq(mTokenA.balanceOf(address(this)), 99999999999999999500);
-        assertEq(mTokenB.balanceOf(address(this)), 99999999999999999500);
+        assertEq(_pool.balanceOf(address(this)), 0);
+        assertEq(_tokenA.balanceOf(address(this)), 99999999999999999500);
+        assertEq(_tokenB.balanceOf(address(this)), 99999999999999999500);
     }
 }
