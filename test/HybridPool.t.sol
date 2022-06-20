@@ -20,14 +20,18 @@ contract HybridPoolTest is Test
 
     function setUp() public
     {
-        _createPair();
+        _pool = _createPair(_tokenA, _tokenB, 25, 1000);
     }
 
-    function _createPair() private
+    function _createPair(MintableERC20 aTokenA,
+                         MintableERC20 aTokenB,
+                         uint256 aSwapFee,
+                         uint256 aAmplificationCoefficient
+    ) private returns (HybridPool rPool)
     {
         _masterDeployer.addToWhitelist(address(_poolFactory));
-        bytes memory lDeployData = abi.encode(address(_tokenA), address(_tokenB), 25, 1000);
-        _pool = HybridPool(_masterDeployer.deployPool(address(_poolFactory), lDeployData));
+        bytes memory lDeployData = abi.encode(address(aTokenA), address(aTokenB), aSwapFee, aAmplificationCoefficient);
+        rPool = HybridPool(_masterDeployer.deployPool(address(_poolFactory), lDeployData));
     }
 
     function testMint() public

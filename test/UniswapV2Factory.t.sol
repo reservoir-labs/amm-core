@@ -7,7 +7,7 @@ import "test/__fixtures/MintableERC20.sol";
 import "src/UniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
-contract FactoryTest is Test
+contract UniswapV2FactoryTest is Test
 {
     address private _owner = address(1);
     address private _recoverer = address(3);

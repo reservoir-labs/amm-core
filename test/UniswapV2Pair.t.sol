@@ -7,7 +7,7 @@ import "src/libraries/Math.sol";
 import "src/UniswapV2Factory.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 
-contract PairTest is Test
+contract UniswapV2PairTest is Test
 {
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
 
@@ -16,6 +16,7 @@ contract PairTest is Test
 
     MintableERC20 private _tokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 private _tokenB = new MintableERC20("TokenB", "TB");
+    MintableERC20 private _tokenC = new MintableERC20("TokenC", "TC");
 
     UniswapV2Factory private _factory;
     UniswapV2Pair private _pair;
@@ -24,21 +25,17 @@ contract PairTest is Test
     {
         _factory = new UniswapV2Factory(30, 2500, _owner, _recoverer);
         _pair = _createPair(_tokenA, _tokenB);
+        _tokenA.mint(address(this), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(this), INITIAL_MINT_AMOUNT);
+
+        _tokenA.transfer(address(_pair), INITIAL_MINT_AMOUNT);
+        _tokenB.transfer(address(_pair), INITIAL_MINT_AMOUNT);
+        UniswapV2Pair(_pair).mint(address(this));
     }
 
     function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)
     {
         rPair = UniswapV2Pair(_factory.createPair(address(aTokenA), address(aTokenB)));
-    }
-
-    function _provideLiquidity(address aPair) private
-    {
-        _tokenA.mint(address(this), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(this), INITIAL_MINT_AMOUNT);
-
-        _tokenA.transfer(aPair, INITIAL_MINT_AMOUNT);
-        _tokenB.transfer(aPair, INITIAL_MINT_AMOUNT);
-        UniswapV2Pair(aPair).mint(address(this));
     }
 
     function _calculateOutput(
@@ -151,9 +148,24 @@ contract PairTest is Test
 
     function testMint() public
     {
-        // act
-        _provideLiquidity(address(_pair));
+        // arrange
+        uint256 lLpTokenBalanceBefore = _pair.balanceOf(address(this));
+        uint256 lTotalSupplyLpToken = _pair.totalSupply();
+        uint256 lLiquidityToAdd = 5e18;
+        (uint256 reserve0, , ) = _pair.getReserves();
 
+        // act
+        _tokenA.mint(address(_pair), lLiquidityToAdd);
+        _tokenB.mint(address(_pair), lLiquidityToAdd);
+        _pair.mint(address(this));
+
+        // assert
+        uint256 lAdditionalLpTokens = lLiquidityToAdd * lTotalSupplyLpToken / reserve0;
+        assertEq(_pair.balanceOf(address(this)), lLpTokenBalanceBefore + lAdditionalLpTokens);
+    }
+
+    function testMint_InitialMint() public
+    {
         // assert
         uint256 lpTokenBalance = _pair.balanceOf(address(this));
         uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _pair.MINIMUM_LIQUIDITY();
@@ -165,30 +177,30 @@ contract PairTest is Test
     function testMint_MinimumLiquidity() public
     {
         // arrange
-        _tokenA.mint(address(_pair), 1000);
-        _tokenB.mint(address(_pair), 1000);
+        UniswapV2Pair lPair = _createPair(_tokenA, _tokenC);
+        _tokenA.mint(address(lPair), 1000);
+        _tokenC.mint(address(lPair), 1000);
 
         // act & assert
         vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
-        _pair.mint(address(this));
+        lPair.mint(address(this));
     }
 
     function testMint_UnderMinimumLiquidity() public
     {
         // arrange
-        _tokenA.mint(address(_pair), 10);
-        _tokenB.mint(address(_pair), 10);
+        UniswapV2Pair lPair = _createPair(_tokenA, _tokenC);
+        _tokenA.mint(address(lPair), 10);
+        _tokenB.mint(address(lPair), 10);
 
         // act & assert
         vm.expectRevert(stdError.arithmeticError);
-        _pair.mint(address(this));
+        lPair.mint(address(this));
     }
 
     function testSwap() public
     {
         // arrange
-        _provideLiquidity(address(_pair));
-
         uint256 reserve0;
         uint256 reserve1;
         (reserve0, reserve1, ) = _pair.getReserves();
@@ -210,7 +222,6 @@ contract PairTest is Test
     function testBurn() public
     {
         // arrange
-        _provideLiquidity(address(_pair));
         uint256 lLpTokenBalance = _pair.balanceOf(address(this));
         uint256 lLpTokenTotalSupply = _pair.totalSupply();
         (uint112 lReserve0, uint112 lReserve1, ) = _pair.getReserves();
