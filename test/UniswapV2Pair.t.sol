@@ -60,14 +60,14 @@ contract PairTest is Test
         (rToken0, rToken1) = aTokenA < aTokenB ? (aTokenA, aTokenB) : (aTokenB, aTokenA);
     }
 
-    function testCustomSwapFeeOffByDefault() public
+    function testCustomSwapFee_OffByDefault() public
     {
         // assert
         assertEq(_pair.customSwapFee(), 0);
         assertEq(_pair.swapFee(), 30);
     }
 
-    function testSetCustomSwapFeeBasic() public
+    function testSetSwapFeeForPair() public
     {
         // act
         _factory.setSwapFeeForPair(address(_pair), 100);
@@ -77,7 +77,7 @@ contract PairTest is Test
         assertEq(_pair.swapFee(), 100);
     }
 
-    function testSetCustomSwapFeeOnThenOff() public
+    function testSetSwapFeeForPair_Reset() public
     {
         // arrange
         _factory.setSwapFeeForPair(address(_pair), 100);
@@ -90,21 +90,21 @@ contract PairTest is Test
         assertEq(_pair.swapFee(), 30);
     }
 
-    function testSetCustomSwapFeeMoreThanMaxSwapFee() public
+    function testSetSwapFeeForPair_BreachMaximum() public
     {
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
         _factory.setSwapFeeForPair(address(_pair), 4000);
     }
 
-    function testCustomPlatformFeeOffByDefault() public
+    function testCustomPlatformFee_OffByDefault() public
     {
         // assert
         assertEq(_pair.customPlatformFee(), 0);
         assertEq(_pair.platformFee(), 2500);
     }
 
-    function testSetCustomPlatformFeeBasic() public
+    function testSetPlatformFeeForPair() public
     {
         // act
         _factory.setPlatformFeeForPair(address(_pair), 100);
@@ -114,7 +114,7 @@ contract PairTest is Test
         assertEq(_pair.platformFee(), 100);
     }
 
-    function testSetCustomPlatformFeeOnThenOff() public
+    function testSetPlatformFeeForPair_Reset() public
     {
         // arrange
         _factory.setPlatformFeeForPair(address(_pair), 100);
@@ -127,7 +127,7 @@ contract PairTest is Test
         assertEq(_pair.platformFee(), 2500);
     }
 
-    function testSetCustomPlatformFeeMoreThanMaxPlatformFee() public
+    function testSetPlatformFeeForPair_BreachMaximum() public
     {
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
@@ -136,10 +136,11 @@ contract PairTest is Test
 
     function testUpdateDefaultFees() public
     {
-        // act
+        // arrange
         _factory.setDefaultSwapFee(200);
         _factory.setDefaultPlatformFee(5000);
 
+        // act
         _pair.updateSwapFee();
         _pair.updatePlatformFee();
 
