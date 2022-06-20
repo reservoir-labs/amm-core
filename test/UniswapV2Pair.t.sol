@@ -201,9 +201,7 @@ contract UniswapV2PairTest is Test
     function testSwap() public
     {
         // arrange
-        uint256 reserve0;
-        uint256 reserve1;
-        (reserve0, reserve1, ) = _pair.getReserves();
+        (uint256 reserve0, uint256 reserve1, ) = _pair.getReserves();
         uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, 30);
 
         // act
@@ -224,7 +222,7 @@ contract UniswapV2PairTest is Test
         // arrange
         uint256 lLpTokenBalance = _pair.balanceOf(address(this));
         uint256 lLpTokenTotalSupply = _pair.totalSupply();
-        (uint112 lReserve0, uint112 lReserve1, ) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
 
         // act
         _pair.transfer(address(_pair), _pair.balanceOf(address(this)));
