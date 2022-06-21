@@ -49,16 +49,16 @@ contract HybridPoolTest is Test
         // arrange
         uint256 lLpTokenBalanceBefore = _pool.balanceOf(address(this));
         uint256 lLpTokenTotalSupply = _pool.totalSupply();
-        uint256 lOldLiquidity = INITIAL_MINT_AMOUNT * 2;
+        (uint256 lReserve0, uint256 lReserve1) = _pool.getReserves();
+        uint256 lOldLiquidity = lReserve0 + lReserve1;
         uint256 lLiquidityToAdd = 5e18;
 
         // act
         _tokenA.mint(address(_pool), lLiquidityToAdd);
         _tokenB.mint(address(_pool), lLiquidityToAdd);
-        _pool.mint(abi.encode(address(this)));
+        uint256 lAdditionalLpTokens = _pool.mint(abi.encode(address(this)));
 
         // assert
-        uint256 lAdditionalLpTokens = ((INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity) * lLpTokenTotalSupply / lOldLiquidity;
         assertEq(_pool.balanceOf(address(this)), lLpTokenBalanceBefore + lAdditionalLpTokens);
     }
 
@@ -66,7 +66,7 @@ contract HybridPoolTest is Test
     {
         // arrange
         HybridPool lPair = _createPair(_tokenA, _tokenC, 25, 1000);
-        _tokenA.mint(address(lPair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(lPair), 5e18);
 
         // act & assert
         vm.expectRevert(stdError.divisionError);
