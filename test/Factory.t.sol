@@ -4,8 +4,8 @@ import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import "src/UniswapV2Factory.sol";
-import "src/curve/constant-product/UniswapV2Pair.sol";
+import { GenericFactory } from "src/GenericFactory.sol";
+import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 
 contract FactoryTest is Test
 {
@@ -16,11 +16,15 @@ contract FactoryTest is Test
     MintableERC20 private mTokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 private mTokenB = new MintableERC20("TokenB", "TB");
 
-    UniswapV2Factory private mFactory;
+    GenericFactory private mFactory;
 
     function setUp() public
     {
-        mFactory = new UniswapV2Factory(30, 0, mOwner, mRecoverer);
+        mFactory = new GenericFactory();
+
+        mFactory.addCurve(type(UniswapV2Pair).creationCode);
+        mFactory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(30)));
+        mFactory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(2500)));
     }
 
     function calculateOutput(
@@ -44,7 +48,7 @@ contract FactoryTest is Test
 
     function createPair() private returns (address rPairAddress)
     {
-        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB));
+        rPairAddress = mFactory.createPair(address(mTokenA), address(mTokenB), 0);
     }
 
     function provideLiquidity(address aPairAddress) private
@@ -63,7 +67,8 @@ contract FactoryTest is Test
         address pairAddress = createPair();
 
         // assert
-        assertEq(mFactory.allPairs(0), pairAddress);
+        assertEq(mFactory.getPair(address(mTokenA), address(mTokenB), 0), pairAddress);
+        assertTrue(pairAddress.code.length > 0);
     }
 
     function testLiquidityProvision() public
