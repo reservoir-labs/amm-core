@@ -7,6 +7,9 @@ import "test/__fixtures/MintableERC20.sol";
 import "src/curve/stable/MasterDeployer.sol";
 import "src/curve/stable/HybridPoolFactory.sol";
 import "src/curve/stable/HybridPool.sol";
+import "src/curve/constant-product/UniswapV2Pair.sol";
+import "src/UniswapV2Factory.sol";
+import "../src/UniswapV2Factory.sol";
 
 contract HybridPoolTest is Test
 {
@@ -22,7 +25,7 @@ contract HybridPoolTest is Test
 
     MasterDeployer private _masterDeployer = new MasterDeployer(2500, _platformFeeTo, _bentoPlaceholder);
     HybridPoolFactory private _poolFactory = new HybridPoolFactory(address(_masterDeployer));
-    HybridPool private _pool = _createPair(_tokenA, _tokenB, 25, 1000);
+    HybridPool private _pool = _createPair(_tokenA, _tokenB, 25, 50);
 
     function setUp() public
     {
@@ -44,13 +47,24 @@ contract HybridPoolTest is Test
         rPool = HybridPool(_masterDeployer.deployPool(address(_poolFactory), lDeployData));
     }
 
+    function _calculateConstantProductOutput(
+        uint256 aReserveIn,
+        uint256 aReserveOut,
+        uint256 aTokenIn,
+        uint256 aFee
+    ) private pure returns (uint256 rExpectedOut)
+    {
+        uint256 lAmountInWithFee = aTokenIn * (10_000 - aFee);
+        uint256 lNumerator = lAmountInWithFee * aReserveOut;
+        uint256 lDenominator = aReserveIn * 10_000 + lAmountInWithFee;
+
+        rExpectedOut = lNumerator / lDenominator;
+    }
+
     function testMint() public
     {
         // arrange
         uint256 lLpTokenBalanceBefore = _pool.balanceOf(address(this));
-        uint256 lLpTokenTotalSupply = _pool.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1) = _pool.getReserves();
-        uint256 lOldLiquidity = lReserve0 + lReserve1;
         uint256 lLiquidityToAdd = 5e18;
 
         // act
@@ -93,10 +107,25 @@ contract HybridPoolTest is Test
     function testSwap_BetterPerformanceThanConstantProduct() public
     {
         // arrange
+        UniswapV2Factory lFactory = new UniswapV2Factory(25, 2500, _platformFeeTo, address(0));
+        UniswapV2Pair lPair = UniswapV2Pair(lFactory.createPair(address(_tokenA), address(_tokenB)));
+        _tokenA.mint(address(lPair), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(lPair), INITIAL_MINT_AMOUNT);
+        lPair.mint(_alice);
 
         // act
+        uint256 lSwapAmount = 5e18;
+        _tokenA.mint(address(_pool), lSwapAmount);
+        _pool.swap(abi.encode(address(_tokenA), address(this)));
+        uint256 lHybridPoolOutput = _tokenB.balanceOf(address(this));
+
+        uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
+        _tokenA.mint(address(lPair), lSwapAmount);
+        lPair.swap(lExpectedConstantProductOutput, 0, address(this), "");
+        uint256 lConstantProductOutput = _tokenB.balanceOf(address(this)) - lHybridPoolOutput;
 
         // assert
+        assertGt(lHybridPoolOutput, lConstantProductOutput);
     }
 
     function testBurn() public
@@ -124,6 +153,7 @@ contract HybridPoolTest is Test
             lExpectedTokenAReceived = lLpTokenBalance * lReserve1 / lLpTokenTotalSupply;
             lExpectedTokenBReceived = lLpTokenBalance * lReserve0 / lLpTokenTotalSupply;
         }
+
         assertEq(_pool.balanceOf(_alice), 0);
         assertGt(lExpectedTokenAReceived, 0);
         assertEq(_tokenA.balanceOf(_alice), lExpectedTokenAReceived);

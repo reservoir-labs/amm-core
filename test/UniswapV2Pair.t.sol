@@ -24,11 +24,8 @@ contract UniswapV2PairTest is Test
 
     function setUp() public
     {
-        _tokenA.mint(address(this), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(this), INITIAL_MINT_AMOUNT);
-
-        _tokenA.transfer(address(_pair), INITIAL_MINT_AMOUNT);
-        _tokenB.transfer(address(_pair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_pair), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_pair), INITIAL_MINT_AMOUNT);
         UniswapV2Pair(_pair).mint(_alice);
     }
 
