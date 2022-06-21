@@ -145,7 +145,6 @@ contract UniswapV2PairTest is Test
     function testMint() public
     {
         // arrange
-        uint256 lLpTokenBalanceBefore = _pair.balanceOf(address(this));
         uint256 lTotalSupplyLpToken = _pair.totalSupply();
         uint256 lLiquidityToAdd = 5e18;
         (uint256 reserve0, , ) = _pair.getReserves();
@@ -157,7 +156,7 @@ contract UniswapV2PairTest is Test
 
         // assert
         uint256 lAdditionalLpTokens = lLiquidityToAdd * lTotalSupplyLpToken / reserve0;
-        assertEq(_pair.balanceOf(address(this)), lLpTokenBalanceBefore + lAdditionalLpTokens);
+        assertEq(_pair.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
     function testMint_InitialMint() public
@@ -166,6 +165,20 @@ contract UniswapV2PairTest is Test
         uint256 lpTokenBalance = _pair.balanceOf(_alice);
         uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _pair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
+    }
+
+    function testMint_JustAboveMinimumLiquidity() public
+    {
+        // arrange
+        UniswapV2Pair lPair = _createPair(_tokenA, _tokenC);
+
+        // act
+        _tokenA.mint(address(lPair), 1001);
+        _tokenC.mint(address(lPair), 1001);
+        lPair.mint(address(this));
+
+        // assert
+        assertEq(lPair.balanceOf(address(this)), 1);
     }
 
     function testMint_MinimumLiquidity() public

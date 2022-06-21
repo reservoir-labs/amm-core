@@ -63,16 +63,20 @@ contract HybridPoolTest is Test
     function testMint() public
     {
         // arrange
-        uint256 lLpTokenBalanceBefore = _pool.balanceOf(address(this));
+        uint256 lLpTokenTotalSupply = _pool.totalSupply();
+        (uint256 lReserve0, uint256 lReserve1) = _pool.getReserves();
+        uint256 lOldLiquidity = lReserve0 + lReserve1;
         uint256 lLiquidityToAdd = 5e18;
 
         // act
         _tokenA.mint(address(_pool), lLiquidityToAdd);
         _tokenB.mint(address(_pool), lLiquidityToAdd);
-        uint256 lAdditionalLpTokens = _pool.mint(abi.encode(address(this)));
+        _pool.mint(abi.encode(address(this)));
 
         // assert
-        assertEq(_pool.balanceOf(address(this)), lLpTokenBalanceBefore + lAdditionalLpTokens);
+        // this works only because the pools are balanced. When the pool is imbalanced the calculation will differ
+        uint256 lAdditionalLpTokens = ((INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity) * lLpTokenTotalSupply / lOldLiquidity;
+        assertEq(_pool.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
     function testMint_OnlyTransferOneToken() public
