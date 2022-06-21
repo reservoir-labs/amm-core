@@ -26,7 +26,7 @@ contract UniswapV2PairTest is Test
     {
         _tokenA.mint(address(_pair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_pair), INITIAL_MINT_AMOUNT);
-        UniswapV2Pair(_pair).mint(_alice);
+        _pair.mint(_alice);
     }
 
     function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)

@@ -9,7 +9,6 @@ import "src/curve/stable/HybridPoolFactory.sol";
 import "src/curve/stable/HybridPool.sol";
 import "src/curve/constant-product/UniswapV2Pair.sol";
 import "src/UniswapV2Factory.sol";
-import "../src/UniswapV2Factory.sol";
 
 contract HybridPoolTest is Test
 {
