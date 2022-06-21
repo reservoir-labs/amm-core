@@ -32,9 +32,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint public platformFee;
     uint public customPlatformFee;
 
-    GenericFactory public factory;
-    address public token0;
-    address public token1;
+    GenericFactory immutable public factory;
+    address immutable public token0;
+    address immutable public token1;
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
