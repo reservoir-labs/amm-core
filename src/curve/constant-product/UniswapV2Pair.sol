@@ -27,10 +27,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     uint public swapFee;
-    uint public customSwapFee;
+    uint public customSwapFee = type(uint).max;
 
     uint public platformFee;
-    uint public customPlatformFee;
+    uint public customPlatformFee = type(uint).max;
 
     GenericFactory immutable public factory;
     address immutable public token0;
@@ -92,19 +92,19 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee > 0
+        uint256 _swapFee = customSwapFee != type(uint).max
             ? customSwapFee
             : uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
         if (_swapFee == swapFee) { return; }
 
-        require(_swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
     }
 
     function updatePlatformFee() public {
-        uint256 _platformFee = customPlatformFee > 0
+        uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
             : uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
         if (_platformFee == platformFee) { return; }

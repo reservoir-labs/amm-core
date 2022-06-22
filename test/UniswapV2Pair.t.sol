@@ -64,7 +64,7 @@ contract UniswapV2PairTest is Test
     function testCustomSwapFee_OffByDefault() public
     {
         // assert
-        assertEq(_pair.customSwapFee(), 0);
+        assertEq(_pair.customSwapFee(), type(uint).max);
         assertEq(_pair.swapFee(), 30);
     }
 
@@ -94,12 +94,12 @@ contract UniswapV2PairTest is Test
         // act
         _factory.rawCall(
             address(_pair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", 0),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", type(uint).max),
             0
         );
 
         // assert
-        assertEq(_pair.customSwapFee(), 0);
+        assertEq(_pair.customSwapFee(), type(uint).max);
         assertEq(_pair.swapFee(), 30);
     }
 
@@ -117,7 +117,7 @@ contract UniswapV2PairTest is Test
     function testCustomPlatformFee_OffByDefault() public
     {
         // assert
-        assertEq(_pair.customPlatformFee(), 0);
+        assertEq(_pair.customPlatformFee(), type(uint).max);
         assertEq(_pair.platformFee(), 2500);
     }
 
@@ -147,12 +147,12 @@ contract UniswapV2PairTest is Test
         // act
         _factory.rawCall(
             address(_pair),
-            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 0),
+            abi.encodeWithSignature("setCustomPlatformFee(uint256)", type(uint).max),
             0
         );
 
         // assert
-        assertEq(_pair.customPlatformFee(), 0);
+        assertEq(_pair.customPlatformFee(), type(uint).max);
         assertEq(_pair.platformFee(), 2500);
     }
 
