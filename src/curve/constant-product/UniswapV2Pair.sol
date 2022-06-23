@@ -188,7 +188,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = address(uint160(uint256(factory.get("UniswapV2Pair::platformFeeTo"))));
+                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::platformFeeTo")))));
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
