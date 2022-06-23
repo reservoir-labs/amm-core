@@ -3,9 +3,10 @@ pragma solidity =0.8.13;
 import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
-import "src/libraries/Math.sol";
-import "src/UniswapV2Factory.sol";
-import "src/curve/constant-product/UniswapV2Pair.sol";
+
+import { Math } from "src/libraries/Math.sol";
+import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
+import { GenericFactory } from "src/GenericFactory.sol";
 
 contract UniswapV2PairTest is Test
 {
@@ -19,11 +20,18 @@ contract UniswapV2PairTest is Test
     MintableERC20 private _tokenB = new MintableERC20("TokenB", "TB");
     MintableERC20 private _tokenC = new MintableERC20("TokenC", "TC");
 
-    UniswapV2Factory private _factory = new UniswapV2Factory(30, 2500, _owner, _recoverer);
-    UniswapV2Pair private _pair = _createPair(_tokenA, _tokenB);
+    GenericFactory private _factory = new GenericFactory();
+    UniswapV2Pair private _pair;
 
     function setUp() public
     {
+        // add stable-swap curve
+        _factory.addCurve(type(UniswapV2Pair).creationCode);
+        _factory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(30)));
+        _factory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(2500)));
+
+        // initial mint
+        _pair = _createPair(_tokenA, _tokenB);
         _tokenA.mint(address(_pair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_pair), INITIAL_MINT_AMOUNT);
         _pair.mint(_alice);
@@ -31,7 +39,7 @@ contract UniswapV2PairTest is Test
 
     function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)
     {
-        rPair = UniswapV2Pair(_factory.createPair(address(aTokenA), address(aTokenB)));
+        rPair = UniswapV2Pair(_factory.createPair(address(aTokenA), address(aTokenB), 0));
     }
 
     function _calculateOutput(
@@ -56,14 +64,18 @@ contract UniswapV2PairTest is Test
     function testCustomSwapFee_OffByDefault() public
     {
         // assert
-        assertEq(_pair.customSwapFee(), 0);
+        assertEq(_pair.customSwapFee(), type(uint).max);
         assertEq(_pair.swapFee(), 30);
     }
 
     function testSetSwapFeeForPair() public
     {
         // act
-        _factory.setSwapFeeForPair(address(_pair), 100);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
+            0
+        );
 
         // assert
         assertEq(_pair.customSwapFee(), 100);
@@ -73,13 +85,21 @@ contract UniswapV2PairTest is Test
     function testSetSwapFeeForPair_Reset() public
     {
         // arrange
-        _factory.setSwapFeeForPair(address(_pair), 100);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
+            0
+        );
 
         // act
-        _factory.setSwapFeeForPair(address(_pair), 0);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", type(uint).max),
+            0
+        );
 
         // assert
-        assertEq(_pair.customSwapFee(), 0);
+        assertEq(_pair.customSwapFee(), type(uint).max);
         assertEq(_pair.swapFee(), 30);
     }
 
@@ -87,20 +107,28 @@ contract UniswapV2PairTest is Test
     {
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
-        _factory.setSwapFeeForPair(address(_pair), 4000);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", 4000),
+            0
+        );
     }
 
     function testCustomPlatformFee_OffByDefault() public
     {
         // assert
-        assertEq(_pair.customPlatformFee(), 0);
+        assertEq(_pair.customPlatformFee(), type(uint).max);
         assertEq(_pair.platformFee(), 2500);
     }
 
     function testSetPlatformFeeForPair() public
     {
         // act
-        _factory.setPlatformFeeForPair(address(_pair), 100);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 100),
+            0
+        );
 
         // assert
         assertEq(_pair.customPlatformFee(), 100);
@@ -110,13 +138,21 @@ contract UniswapV2PairTest is Test
     function testSetPlatformFeeForPair_Reset() public
     {
         // arrange
-        _factory.setPlatformFeeForPair(address(_pair), 100);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 100),
+            0
+        );
 
         // act
-        _factory.setPlatformFeeForPair(address(_pair), 0);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomPlatformFee(uint256)", type(uint).max),
+            0
+        );
 
         // assert
-        assertEq(_pair.customPlatformFee(), 0);
+        assertEq(_pair.customPlatformFee(), type(uint).max);
         assertEq(_pair.platformFee(), 2500);
     }
 
@@ -124,14 +160,18 @@ contract UniswapV2PairTest is Test
     {
         // act & assert
         vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
-        _factory.setPlatformFeeForPair(address(_pair), 9000);
+        _factory.rawCall(
+            address(_pair),
+            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 9000),
+            0
+        );
     }
 
     function testUpdateDefaultFees() public
     {
         // arrange
-        _factory.setDefaultSwapFee(200);
-        _factory.setDefaultPlatformFee(5000);
+        _factory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(200)));
+        _factory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(5000)));
 
         // act
         _pair.updateSwapFee();

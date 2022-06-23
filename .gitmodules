@@ -10,3 +10,6 @@
 [submodule "reference/sushi-trident"]
 	path = reference/sushi-trident
 	url = git@github.com:vexchange/sushi-trident.git
+[submodule "lib/solmate"]
+	path = lib/solmate
+	url = https://github.com/Rari-Capital/solmate

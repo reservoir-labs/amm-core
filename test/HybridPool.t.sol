@@ -7,8 +7,8 @@ import "test/__fixtures/MintableERC20.sol";
 import "src/curve/stable/MasterDeployer.sol";
 import "src/curve/stable/HybridPoolFactory.sol";
 import "src/curve/stable/HybridPool.sol";
-import "src/curve/constant-product/UniswapV2Pair.sol";
-import "src/UniswapV2Factory.sol";
+import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
+import { GenericFactory } from "src/GenericFactory.sol";
 
 contract HybridPoolTest is Test
 {
@@ -107,11 +107,16 @@ contract HybridPoolTest is Test
         _pool.swap(abi.encode(address(_tokenA), address(this)));
     }
 
+    // todo: ensure fees are the same across pools
     function testSwap_BetterPerformanceThanConstantProduct() public
     {
         // arrange
-        UniswapV2Factory lFactory = new UniswapV2Factory(25, 2500, _platformFeeTo, address(0));
-        UniswapV2Pair lPair = UniswapV2Pair(lFactory.createPair(address(_tokenA), address(_tokenB)));
+        GenericFactory lFactory = new GenericFactory();
+        lFactory.addCurve(type(UniswapV2Pair).creationCode);
+        lFactory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(25)));
+        lFactory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(2500)));
+
+        UniswapV2Pair lPair = UniswapV2Pair(lFactory.createPair(address(_tokenA), address(_tokenB), 0));
         _tokenA.mint(address(lPair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(lPair), INITIAL_MINT_AMOUNT);
         lPair.mint(_alice);

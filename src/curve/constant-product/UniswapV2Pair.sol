@@ -2,12 +2,14 @@
 pragma solidity =0.8.13;
 
 import "@openzeppelin/token/ERC20/IERC20.sol";
-import "src/UniswapV2ERC20.sol";
+
+import { GenericFactory } from "src/GenericFactory.sol";
+
 import "src/libraries/Math.sol";
 import "src/libraries/UQ112x112.sol";
 import "src/interfaces/IUniswapV2Pair.sol";
-import "src/interfaces/IUniswapV2Factory.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
+import "src/UniswapV2ERC20.sol";
 
 contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     using UQ112x112 for uint224;
@@ -20,15 +22,19 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     uint256 public constant ACCURACY         = 1e38;
     uint256 public constant FEE_ACCURACY     = 10_000;
 
+    uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
+    uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
+    uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
+
     uint public swapFee;
-    uint public customSwapFee;
+    uint public customSwapFee = type(uint).max;
 
     uint public platformFee;
-    uint public customPlatformFee;
+    uint public customPlatformFee = type(uint).max;
 
-    address public factory;
-    address public token0;
-    address public token1;
+    GenericFactory immutable public factory;
+    address immutable public token0;
+    address immutable public token1;
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -47,7 +53,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     modifier onlyFactory() {
-        require(msg.sender == factory, "UniswapV2: FORBIDDEN");
+        require(msg.sender == address(factory), "UniswapV2: FORBIDDEN");
         _;
     }
 
@@ -56,8 +62,13 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
     event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
 
-    constructor() {
-        factory = msg.sender;
+    constructor(address aToken0, address aToken1) {
+        factory = GenericFactory(msg.sender);
+        token0 = aToken0;
+        token1 = aToken1;
+
+        swapFee = uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
+        platformFee = uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
     }
 
     function platformFeeOn() external view returns (bool _platformFeeOn)
@@ -81,22 +92,24 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee > 0
+        uint256 _swapFee = customSwapFee != type(uint).max
             ? customSwapFee
-            : IUniswapV2Factory(factory).defaultSwapFee();
-
+            : uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
         if (_swapFee == swapFee) { return; }
+
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
     }
 
     function updatePlatformFee() public {
-        uint256 _platformFee = customPlatformFee > 0
+        uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
-            : IUniswapV2Factory(factory).defaultPlatformFee();
-
+            : uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
         if (_platformFee == platformFee) { return; }
+
+        require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
 
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
@@ -112,14 +125,6 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), "UniswapV2: TRANSFER_FAILED");
-    }
-
-    // called once by the factory at time of deployment
-    function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external onlyFactory {
-        token0 = _token0;
-        token1 = _token1;
-        swapFee = _swapFee;
-        platformFee = _platformFee;
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -183,7 +188,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = IUniswapV2Factory(factory).platformFeeTo();
+                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::platformFeeTo")))));
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
@@ -281,7 +286,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = IUniswapV2Factory(factory).defaultRecoverer();
+        address _recoverer = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::defaultRecoverer")))));
         require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");
