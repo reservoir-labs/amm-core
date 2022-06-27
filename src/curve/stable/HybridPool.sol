@@ -5,6 +5,8 @@ pragma solidity 0.8.13;
 import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/token/ERC20/ERC20.sol";
 
+import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 import "src/UniswapV2ERC20.sol";
@@ -17,6 +19,8 @@ import "src/libraries/StableMath.sol";
 contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
+    using FactoryStoreLib for GenericFactory;
+    using Bytes32Lib for bytes32;
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
@@ -70,13 +74,13 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
 
     constructor(address aToken0, address aToken1) {
-        factory = GenericFactory(msg.sender);
-        token0 = aToken0;
-        token1 = aToken1;
-        swapFee = uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
-        platformFee = uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
-        A = uint256(factory.get(keccak256("UniswapV2Pair::amplificationCoefficient")));
-        N_A = 2 * A;
+        factory     = GenericFactory(msg.sender);
+        token0      = aToken0;
+        token1      = aToken1;
+        swapFee     = factory.read("UniswapV2Pair::swapFee").toUint256();
+        platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
+        A           = factory.read("UniswapV2Pair::amplificationCoefficient").toUint256();
+        N_A         = 2 * A;
 
         token0PrecisionMultiplier = uint256(10)**(18 - ERC20(token0).decimals());
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(token1).decimals());
@@ -106,7 +110,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     function updateSwapFee() public {
         uint256 _swapFee = customSwapFee != type(uint).max
         ? customSwapFee
-        : uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
+        : factory.read("UniswapV2Pair::swapFee").toUint256();
         if (_swapFee == swapFee) { return; }
 
         require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
@@ -118,7 +122,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
         ? customPlatformFee
-        : uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
+        : factory.read("UniswapV2Pair::platformFee").toUint256();
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
@@ -321,7 +325,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::platformFeeTo")))));
+                    address platformFeeTo = factory.read("UniswapV2Pair::platformFeeTo").toAddress();
 
                     _mint(platformFeeTo, liquidity);
                     _totalSupply += liquidity;
@@ -358,7 +362,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::defaultRecoverer")))));
+        address _recoverer = factory.read("UniswapV2Pair::defaultRecoverer").toAddress();
         require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");
