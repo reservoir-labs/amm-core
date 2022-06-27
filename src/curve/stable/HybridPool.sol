@@ -126,6 +126,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
     }
+
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
@@ -354,5 +355,16 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         (uint256 _reserve0, uint256 _reserve1) = _getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
+    }
+
+    function recoverToken(address token) external {
+        address _recoverer = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::defaultRecoverer")))));
+        require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
+        require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
+        require(_recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");
+
+        uint _amountToRecover = ERC20(token).balanceOf(address(this));
+
+        _safeTransfer(token, _recoverer, _amountToRecover);
     }
 }
