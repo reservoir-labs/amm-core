@@ -22,6 +22,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
     event Swap(address indexed to, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
     event Sync(uint256 reserve0, uint256 reserve1);
+    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
+    event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
+    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
+    event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
 
     uint256 internal constant MINIMUM_LIQUIDITY = 10**3;
     bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
@@ -36,7 +40,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     uint256 public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     uint256 public swapFee;
-    uint256 public barFee;
+    uint256 public customSwapFee = type(uint).max;
+
+    uint256 public platformFee;
+    uint256 public customPlatformFee = type(uint).max;
 
     GenericFactory public immutable factory;
     address public immutable token0;
@@ -57,12 +64,17 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     uint128 internal reserve1;
     uint256 internal dLast;
 
+    modifier onlyFactory() {
+        require(msg.sender == address(factory), "UniswapV2: FORBIDDEN");
+        _;
+    }
+
     constructor(address aToken0, address aToken1) {
         factory = GenericFactory(msg.sender);
         token0 = aToken0;
         token1 = aToken1;
         swapFee = uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
-        barFee = uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
+        platformFee = uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
         A = uint256(factory.get(keccak256("UniswapV2Pair::amplificationCoefficient")));
         N_A = 2 * A;
 
@@ -76,6 +88,44 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(A != 0, "ZERO_A");
     }
 
+    function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
+        // we assume the factory won't spam events, so no early check & return
+        emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
+        customSwapFee = _customSwapFee;
+
+        updateSwapFee();
+    }
+
+    function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
+        emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
+        customPlatformFee = _customPlatformFee;
+
+        updatePlatformFee();
+    }
+
+    function updateSwapFee() public {
+        uint256 _swapFee = customSwapFee != type(uint).max
+        ? customSwapFee
+        : uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
+        if (_swapFee == swapFee) { return; }
+
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
+
+        emit SwapFeeChanged(swapFee, _swapFee);
+        swapFee = _swapFee;
+    }
+
+    function updatePlatformFee() public {
+        uint256 _platformFee = customPlatformFee != type(uint).max
+        ? customPlatformFee
+        : uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
+        if (_platformFee == platformFee) { return; }
+
+        require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
+
+        emit PlatformFeeChanged(platformFee, _platformFee);
+        platformFee = _platformFee;
+    }
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
@@ -263,10 +313,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         if (_dLast != 0) {
             d = _computeLiquidity(_reserve0, _reserve1);
             if (d > _dLast) {
-                // @dev `barFee` % of increase in liquidity.
-                uint256 _barFee = barFee;
-                uint256 numerator = _totalSupply * (d - _dLast) * _barFee;
-                uint256 denominator = (FEE_ACCURACY - _barFee) * d + _barFee * _dLast;
+                // @dev `platformFee` % of increase in liquidity.
+                uint256 _platformFee = platformFee;
+                uint256 numerator = _totalSupply * (d - _dLast) * _platformFee;
+                uint256 denominator = (FEE_ACCURACY - _platformFee) * d + _platformFee * _dLast;
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
