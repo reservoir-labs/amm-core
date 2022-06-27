@@ -35,7 +35,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     uint256 public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint256 public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
-    uint256 public immutable swapFee;
+    uint256 public swapFee;
     uint256 public barFee;
 
     GenericFactory public immutable factory;
