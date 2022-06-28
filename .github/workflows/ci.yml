@@ -95,37 +95,6 @@ jobs:
       - name: Uniswap v2-core regression tests
         run: npm run test:uniswap
 
-  test-trident:
-    name: Test Trident
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Use configured NodeJS
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-
-      - name: Install js dependencies
-        run: npm ci
-
-      - name: Run build
-        run: forge build
-
-      - name: Setup Trident
-        run: npm run install:trident
-
-      - name: Trident regression tests
-        run: npm run test:trident
-
   check-gas:
     name: Check Gas
     runs-on: ubuntu-latest
