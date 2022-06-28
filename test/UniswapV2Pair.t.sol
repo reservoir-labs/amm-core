@@ -25,7 +25,7 @@ contract UniswapV2PairTest is Test
 
     function setUp() public
     {
-        // add stable-swap curve
+        // add constant product curve
         _factory.addCurve(type(UniswapV2Pair).creationCode);
         _factory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(30)));
         _factory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(2500)));

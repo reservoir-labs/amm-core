@@ -4,9 +4,7 @@ import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import "src/curve/stable/MasterDeployer.sol";
-import "src/curve/stable/HybridPoolFactory.sol";
-import "src/curve/stable/HybridPool.sol";
+import { HybridPool } from "src/curve/stable/HybridPool.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
@@ -17,33 +15,37 @@ contract HybridPoolTest is Test
     address private _platformFeeTo = address(1);
     address private _bentoPlaceholder = address(2);
     address private _alice = address(3);
+    address private _recoverer = address(4);
 
     MintableERC20 private _tokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 private _tokenB = new MintableERC20("TokenB", "TB");
     MintableERC20 private _tokenC = new MintableERC20("TokenC", "TC");
 
-    MasterDeployer private _masterDeployer = new MasterDeployer(2500, _platformFeeTo, _bentoPlaceholder);
-    HybridPoolFactory private _poolFactory = new HybridPoolFactory(address(_masterDeployer));
-    HybridPool private _pool = _createPair(_tokenA, _tokenB, 25, 50);
+    GenericFactory private _factory = new GenericFactory();
+    HybridPool private _pool;
 
     function setUp() public
     {
+        // add hybridpool curve
+        _factory.addCurve(type(HybridPool).creationCode);
+        _factory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(30)));
+        _factory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(2500)));
+        _factory.set(keccak256("UniswapV2Pair::amplificationCoefficient"), bytes32(uint256(1000)));
+        _factory.set(keccak256("UniswapV2Pair::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
+
+        // initial mint
+        _pool = _createPair(_tokenA, _tokenB);
         _tokenA.mint(address(_pool), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_pool), INITIAL_MINT_AMOUNT);
-        _pool.mint(abi.encode(_alice));
+        _pool.mint(_alice);
     }
 
     function _createPair(
         MintableERC20 aTokenA,
-        MintableERC20 aTokenB,
-        uint256 aSwapFee,
-        uint256 aAmplificationCoefficient
+        MintableERC20 aTokenB
     ) private returns (HybridPool rPool)
     {
-        _masterDeployer.addToWhitelist(address(_poolFactory));
-        bytes memory lDeployData = abi.encode(address(aTokenA), address(aTokenB), aSwapFee, aAmplificationCoefficient);
-
-        rPool = HybridPool(_masterDeployer.deployPool(address(_poolFactory), lDeployData));
+        rPool = HybridPool(_factory.createPair(address(aTokenA), address(aTokenB), 0));
     }
 
     function _calculateConstantProductOutput(
@@ -71,7 +73,7 @@ contract HybridPoolTest is Test
         // act
         _tokenA.mint(address(_pool), lLiquidityToAdd);
         _tokenB.mint(address(_pool), lLiquidityToAdd);
-        _pool.mint(abi.encode(address(this)));
+        _pool.mint(address(this));
 
         // assert
         // this works only because the pools are balanced. When the pool is imbalanced the calculation will differ
@@ -82,19 +84,19 @@ contract HybridPoolTest is Test
     function testMint_OnlyTransferOneToken() public
     {
         // arrange
-        HybridPool lPair = _createPair(_tokenA, _tokenC, 25, 1000);
+        HybridPool lPair = _createPair(_tokenA, _tokenC);
         _tokenA.mint(address(lPair), 5e18);
 
         // act & assert
         vm.expectRevert(stdError.divisionError);
-        lPair.mint(abi.encode(address(this)));
+        lPair.mint(address(this));
     }
 
     function testSwap() public
     {
         // act
         _tokenA.mint(address(address(_pool)), 5e18);
-        uint256 lAmountOut = _pool.swap(abi.encode(address(_tokenA), address(this)));
+        uint256 lAmountOut = _pool.swap(address(_tokenA), address(this));
 
         // assert
         assertEq(lAmountOut, _tokenB.balanceOf(address(this)));
@@ -104,10 +106,9 @@ contract HybridPoolTest is Test
     {
         // act & assert
         vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        _pool.swap(abi.encode(address(_tokenA), address(this)));
+        _pool.swap(address(_tokenA), address(this));
     }
 
-    // todo: ensure fees are the same across pools
     function testSwap_BetterPerformanceThanConstantProduct() public
     {
         // arrange
@@ -124,7 +125,7 @@ contract HybridPoolTest is Test
         // act
         uint256 lSwapAmount = 5e18;
         _tokenA.mint(address(_pool), lSwapAmount);
-        _pool.swap(abi.encode(address(_tokenA), address(this)));
+        _pool.swap(address(_tokenA), address(this));
         uint256 lHybridPoolOutput = _tokenB.balanceOf(address(this));
 
         uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
@@ -148,7 +149,7 @@ contract HybridPoolTest is Test
 
         // act
         _pool.transfer(address(_pool), _pool.balanceOf(_alice));
-        _pool.burn(abi.encode(_alice));
+        _pool.burn(_alice);
 
         // assert
         uint256 lExpectedTokenAReceived;
@@ -166,5 +167,19 @@ contract HybridPoolTest is Test
         assertGt(lExpectedTokenAReceived, 0);
         assertEq(_tokenA.balanceOf(_alice), lExpectedTokenAReceived);
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
+    }
+
+    function testRecoverToken() external
+    {
+        // arrange
+        uint256 lAmountToRecover = 1e18;
+        _tokenC.mint(address(_pool), 1e18);
+
+        // act
+        _pool.recoverToken(address(_tokenC));
+
+        // assert
+        assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
+        assertEq(_tokenC.balanceOf(address(_pool)), 0);
     }
 }
