@@ -18,8 +18,8 @@ import "src/libraries/StableMath.sol";
 struct AmplificationData {
     uint64 initialA;
     uint64 futureA;
-    uint64 initialTime;
-    uint64 futureTime;
+    uint64 initialATime;
+    uint64 futureATime;
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
@@ -33,6 +33,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
     event Swap(address indexed to, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
     event Sync(uint256 reserve0, uint256 reserve1);
+    event RampA(uint64 initialA, uint64, futureA, uint64 initialTime, uint64 futureTme);
+    event StopRampA(uint64 currentA, uint64 time);
     event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
     event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
     event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
@@ -53,6 +55,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     uint256 public constant MAX_A_CHANGE     = 2;
 
     AmplificationData public ampData;
+    uint256 internal constant A_PRECISION = 100;
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint).max;
@@ -63,13 +66,6 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     GenericFactory public immutable factory;
     address public immutable token0;
     address public immutable token1;
-
-    // TODO: reconsider the relevance of this given A changes
-    // disabling for now
-    // solhint-disable-next-line var-name-mixedcase
-    // uint256 internal immutable N_A; // @dev 2 * A.
-
-    uint256 internal constant A_PRECISION = 100;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
@@ -94,8 +90,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
         ampData.initialA = uint64(factory.read("UniswapV2Pair::amplificationCoefficient").toUint256());
         ampData.futureA = ampData.initialA;
-        ampData.initialTime = uint64(block.timestamp);
-        ampData.futureTime = uint64(block.timestamp);
+        ampData.initialATime = uint64(block.timestamp);
+        ampData.futureATime = uint64(block.timestamp);
 
         token0PrecisionMultiplier = uint256(10)**(18 - ERC20(token0).decimals());
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(token1).decimals());
