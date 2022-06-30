@@ -377,8 +377,25 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    function _getCurrentA() internal view returns (uint64) {
-        return ampData.initialA;
+    function _getCurrentA() internal view returns (uint64 currentA) {
+        uint64 futureA = ampData.futureA;
+        uint64 futureATime = ampData.futureATime;
+
+        if (block.timestamp < futureATime) {
+            uint64 initialA = ampData.initialA;
+            uint64 initialATime = ampData.initialATime;
+            uint64 rampTime = futureATime - initialATime;
+
+            if (futureA > initialA) {
+                currentA = initialA + (futureATime - uint64(block.timestamp)) * (futureA - initialA) / rampTime;
+            }
+            else {
+                currentA = initialA - (futureATime - uint64(block.timestamp)) * (initialA - futureA) / rampTime;
+            }
+        }
+        else {
+            currentA = futureA;
+        }
     }
 
     function _getNA() internal view returns (uint256) {
