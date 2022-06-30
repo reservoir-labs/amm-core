@@ -12,6 +12,8 @@ contract HybridPoolTest is Test
 {
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
 
+    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
+
     address private _platformFeeTo = address(1);
     address private _bentoPlaceholder = address(2);
     address private _alice = address(3);
@@ -186,11 +188,13 @@ contract HybridPoolTest is Test
     function testRampA() public
     {
         // arrange
-        uint256 lCurrentTimestamp = block.timestamp;
-        uint256 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
         uint64 lFutureAToSet = 5000;
 
         // act
+        vm.expectEmit(true, true, true, true);
+        emit RampA(1000, lFutureAToSet, lCurrentTimestamp, lFutureATimestamp);
         _factory.rawCall(
             address(_pool),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -204,8 +208,6 @@ contract HybridPoolTest is Test
         assertEq(lFutureA, lFutureAToSet);
         assertEq(lInitialATime, block.timestamp);
         assertEq(lFutureATime, lFutureATimestamp);
-
-        // expectEmit
     }
 
     function testGetCurrentA() public
