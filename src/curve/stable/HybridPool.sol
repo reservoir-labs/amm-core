@@ -160,6 +160,11 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
             : (currentA * 1 days) / (futureA * duration);
         require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "UniswapV2: AMP RATE TOO HIGH");
 
+        ampData.initialA = currentA;
+        ampData.futureA = futureA;
+        ampData.initialATime = uint64(block.timestamp);
+        ampData.futureATime = futureATime;
+
         emit RampA(currentA, futureA, uint64(block.timestamp), futureATime);
     }
 
@@ -387,10 +392,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
             uint64 rampTime = futureATime - initialATime;
 
             if (futureA > initialA) {
-                currentA = initialA + (futureATime - uint64(block.timestamp)) * (futureA - initialA) / rampTime;
+                currentA = initialA + (uint64(block.timestamp) - initialATime) * (futureA - initialA) / rampTime;
             }
             else {
-                currentA = initialA - (futureATime - uint64(block.timestamp)) * (initialA - futureA) / rampTime;
+                currentA = initialA - (uint64(block.timestamp) - initialATime) * (initialA - futureA) / rampTime;
             }
         }
         else {
@@ -400,6 +405,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     function _getNA() internal view returns (uint256) {
         return 2 * _getCurrentA();
+    }
+
+    function getCurrentA() external view returns (uint64) {
+        return _getCurrentA();
     }
 
     function getAssets() public view returns (address[] memory assets) {
