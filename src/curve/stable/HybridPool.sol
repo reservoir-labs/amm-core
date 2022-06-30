@@ -15,6 +15,13 @@ import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
 
+struct AmplificationData {
+    uint64 initialA;
+    uint64 futureA;
+    uint64 initialTime;
+    uint64 futureTime;
+}
+
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     using MathUtils for uint256;
@@ -42,6 +49,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     uint256 public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
     uint256 public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint256 public constant MAX_SWAP_FEE     = 200;    //  2.00%
+    uint256 public constant MIN_RAMP_TIME    = 1 days;
+    uint256 public constant MAX_A_CHANGE     = 2;
+
+    AmplificationData public ampData;
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint).max;
@@ -52,10 +63,12 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     GenericFactory public immutable factory;
     address public immutable token0;
     address public immutable token1;
+
+    // TODO: reconsider the relevance of this given A changes
+    // disabling for now
     // solhint-disable-next-line var-name-mixedcase
-    uint256 public immutable A;
-    // solhint-disable-next-line var-name-mixedcase
-    uint256 internal immutable N_A; // @dev 2 * A.
+    // uint256 internal immutable N_A; // @dev 2 * A.
+
     uint256 internal constant A_PRECISION = 100;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
@@ -79,8 +92,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         token1      = aToken1;
         swapFee     = factory.read("UniswapV2Pair::swapFee").toUint256();
         platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
-        A           = factory.read("UniswapV2Pair::amplificationCoefficient").toUint256();
-        N_A         = 2 * A;
+        ampData.initialA = uint64(factory.read("UniswapV2Pair::amplificationCoefficient").toUint256());
+        ampData.futureA = ampData.initialA;
+        ampData.initialTime = uint64(block.timestamp);
+        ampData.futureTime = uint64(block.timestamp);
 
         token0PrecisionMultiplier = uint256(10)**(18 - ERC20(token0).decimals());
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(token1).decimals());
@@ -89,7 +104,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(token0 != address(0), "ZERO_ADDRESS");
         require(token0 != token1, "IDENTICAL_ADDRESSES");
         require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "INVALID_SWAP_FEE");
-        require(A != 0, "ZERO_A");
+        require(ampData.initialA != 0, "ZERO_A");
     }
 
     function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
@@ -129,6 +144,14 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
+    }
+
+    function rampA() external onlyFactory () {
+
+    }
+
+    function stopRampA() external onlyFactory () {
+
     }
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
@@ -216,14 +239,14 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
         if (tokenIn == token0) {
             tokenOut = token1;
-            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, N_A, A_PRECISION);
+            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, 2 * _getCurrentA(), A_PRECISION);
             _processSwap(token1, to, amountOut, context);
             uint256 balance0 = ERC20(token0).balanceOf(address(this));
             require(balance0 - _reserve0 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
-            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, N_A, A_PRECISION);
+            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, _getNA(), A_PRECISION);
             _processSwap(token0, to, amountOut, context);
             uint256 balance1 = ERC20(token1).balanceOf(address(this));
             require(balance1 - _reserve1 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
@@ -291,7 +314,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     ) internal view returns (uint256 dy) {
         return StableMath._getAmountOut(amountIn, _reserve0, _reserve1,
                                         token0PrecisionMultiplier, token1PrecisionMultiplier,
-                                        token0In, swapFee, N_A, A_PRECISION);
+                                        token0In, swapFee, _getNA(), A_PRECISION);
     }
 
     function _safeTransfer(address token, address to, uint value) private {
@@ -308,7 +331,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     unchecked {
         uint256 adjustedReserve0 = _reserve0 * token0PrecisionMultiplier;
         uint256 adjustedReserve1 = _reserve1 * token1PrecisionMultiplier;
-        liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A, A_PRECISION);
+        liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA(), A_PRECISION);
     }
     }
 
@@ -332,6 +355,14 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
                 }
             }
         }
+    }
+
+    function _getCurrentA() internal view returns (uint256) {
+        return ampData.initialA;
+    }
+
+    function _getNA() internal view returns (uint256) {
+        return 2 * _getCurrentA();
     }
 
     function getAssets() public view returns (address[] memory assets) {
