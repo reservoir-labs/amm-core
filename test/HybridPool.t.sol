@@ -213,8 +213,8 @@ contract HybridPoolTest is Test
     function testGetCurrentA() public
     {
         // arrange
-        uint256 lCurrentTimestamp = block.timestamp;
-        uint256 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
         uint64 lFutureAToSet = 5000;
 
         // act
