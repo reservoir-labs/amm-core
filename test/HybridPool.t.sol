@@ -169,7 +169,7 @@ contract HybridPoolTest is Test
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
     }
 
-    function testRecoverToken() external
+    function testRecoverToken() public
     {
         // arrange
         uint256 lAmountToRecover = 1e18;

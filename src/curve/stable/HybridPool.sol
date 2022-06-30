@@ -33,7 +33,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
     event Swap(address indexed to, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
     event Sync(uint256 reserve0, uint256 reserve1);
-    event RampA(uint64 initialA, uint64, futureA, uint64 initialTime, uint64 futureTme);
+    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
     event StopRampA(uint64 currentA, uint64 time);
     event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
     event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
@@ -45,17 +45,12 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     uint8 internal constant PRECISION = 112;
 
-    /// @dev Constant value used as max loop limit.
-    uint256 private constant MAX_LOOP_LIMIT = 256;
     uint256 public constant FEE_ACCURACY     = 10_000;
     uint256 public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
     uint256 public constant MIN_SWAP_FEE     = 1;      //  0.01%
     uint256 public constant MAX_SWAP_FEE     = 200;    //  2.00%
-    uint256 public constant MIN_RAMP_TIME    = 1 days;
-    uint256 public constant MAX_A_CHANGE     = 2;
 
     AmplificationData public ampData;
-    uint256 internal constant A_PRECISION = 100;
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint).max;
@@ -142,12 +137,41 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         platformFee = _platformFee;
     }
 
-    function rampA() external onlyFactory () {
+    function rampA(uint64 futureA, uint64 futureATime) external onlyFactory {
+        require(
+            futureA >= StableMath.MIN_A
+         && futureA <= StableMath.MAX_A,
+            "UniswapV2: INVALID A"
+        );
 
+        // what if futureATime provided is in the past?
+        // solidity will detect the arithmetic underflow
+        uint256 duration = futureATime - block.timestamp;
+        require(duration >= StableMath.MIN_RAMP_TIME, "UniswapV2: INVALID DURATION");
+
+        uint64 currentA = _getCurrentA();
+
+        // daily rate = (futureA / currentA) / duration * 1 day
+        // we do multiplication first before division to avoid
+        // losing precision
+        uint256 dailyRate = futureA > currentA
+            // balancer used divUp for this operation but I find no need for that
+            ? (futureA * 1 days) / (currentA * duration)
+            : (currentA * 1 days) / (futureA * duration);
+        require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "UniswapV2: AMP RATE TOO HIGH");
+
+        emit RampA(currentA, futureA, uint64(block.timestamp), futureATime);
     }
 
-    function stopRampA() external onlyFactory () {
+    function stopRampA() external onlyFactory {
+        uint64 currentA = _getCurrentA();
 
+        ampData.initialA = currentA;
+        ampData.futureA = currentA;
+        ampData.initialATime =  uint64(block.timestamp);
+        ampData.futureATime = ampData.initialATime;
+
+        emit StopRampA(currentA, ampData.initialATime);
     }
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
@@ -235,14 +259,14 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
         if (tokenIn == token0) {
             tokenOut = token1;
-            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, 2 * _getCurrentA(), A_PRECISION);
+            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true, swapFee, 2 * _getCurrentA());
             _processSwap(token1, to, amountOut, context);
             uint256 balance0 = ERC20(token0).balanceOf(address(this));
             require(balance0 - _reserve0 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
-            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, _getNA(), A_PRECISION);
+            amountOut = StableMath._getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false, swapFee, _getNA());
             _processSwap(token0, to, amountOut, context);
             uint256 balance1 = ERC20(token1).balanceOf(address(this));
             require(balance1 - _reserve1 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
@@ -310,7 +334,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     ) internal view returns (uint256 dy) {
         return StableMath._getAmountOut(amountIn, _reserve0, _reserve1,
                                         token0PrecisionMultiplier, token1PrecisionMultiplier,
-                                        token0In, swapFee, _getNA(), A_PRECISION);
+                                        token0In, swapFee, _getNA());
     }
 
     function _safeTransfer(address token, address to, uint value) private {
@@ -327,7 +351,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     unchecked {
         uint256 adjustedReserve0 = _reserve0 * token0PrecisionMultiplier;
         uint256 adjustedReserve1 = _reserve1 * token1PrecisionMultiplier;
-        liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA(), A_PRECISION);
+        liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
     }
     }
 
@@ -353,7 +377,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    function _getCurrentA() internal view returns (uint256) {
+    function _getCurrentA() internal view returns (uint64) {
         return ampData.initialA;
     }
 

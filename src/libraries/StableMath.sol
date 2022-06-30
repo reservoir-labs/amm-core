@@ -6,7 +6,12 @@ library StableMath {
     using MathUtils for uint256;
 
     uint256 private constant MAX_LOOP_LIMIT = 256;
-    uint256 internal constant MAX_FEE = 10000; // @dev 100%.
+    uint256 private constant MAX_FEE = 10000; // @dev 100%.
+    uint256 private constant A_PRECISION = 100;
+    uint256 public constant MIN_RAMP_TIME    = 1 days;
+    uint256 public constant MIN_A            = 1;
+    uint256 public constant MAX_A            = 10_000;
+    uint256 public constant MAX_AMP_UPDATE_DAILY_RATE = 2;
 
     function _getAmountOut(
         uint256 amountIn,
@@ -16,23 +21,22 @@ library StableMath {
         uint256 token1PrecisionMultiplier,
         bool token0In,
         uint256 swapFee,
-        uint256 N_A,        // solhint-disable-line var-name-mixedcase
-        uint256 A_PRECISION // solhint-disable-line var-name-mixedcase
+        uint256 N_A        // solhint-disable-line var-name-mixedcase
     ) internal pure returns(uint256 dy) {
     unchecked {
         uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
         uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
         uint256 feeDeductedAmountIn = amountIn - (amountIn * swapFee) / MAX_FEE;
-        uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A, A_PRECISION);
+        uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
 
         if (token0In) {
             uint256 x = adjustedReserve0 + (feeDeductedAmountIn * token0PrecisionMultiplier);
-            uint256 y = _getY(x, d, N_A, A_PRECISION);
+            uint256 y = _getY(x, d, N_A);
             dy = adjustedReserve1 - y - 1;
             dy /= token1PrecisionMultiplier;
         } else {
             uint256 x = adjustedReserve1 + (feeDeductedAmountIn * token1PrecisionMultiplier);
-            uint256 y = _getY(x, d, N_A, A_PRECISION);
+            uint256 y = _getY(x, d, N_A);
             dy = adjustedReserve0 - y - 1;
             dy /= token0PrecisionMultiplier;
         }
@@ -42,8 +46,7 @@ library StableMath {
     function _computeLiquidityFromAdjustedBalances(
         uint256 xp0,
         uint256 xp1,
-        uint256 N_A,        // solhint-disable-line var-name-mixedcase
-        uint256 A_PRECISION // solhint-disable-line var-name-mixedcase
+        uint256 N_A        // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 computed) {
         uint256 s = xp0 + xp1;
 
@@ -74,8 +77,7 @@ library StableMath {
     function _getY(
         uint256 x,
         uint256 D,          // solhint-disable-line var-name-mixedcase
-        uint256 N_A,        // solhint-disable-line var-name-mixedcase
-        uint256 A_PRECISION // solhint-disable-line var-name-mixedcase
+        uint256 N_A        // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 y) {
         uint256 c = (D * D) / (x * 2);
         c = (c * D) / ((N_A * 2) / A_PRECISION);
