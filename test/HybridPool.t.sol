@@ -4,7 +4,7 @@ import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import { HybridPool } from "src/curve/stable/HybridPool.sol";
+import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
@@ -181,5 +181,56 @@ contract HybridPoolTest is Test
         // assert
         assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
         assertEq(_tokenC.balanceOf(address(_pool)), 0);
+    }
+
+    function testRampA() public
+    {
+        // arrange
+        uint256 lCurrentTimestamp = block.timestamp;
+        uint256 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _pool.ampData();
+        assertEq(lInitialA, 1000);
+        assertEq(_pool.getCurrentA(), 1000);
+        assertEq(lFutureA, lFutureAToSet);
+        assertEq(lInitialATime, block.timestamp);
+        assertEq(lFutureATime, lFutureATimestamp);
+
+        // expectEmit
+    }
+
+    function testGetCurrentA() public
+    {
+        // arrange
+        uint256 lCurrentTimestamp = block.timestamp;
+        uint256 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        assertEq(_pool.getCurrentA(), 1000);
+
+        // warp to the midpoint between the initialATime and futureATime
+        vm.warp((lFutureATimestamp + block.timestamp) / 2);
+        assertEq(_pool.getCurrentA(), (1000 + lFutureAToSet) / 2);
+
+        // warp to the end
+        vm.warp(lFutureATimestamp);
+        assertEq(_pool.getCurrentA(), lFutureAToSet);
     }
 }
