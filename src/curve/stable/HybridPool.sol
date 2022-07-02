@@ -83,7 +83,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         token1      = aToken1;
         swapFee     = factory.read("UniswapV2Pair::swapFee").toUint256();
         platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
-        ampData.initialA = uint64(factory.read("UniswapV2Pair::amplificationCoefficient").toUint256());
+        ampData.initialA = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64();
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);
         ampData.futureATime = uint64(block.timestamp);
@@ -144,8 +144,6 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
             "UniswapV2: INVALID A"
         );
 
-        // what if futureATime provided is in the past?
-        // solidity will detect the arithmetic underflow
         uint256 duration = futureATime - block.timestamp;
         require(duration >= StableMath.MIN_RAMP_TIME, "UniswapV2: INVALID DURATION");
 
@@ -403,6 +401,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
+    /// @dev number of coins in the pool multiplied by A
     function _getNA() internal view returns (uint256) {
         return 2 * _getCurrentA();
     }
