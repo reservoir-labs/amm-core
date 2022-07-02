@@ -210,6 +210,59 @@ contract HybridPoolTest is Test
         assertEq(lFutureATime, lFutureATimestamp);
     }
 
+    function testRampA_InvalidA() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 20000;
+
+        // act & assert
+        vm.expectRevert("UniswapV2: INVALID A");
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        lFutureAToSet = 0;
+        vm.expectRevert("UniswapV2: INVALID A");
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+    }
+
+    function testStopRampA() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        vm.warp(lFutureATimestamp);
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("stopRampA()"),
+            0
+        );
+
+        // assert
+        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _pool.ampData();
+        assertEq(lInitialA, lFutureAToSet);
+        assertEq(lFutureA, lFutureAToSet);
+        assertEq(lInitialATime, lFutureATimestamp);
+        assertEq(lFutureATime, lFutureATimestamp);
+    }
+
     function testGetCurrentA() public
     {
         // arrange

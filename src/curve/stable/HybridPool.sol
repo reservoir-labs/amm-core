@@ -95,7 +95,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(token0 != address(0), "ZERO_ADDRESS");
         require(token0 != token1, "IDENTICAL_ADDRESSES");
         require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "INVALID_SWAP_FEE");
-        require(ampData.initialA != 0, "ZERO_A");
+        require(ampData.initialA >= StableMath.MIN_A && ampData.initialA <= StableMath.MAX_A, "INVALID_A");
     }
 
     function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
