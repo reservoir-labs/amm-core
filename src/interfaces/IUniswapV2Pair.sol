@@ -43,5 +43,5 @@ interface IUniswapV2Pair {
     function setManager(IAssetManager manager) external;
 
     function syncBalances() external;
-    function manageReserves(int256 token0Change, int256 token1Change) external;
+    function adjustInvestment(int256 token0Change, int256 token1Change) external;
 }

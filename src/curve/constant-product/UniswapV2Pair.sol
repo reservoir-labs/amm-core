@@ -329,6 +329,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
+    // perf: these should be uint112 because reserves are uint112
     uint256 public token0Invested;
     uint256 public token1Invested;
 
@@ -377,43 +378,47 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function syncBalances() external onlyManager {
-        uint256 lToken0Invested = assetManager.getBalance(token0);
-        uint256 lToken1Invested = assetManager.getBalance(token1);
+        uint256 lToken0Invested = assetManager.getBalance(address(this), token0);
+        uint256 lToken1Invested = assetManager.getBalance(address(this), token1);
 
         _handleReport(token0, token0Invested, lToken0Invested);
         _handleReport(token1, token1Invested, lToken1Invested);
     }
 
-    function manageReserves(int256 token0Change, int256 token1Change) external onlyManager {
+    function adjustInvestment(int256 token0Change, int256 token1Change) external onlyManager {
         require(
             token0Change != type(int256).min && token1Change != type(int256).min,
             "cast would overflow"
         );
 
-        if (token0Change > 0) {
-            revert("todo");
-            // pull tokens from manager
-            // update internal accounting
+        if (token0Change < 0) {
+            uint256 lDelta = uint256(-token0Change);
+
+            token0Invested -= lDelta;
+
+            IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
         }
-        else if (token0Change < 0) {
-            uint256 lAdditional = uint256(-token0Change);
+        else if (token0Change > 0) {
+            uint256 lDelta = uint256(token0Change);
 
-            token0Invested += lAdditional;
+            token0Invested += lDelta;
 
-            IERC20(token0).transfer(address(assetManager), lAdditional);
+            IERC20(token0).transfer(address(assetManager), lDelta);
         }
 
-        if (token1Change > 0) {
-            revert("todo");
-            // pull tokens from manager
-            // update internal accounting
+        if (token1Change < 0) {
+            uint256 lDelta = uint256(-token1Change);
+
+            token1Invested -= lDelta;
+
+            IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
-        else if (token1Change < 0) {
-            uint256 lAdditional = uint256(-token1Change);
+        else if (token1Change > 0) {
+            uint256 lDelta = uint256(token1Change);
 
-            token1Invested += lAdditional;
+            token1Invested += lDelta;
 
-            IERC20(token1).transfer(address(assetManager), lAdditional);
+            IERC20(token1).transfer(address(assetManager), lDelta);
         }
 
         _update(
