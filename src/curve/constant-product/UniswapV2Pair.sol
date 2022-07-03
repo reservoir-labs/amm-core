@@ -201,6 +201,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {
+        _syncInvested(); // check asset-manager pnl
+
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = _totalToken0();
         uint balance1 = _totalToken1();
@@ -225,6 +227,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function burn(address to) external lock returns (uint amount0, uint amount1) {
+        _syncInvested(); // check asset-manager pnl
+
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0;                                // gas savings
         address _token1 = token1;                                // gas savings
@@ -377,12 +381,19 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         // else do nothing balance is equal
     }
 
-    function syncBalances() external onlyManager {
+    function _syncInvested() private {
+        if (address(assetManager) == address(0)) {
+            return;
+        }
+
         uint256 lToken0Invested = assetManager.getBalance(address(this), token0);
         uint256 lToken1Invested = assetManager.getBalance(address(this), token1);
 
         _handleReport(token0, token0Invested, lToken0Invested);
         _handleReport(token1, token1Invested, lToken1Invested);
+
+        token0Invested = lToken0Invested;
+        token1Invested = lToken1Invested;
     }
 
     function adjustInvestment(int256 token0Change, int256 token1Change) external onlyManager {

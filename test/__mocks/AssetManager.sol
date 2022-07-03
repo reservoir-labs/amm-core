@@ -39,4 +39,9 @@ contract AssetManager is IAssetManager
 
         aPool.adjustInvestment(aToken0Amount, aToken1Amount);
     }
+
+    function adjustBalance(address aOwner, address aToken, uint256 aNewAmount) external
+    {
+        getBalance[aOwner][aToken] = aNewAmount;
+    }
 }

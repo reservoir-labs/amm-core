@@ -314,14 +314,14 @@ contract UniswapV2PairTest is Test
     {
         // arrange
         vm.prank(address(_factory));
-        _pair.setManager(IAssetManager(address(this)));
+        _pair.setManager(_manager);
 
         // liquidity prior to adjustInvestment
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
         uint256 lLiq1 = _pair.mint(address(this));
 
-        _pair.adjustInvestment(50e18, 50e18);
+        _manager.adjustInvestment(_pair, 50e18, 50e18);
 
         // act
         _tokenA.mint(address(_pair), 50e18);
@@ -374,5 +374,38 @@ contract UniswapV2PairTest is Test
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
         assertEq(_manager.getBalance(address(_pair), address(lToken0)), 10e18);
         assertEq(_manager.getBalance(address(_pair), address(lToken1)), 10e18);
+    }
+
+    function testSyncInvested() external
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        address lToken0 = _pair.token0();
+        address lToken1 = _pair.token1();
+
+        _manager.adjustInvestment(_pair, 20e18, 20e18);
+        _tokenA.mint(address(_pair), 10e18);
+        _tokenB.mint(address(_pair), 10e18);
+        uint256 lLiq = _pair.mint(address(this));
+
+        // sanity
+        assertEq(lLiq, 10e18); // sqrt(10e18, 10e18)
+        assertEq(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_tokenB.balanceOf(address(this)), 0);
+        assertEq(_manager.getBalance(address(_pair), lToken0), 20e18);
+        assertEq(_manager.getBalance(address(_pair), lToken1), 20e18);
+
+        // act
+        _manager.adjustBalance(address(_pair), lToken0, 19e18); // 1e18 lost
+        _manager.adjustBalance(address(_pair), lToken1, 19e18); // 1e18 lost
+        _pair.transfer(address(_pair), 10e18);
+        _pair.burn(address(this));
+
+        assertEq(_manager.getBalance(address(_pair), lToken0), 19e18);
+        assertEq(_manager.getBalance(address(_pair), lToken1), 19e18);
+        assertLt(_tokenA.balanceOf(address(this)), 10e18);
+        assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 }
