@@ -349,10 +349,10 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     event ProfitReported(address token, uint112 amount);
     event LossReported(address token, uint112 amount);
 
-    function _handleReport(address token, uint112 prevBalance, uint112 currBalance) private {
-        if (currBalance > prevBalance) {
+    function _handleReport(address token, uint112 prevBalance, uint112 newBalance) private {
+        if (newBalance > prevBalance) {
             // report profit
-            uint112 lProfit = currBalance - prevBalance;
+            uint112 lProfit = newBalance - prevBalance;
 
             emit ProfitReported(token, lProfit);
 
@@ -360,9 +360,9 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
                 ? reserve0 += lProfit
                 : reserve1 += lProfit;
         }
-        else if (currBalance < prevBalance) {
+        else if (newBalance < prevBalance) {
             // report loss
-            uint112 lLoss = prevBalance - currBalance;
+            uint112 lLoss = prevBalance - newBalance;
 
             emit LossReported(token, lLoss);
 
@@ -394,34 +394,34 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
             "cast would overflow"
         );
 
-        if (token0Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token0Change)));
-
-            token0Invested -= lDelta;
-
-            IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
-        }
-        else if (token0Change > 0) {
+        if (token0Change > 0) {
             uint112 lDelta = uint112(uint256(int256(token0Change)));
 
             token0Invested += lDelta;
 
             IERC20(token0).transfer(address(assetManager), lDelta);
         }
+        else if (token0Change < 0) {
+            uint112 lDelta = uint112(uint256(int256(-token0Change)));
 
-        if (token1Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token1Change)));
+            token0Invested -= lDelta;
 
-            token1Invested -= lDelta;
-
-            IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
+            IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
         }
-        else if (token1Change > 0) {
+
+        if (token1Change > 0) {
             uint112 lDelta = uint112(uint256(int256(token1Change)));
 
             token1Invested += lDelta;
 
             IERC20(token1).transfer(address(assetManager), lDelta);
+        }
+        else if (token1Change < 0) {
+            uint112 lDelta = uint112(uint256(int256(-token1Change)));
+
+            token1Invested -= lDelta;
+
+            IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
 
         _update(
