@@ -312,11 +312,6 @@ contract UniswapV2PairTest is Test
         vm.prank(address(_factory));
         _pair.setManager(IAssetManager(address(this)));
 
-        // initial liq
-        _tokenA.mint(address(_pair), 1e18);
-        _tokenB.mint(address(_pair), 1e18);
-        _pair.mint(address(this));
-
         // first untaxed liq
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
