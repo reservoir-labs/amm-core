@@ -10,34 +10,34 @@ contract AssetManager is IAssetManager
 {
     mapping(address => mapping(address => uint256)) public getBalance;
 
-    function adjustInvestment(IUniswapV2Pair aPool, int256 aToken0Amount, int256 aToken1Amount) external
+    function adjustInvestment(IUniswapV2Pair aPair, int256 aToken0Amount, int256 aToken1Amount) external
     {
         require(aToken0Amount != type(int256).min && aToken1Amount != type(int256).min, "overflow");
 
         if (aToken0Amount >= 0) {
             uint256 lAbs = uint256(aToken0Amount);
 
-            getBalance[address(aPool)][aPool.token0()] += lAbs;
+            getBalance[address(aPair)][aPair.token0()] += lAbs;
         }
         else {
             uint256 lAbs = uint256(-aToken0Amount);
 
-            IERC20(aPool.token0()).approve(address(aPool), lAbs);
-            getBalance[address(aPool)][aPool.token0()] -= lAbs;
+            IERC20(aPair.token0()).approve(address(aPair), lAbs);
+            getBalance[address(aPair)][aPair.token0()] -= lAbs;
         }
         if (aToken1Amount >= 0) {
             uint256 lAbs = uint256(aToken1Amount);
 
-            getBalance[address(aPool)][aPool.token1()] += lAbs;
+            getBalance[address(aPair)][aPair.token1()] += lAbs;
         }
         else {
             uint256 lAbs = uint256(-aToken1Amount);
 
-            IERC20(aPool.token1()).approve(address(aPool), lAbs);
-            getBalance[address(aPool)][aPool.token1()] -= lAbs;
+            IERC20(aPair.token1()).approve(address(aPair), lAbs);
+            getBalance[address(aPair)][aPair.token1()] -= lAbs;
         }
 
-        aPool.adjustInvestment(aToken0Amount, aToken1Amount);
+        aPair.adjustInvestment(aToken0Amount, aToken1Amount);
     }
 
     function adjustBalance(address aOwner, address aToken, uint256 aNewAmount) external

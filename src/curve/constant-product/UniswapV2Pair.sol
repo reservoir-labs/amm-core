@@ -314,6 +314,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     IAssetManager public assetManager;
 
     function setManager(IAssetManager manager) external onlyFactory {
+        require(token0Invested == 0 && token1Invested == 0, "UniswapV2: AM_STILL_ACTIVE");
+
         assetManager = manager;
     }
 

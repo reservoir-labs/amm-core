@@ -292,6 +292,33 @@ contract UniswapV2PairTest is Test
                                     ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////////////////*/
 
+    function testSetManager() external
+    {
+        // sanity
+        assertEq(address(_pair.assetManager()), address(0));
+
+        // act
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // assert
+        assertEq(address(_pair.assetManager()), address(_manager));
+    }
+
+    function testSetManager_CannotMigrateWithInvested() external
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustInvestment(_pair, 10e18, 10e18);
+
+        // act & assert
+        vm.prank(address(_factory));
+        vm.expectRevert("UniswapV2: AM_STILL_ACTIVE");
+        _pair.setManager(IAssetManager(address(0)));
+    }
+
     function testManageReserves() external
     {
         // arrange
