@@ -335,50 +335,40 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    // perf: these should be uint112 because reserves are uint112
-    uint256 public token0Invested;
-    uint256 public token1Invested;
-
-    function _token0Liquid() private view returns (uint256) {
-        return reserve0 - token0Invested;
-    }
-
-    function _token1Liquid() private view returns (uint256) {
-        return reserve1 - token1Invested;
-    }
+    uint112 public token0Invested;
+    uint112 public token1Invested;
 
     function _totalToken0() private view returns (uint256) {
-        return IERC20(token0).balanceOf(address(this)) + token0Invested;
+        return IERC20(token0).balanceOf(address(this)) + uint256(token0Invested);
     }
 
     function _totalToken1() private view returns (uint256) {
-        return IERC20(token1).balanceOf(address(this)) + token1Invested;
+        return IERC20(token1).balanceOf(address(this)) + uint256(token1Invested);
     }
 
-    event ProfitReported(address token, uint256 amount);
-    event LossReported(address token, uint256 amount);
+    event ProfitReported(address token, uint112 amount);
+    event LossReported(address token, uint112 amount);
 
-    function _handleReport(address token, uint256 prevBalance, uint256 currBalance) private {
+    function _handleReport(address token, uint112 prevBalance, uint112 currBalance) private {
         if (currBalance > prevBalance) {
             // report profit
-            uint256 lProfit = currBalance - prevBalance;
+            uint112 lProfit = currBalance - prevBalance;
 
             emit ProfitReported(token, lProfit);
 
             token == token0
-                ? reserve0 += lProfit.toUint112()
-                : reserve1 += lProfit.toUint112();
+                ? reserve0 += lProfit
+                : reserve1 += lProfit;
         }
         else if (currBalance < prevBalance) {
             // report loss
-            uint256 lLoss = prevBalance - currBalance;
+            uint112 lLoss = prevBalance - currBalance;
 
             emit LossReported(token, lLoss);
 
-            // nb: loss cannot exceed sum of assets
             token == token0
-                ? reserve0 -= uint112(lLoss)
-                : reserve1 -= uint112(lLoss);
+                ? reserve0 -= lLoss
+                : reserve1 -= lLoss;
         }
         // else do nothing balance is equal
     }
@@ -388,8 +378,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
             return;
         }
 
-        uint256 lToken0Invested = assetManager.getBalance(address(this), token0);
-        uint256 lToken1Invested = assetManager.getBalance(address(this), token1);
+        uint112 lToken0Invested = assetManager.getBalance(address(this), token0);
+        uint112 lToken1Invested = assetManager.getBalance(address(this), token1);
 
         _handleReport(token0, token0Invested, lToken0Invested);
         _handleReport(token1, token1Invested, lToken1Invested);
@@ -405,14 +395,14 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         );
 
         if (token0Change < 0) {
-            uint256 lDelta = uint256(-token0Change);
+            uint112 lDelta = uint112(uint256(int256(-token0Change)));
 
             token0Invested -= lDelta;
 
             IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
         }
         else if (token0Change > 0) {
-            uint256 lDelta = uint256(token0Change);
+            uint112 lDelta = uint112(uint256(int256(token0Change)));
 
             token0Invested += lDelta;
 
@@ -420,14 +410,14 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         }
 
         if (token1Change < 0) {
-            uint256 lDelta = uint256(-token1Change);
+            uint112 lDelta = uint112(uint256(int256(-token1Change)));
 
             token1Invested -= lDelta;
 
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
         else if (token1Change > 0) {
-            uint256 lDelta = uint256(token1Change);
+            uint112 lDelta = uint112(uint256(int256(token1Change)));
 
             token1Invested += lDelta;
 
