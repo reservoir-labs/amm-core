@@ -1,6 +1,3 @@
-[submodule "lib/ds-test"]
-	path = lib/ds-test
-	url = https://github.com/dapphub/ds-test
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/brockelmore/forge-std
@@ -13,3 +10,6 @@
 [submodule "reference/sushi-trident"]
 	path = reference/sushi-trident
 	url = git@github.com:vexchange/sushi-trident.git
+[submodule "lib/solmate"]
+	path = lib/solmate
+	url = https://github.com/Rari-Capital/solmate

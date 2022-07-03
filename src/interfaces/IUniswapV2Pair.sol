@@ -1,6 +1,7 @@
 pragma solidity =0.8.13;
 
 import "src/interfaces/IAssetManager.sol";
+import { GenericFactory } from "src/GenericFactory.sol";
 
 interface IUniswapV2Pair {
     event Mint(address indexed sender, uint amount0, uint amount1);
@@ -17,7 +18,7 @@ interface IUniswapV2Pair {
 
     // solhint-disable-next-line func-name-mixedcase
     function MINIMUM_LIQUIDITY() external pure returns (uint);
-    function factory() external view returns (address);
+    function factory() external view returns (GenericFactory);
     function token0() external view returns (address);
     function token1() external view returns (address);
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
@@ -37,8 +38,6 @@ interface IUniswapV2Pair {
 
     function setCustomSwapFee(uint _customSwapFee) external;
     function setCustomPlatformFee(uint _customPlatformFee) external;
-
-    function initialize(address _token0, address _token1, uint _swapFee, uint _platformFee) external;
 
     function assetManager() external returns (IAssetManager);
     function setManager(IAssetManager manager) external;
