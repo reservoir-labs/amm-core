@@ -16,6 +16,7 @@ import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
 
 struct AmplificationData {
+    /// @dev both initialA and futureA are stored with A_PRECISION (i.e. multiplied by 100)
     uint64 initialA;
     uint64 futureA;
     uint64 initialATime;
@@ -33,8 +34,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
     event Swap(address indexed to, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
     event Sync(uint256 reserve0, uint256 reserve1);
-    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
-    event StopRampA(uint64 currentA, uint64 time);
+    event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
+    event StopRampA(uint64 currentAPrecise, uint64 time);
     event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
     event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
     event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
@@ -83,7 +84,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         token1      = aToken1;
         swapFee     = factory.read("UniswapV2Pair::swapFee").toUint256();
         platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
-        ampData.initialA = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64();
+        ampData.initialA = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);
         ampData.futureATime = uint64(block.timestamp);
@@ -95,7 +96,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(token0 != address(0), "ZERO_ADDRESS");
         require(token0 != token1, "IDENTICAL_ADDRESSES");
         require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "INVALID_SWAP_FEE");
-        require(ampData.initialA >= StableMath.MIN_A && ampData.initialA <= StableMath.MAX_A, "INVALID_A");
+        require(ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
+             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION), "INVALID_A");
     }
 
     function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
@@ -137,44 +139,46 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         platformFee = _platformFee;
     }
 
-    function rampA(uint64 futureA, uint64 futureATime) external onlyFactory {
+    function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {
         require(
-            futureA >= StableMath.MIN_A
-         && futureA <= StableMath.MAX_A,
+            futureARaw >= StableMath.MIN_A
+         && futureARaw <= StableMath.MAX_A,
             "UniswapV2: INVALID A"
         );
+
+        uint64 futureAPrecise = futureARaw * uint64(StableMath.A_PRECISION);
 
         uint256 duration = futureATime - block.timestamp;
         require(duration >= StableMath.MIN_RAMP_TIME, "UniswapV2: INVALID DURATION");
 
-        uint64 currentA = _getCurrentA();
+        uint64 currentAPrecise = _getCurrentAPrecise();
 
         // daily rate = (futureA / currentA) / duration * 1 day
         // we do multiplication first before division to avoid
         // losing precision
-        uint256 dailyRate = futureA > currentA
+        uint256 dailyRate = futureAPrecise > currentAPrecise
             // balancer used divUp for this operation but I find no need for that
-            ? (futureA * 1 days) / (currentA * duration)
-            : (currentA * 1 days) / (futureA * duration);
+            ? (futureAPrecise * 1 days) / (currentAPrecise * duration)
+            : (currentAPrecise * 1 days) / (futureAPrecise * duration);
         require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "UniswapV2: AMP RATE TOO HIGH");
 
-        ampData.initialA = currentA;
-        ampData.futureA = futureA;
+        ampData.initialA = currentAPrecise;
+        ampData.futureA = futureAPrecise;
         ampData.initialATime = uint64(block.timestamp);
         ampData.futureATime = futureATime;
 
-        emit RampA(currentA, futureA, uint64(block.timestamp), futureATime);
+        emit RampA(currentAPrecise, futureAPrecise, uint64(block.timestamp), futureATime);
     }
 
     function stopRampA() external onlyFactory {
-        uint64 currentA = _getCurrentA();
+        uint64 currentAPrecise = _getCurrentAPrecise();
 
-        ampData.initialA = currentA;
-        ampData.futureA = currentA;
+        ampData.initialA = currentAPrecise;
+        ampData.futureA = currentAPrecise;
         ampData.initialATime =  uint64(block.timestamp);
         ampData.futureATime = ampData.initialATime;
 
-        emit StopRampA(currentA, ampData.initialATime);
+        emit StopRampA(currentAPrecise, ampData.initialATime);
     }
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
@@ -380,7 +384,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    function _getCurrentA() internal view returns (uint64 currentA) {
+    function _getCurrentAPrecise() internal view returns (uint64 currentA) {
         uint64 futureA = ampData.futureA;
         uint64 futureATime = ampData.futureATime;
 
@@ -401,13 +405,17 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    /// @dev number of coins in the pool multiplied by A
+    /// @dev number of coins in the pool multiplied by A precise
     function _getNA() internal view returns (uint256) {
-        return 2 * _getCurrentA();
+        return 2 * _getCurrentAPrecise();
     }
 
     function getCurrentA() external view returns (uint64) {
-        return _getCurrentA();
+        return _getCurrentAPrecise() / uint64(StableMath.A_PRECISION);
+    }
+
+    function getCurrentAPrecise() external view returns (uint64) {
+        return _getCurrentAPrecise();
     }
 
     function getAssets() public view returns (address[] memory assets) {

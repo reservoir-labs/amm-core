@@ -4,6 +4,7 @@ import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
+import { StableMath } from "src/libraries/StableMath.sol";
 import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -194,7 +195,7 @@ contract HybridPoolTest is Test
 
         // act
         vm.expectEmit(true, true, true, true);
-        emit RampA(1000, lFutureAToSet, lCurrentTimestamp, lFutureATimestamp);
+        emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
         _factory.rawCall(
             address(_pool),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -203,9 +204,9 @@ contract HybridPoolTest is Test
 
         // assert
         (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _pool.ampData();
-        assertEq(lInitialA, 1000);
+        assertEq(lInitialA, 1000 * uint64(StableMath.A_PRECISION));
         assertEq(_pool.getCurrentA(), 1000);
-        assertEq(lFutureA, lFutureAToSet);
+        assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, block.timestamp);
         assertEq(lFutureATime, lFutureATimestamp);
     }
@@ -257,8 +258,8 @@ contract HybridPoolTest is Test
 
         // assert
         (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _pool.ampData();
-        assertEq(lInitialA, lFutureAToSet);
-        assertEq(lFutureA, lFutureAToSet);
+        assertEq(lInitialA, lFutureAToSet * uint64(StableMath.A_PRECISION));
+        assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, lFutureATimestamp);
         assertEq(lFutureATime, lFutureATimestamp);
     }

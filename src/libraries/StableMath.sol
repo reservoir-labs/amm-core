@@ -5,13 +5,13 @@ import "src/libraries/MathUtils.sol";
 library StableMath {
     using MathUtils for uint256;
 
-    uint256 private constant MAX_LOOP_LIMIT = 256;
-    uint256 private constant MAX_FEE = 10000; // @dev 100%.
-    uint256 private constant A_PRECISION = 100;
+    uint256 public constant A_PRECISION = 100;
     uint256 public constant MIN_RAMP_TIME    = 1 days;
     uint256 public constant MIN_A            = 1;
     uint256 public constant MAX_A            = 10_000;
     uint256 public constant MAX_AMP_UPDATE_DAILY_RATE = 2;
+    uint256 private constant MAX_LOOP_LIMIT = 256;
+    uint256 private constant MAX_FEE = 10000; // @dev 100%.
 
     function _getAmountOut(
         uint256 amountIn,
