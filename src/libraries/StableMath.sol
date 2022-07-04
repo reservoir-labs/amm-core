@@ -47,11 +47,11 @@ library StableMath {
         uint256 xp0,
         uint256 xp1,
         uint256 N_A        // solhint-disable-line var-name-mixedcase
-    ) internal pure returns (uint256 computed) {
+    ) internal pure returns (uint256) {
         uint256 s = xp0 + xp1;
 
         if (s == 0) {
-            computed = 0;
+            return 0;
         }
         uint256 prevD;
         // solhint-disable-next-line var-name-mixedcase
@@ -61,10 +61,10 @@ library StableMath {
             prevD = D;
             D = (((N_A * s) / A_PRECISION + 2 * dP) * D) / ((N_A - A_PRECISION) * D / A_PRECISION + 3 * dP);
             if (D.within1(prevD)) {
-                break;
+                return D;
             }
         }
-        computed = D;
+        revert("_computeLiquidity did not converge");
     }
 
     /// @notice Calculate the new balances of the tokens given the indexes of the token
@@ -89,8 +89,9 @@ library StableMath {
             yPrev = y;
             y = (y * y + c) / (y * 2 + b - D);
             if (y.within1(yPrev)) {
-                break;
+                return y;
             }
         }
+        revert("_getY did not converge");
     }
 }
