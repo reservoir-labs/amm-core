@@ -262,14 +262,14 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
         if (tokenIn == token0) {
             tokenOut = token1;
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, true);
+            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
             _processSwap(token1, to, amountOut, context);
             uint256 balance0 = ERC20(token0).balanceOf(address(this));
             require(balance0 - _reserve0 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, token0PrecisionMultiplier, token1PrecisionMultiplier, false);
+            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
             _processSwap(token0, to, amountOut, context);
             uint256 balance1 = ERC20(token1).balanceOf(address(this));
             require(balance1 - _reserve1 >= amountIn, "INSUFFICIENT_AMOUNT_IN");
