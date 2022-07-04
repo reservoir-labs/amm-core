@@ -80,7 +80,7 @@ library StableMath {
         uint256 N_A        // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 y) {
         uint256 c = (D * D) / (x * 2);
-        c = (c * D) / ((N_A * 2) / A_PRECISION);
+        c = (c * D) * A_PRECISION / (N_A * 2);
         uint256 b = x + ((D * A_PRECISION) / N_A);
         uint256 yPrev;
         y = D;
