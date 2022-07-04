@@ -59,7 +59,7 @@ library StableMath {
         for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
             uint256 dP = (((D * D) / xp0) * D) / xp1 / 4;
             prevD = D;
-            D = (((N_A * s) / A_PRECISION + 2 * dP) * D) / ((N_A / A_PRECISION - 1) * D + 3 * dP);
+            D = (((N_A * s) / A_PRECISION + 2 * dP) * D) / ((N_A - A_PRECISION) * D / A_PRECISION + 3 * dP);
             if (D.within1(prevD)) {
                 break;
             }
