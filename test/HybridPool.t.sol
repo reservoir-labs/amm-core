@@ -289,4 +289,40 @@ contract HybridPoolTest is Test
         vm.warp(lFutureATimestamp);
         assertEq(_pool.getCurrentA(), lFutureAToSet);
     }
+
+    function testRampA_SwappingDuringIncreasingRamping() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+        uint256 lAmountToSwap = 10e18;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 0.5 days);
+        uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 1.5 days);
+        uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 2.79 days);
+        uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 3 days);
+        uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        // assert
+        assertGt(lAmountOutT1, lAmountOutBeforeRamp);
+        assertGt(lAmountOutT2, lAmountOutT1);
+        assertGt(lAmountOutT3, lAmountOutT2);
+        assertGt(lAmountOutT4, lAmountOutT3);
+    }
 }
