@@ -319,10 +319,46 @@ contract HybridPoolTest is Test
         vm.warp(lCurrentTimestamp + 3 days);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        // assert
+        // assert - output amount over time should be strictly increasing
         assertGt(lAmountOutT1, lAmountOutBeforeRamp);
         assertGt(lAmountOutT2, lAmountOutT1);
         assertGt(lAmountOutT3, lAmountOutT2);
         assertGt(lAmountOutT4, lAmountOutT3);
+    }
+
+    function testRampA_SwappingDuringDecreasingRamping() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 38 days;
+        uint64 lFutureAToSet = 9;
+        uint256 lAmountToSwap = 10e18;
+
+         // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 0.5 days);
+        uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 9.3 days);
+        uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 15.6 days);
+        uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        vm.warp(lCurrentTimestamp + 38 days);
+        uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        // assert - output amount over time should be strictly decreasing
+        assertLt(lAmountOutT1, lAmountOutBeforeRamp);
+        assertLt(lAmountOutT2, lAmountOutT1);
+        assertLt(lAmountOutT3, lAmountOutT2);
+        assertLt(lAmountOutT4, lAmountOutT3);
     }
 }
