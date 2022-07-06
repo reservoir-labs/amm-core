@@ -71,7 +71,11 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     uint128 internal reserve0;
     uint128 internal reserve1;
-    uint256 internal dLast;
+    /// @dev We need the 2 variables below to calculate the growth in liquidity between
+    /// minting and burning, for the purpose of calculating platformFee.
+    /// We no longer store dLast as dLast is dependent on the amp coefficient, which is dynamic
+    uint128 internal lastLiquidityEventReserve0;
+    uint128 internal lastLiquidityEventReserve1;
 
     modifier onlyFactory() {
         require(msg.sender == address(factory), "UniswapV2: FORBIDDEN");
@@ -204,7 +208,9 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         _mint(to, liquidity);
         _updateReserves();
 
-        dLast = newLiq;
+        lastLiquidityEventReserve0 = reserve0;
+        lastLiquidityEventReserve1 = reserve1;
+
         uint256 liquidityForEvent = liquidity;
         emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
     }
@@ -229,8 +235,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         withdrawnAmounts[0] = amount0;
         withdrawnAmounts[1] = amount1;
 
-        dLast = _computeLiquidity(balance0 - amount0, balance1 - amount1);
-
+        lastLiquidityEventReserve0 = reserve0;
+        lastLiquidityEventReserve1 = reserve1;
         emit Burn(msg.sender, amount0, amount1, to, liquidity);
     }
 
@@ -364,7 +370,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     function _mintFee(uint256 _reserve0, uint256 _reserve1) internal returns (uint256 _totalSupply, uint256 d) {
         _totalSupply = totalSupply;
-        uint256 _dLast = dLast;
+        uint256 _dLast = _computeLiquidity(lastLiquidityEventReserve0, lastLiquidityEventReserve1);
         if (_dLast != 0) {
             d = _computeLiquidity(_reserve0, _reserve1);
             if (d > _dLast) {
