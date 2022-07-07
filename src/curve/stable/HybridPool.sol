@@ -20,7 +20,9 @@ struct AmplificationData {
     uint64 initialA;
     /// @dev futureA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 futureA;
+    /// @dev initialATime is a unix timestamp and will only overflow in the year 2554
     uint64 initialATime;
+    /// @dev futureATime is a unix timestamp and will only overflow in the year 2554
     uint64 futureATime;
 }
 
@@ -72,9 +74,9 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     uint128 internal reserve0;
     uint128 internal reserve1;
-    /// @dev We need the 2 variables below to calculate the growth in liquidity between
-    /// minting and burning, for the purpose of calculating platformFee.
-    /// We no longer store dLast as dLast is dependent on the amp coefficient, which is dynamic
+    // We need the 2 variables below to calculate the growth in liquidity between
+    // minting and burning, for the purpose of calculating platformFee.
+    // We no longer store dLast as dLast is dependent on the amp coefficient, which is dynamic
     uint128 internal lastLiquidityEventReserve0;
     uint128 internal lastLiquidityEventReserve1;
 
