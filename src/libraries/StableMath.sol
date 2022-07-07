@@ -5,13 +5,21 @@ import "src/libraries/MathUtils.sol";
 library StableMath {
     using MathUtils for uint256;
 
-    uint256 public constant A_PRECISION = 100;
-    uint256 public constant MIN_RAMP_TIME    = 1 days;
-    uint256 public constant MIN_A            = 1;
-    uint256 public constant MAX_A            = 10_000;
-    uint256 public constant MAX_AMP_UPDATE_DAILY_RATE = 2;
-    uint256 private constant MAX_LOOP_LIMIT = 256;
-    uint256 private constant MAX_FEE = 10_000; // @dev 100%.
+    /// @dev extra precision for intermediate calculations
+    uint256 public constant A_PRECISION                 = 100;
+    /// @dev minimum time to the ramp A
+    uint256 public constant MIN_RAMP_TIME               = 1 days;
+    /// @dev minimum amplification coefficient for the math to work
+    uint256 public constant MIN_A                       = 1;
+    /// @dev maximum amplification coefficient
+    uint256 public constant MAX_A                       = 10_000;
+    /// @dev maximum rate of change daily
+    /// it is possible to change A by a factor of 8 over 3 days (2 ** 3)
+    uint256 public constant MAX_AMP_UPDATE_DAILY_RATE   = 2;
+    /// @dev required as an upper limit for iterative calculations not guaranteed to converge
+    uint256 private constant MAX_LOOP_LIMIT             = 256;
+    /// @dev 100% in basis points
+    uint256 private constant MAX_FEE                    = 10_000;
 
     function _getAmountOut(
         uint256 amountIn,

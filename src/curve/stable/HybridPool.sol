@@ -427,6 +427,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
 
     /// @dev number of coins in the pool multiplied by A precise
+    // perf: is it possible to optimize/simplify by hardcoding to two assets instead of using _getNA() etc
     function _getNA() internal view returns (uint256) {
         return 2 * _getCurrentAPrecise();
     }
