@@ -16,8 +16,9 @@ import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
 
 struct AmplificationData {
-    /// @dev both initialA and futureA are stored with A_PRECISION (i.e. multiplied by 100)
+    /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 initialA;
+    /// @dev futureA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 futureA;
     uint64 initialATime;
     uint64 futureATime;
@@ -179,6 +180,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
         ampData.initialA = currentAPrecise;
         ampData.futureA = currentAPrecise;
+        // perf: check performance of using intermediate variable instead of struct property
         ampData.initialATime =  uint64(block.timestamp);
         ampData.futureATime = ampData.initialATime;
 
@@ -237,6 +239,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
         lastLiquidityEventReserve0 = reserve0;
         lastLiquidityEventReserve1 = reserve1;
+
         emit Burn(msg.sender, amount0, amount1, to, liquidity);
     }
 
@@ -390,7 +393,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    function _getCurrentAPrecise() internal view returns (uint64 currentA) {
+    function _getCurrentAPrecise() internal view returns (uint64 rCurrentA) {
         uint64 futureA = ampData.futureA;
         uint64 futureATime = ampData.futureATime;
 
