@@ -350,9 +350,16 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         uint256 _reserve1,
         bool token0In
     ) internal view returns (uint256 dy) {
-        return StableMath._getAmountOut(amountIn, _reserve0, _reserve1,
-                                        token0PrecisionMultiplier, token1PrecisionMultiplier,
-                                        token0In, swapFee, _getNA());
+        return StableMath._getAmountOut(
+                amountIn,
+                _reserve0,
+                _reserve1,
+                token0PrecisionMultiplier,
+                token1PrecisionMultiplier,
+                token0In,
+                swapFee,
+                _getNA()
+        );
     }
 
     function _safeTransfer(address token, address to, uint value) private {
@@ -402,17 +409,20 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         if (block.timestamp < futureATime) {
             uint64 initialA = ampData.initialA;
             uint64 initialATime = ampData.initialATime;
-            uint64 rampTime = futureATime - initialATime;
+            uint64 rampDuration = futureATime - initialATime;
+            uint64 rampElapsed = uint64(block.timestamp) - initialATime;
 
             if (futureA > initialA) {
-                currentA = initialA + (uint64(block.timestamp) - initialATime) * (futureA - initialA) / rampTime;
+                uint64 rampDelta = futureA - initialA;
+                rCurrentA = initialA + rampElapsed * rampDelta / rampDuration;
             }
             else {
-                currentA = initialA - (uint64(block.timestamp) - initialATime) * (initialA - futureA) / rampTime;
+                uint64 rampDelta = initialA - futureA;
+                rCurrentA = initialA - rampElapsed * rampDelta / rampDuration;
             }
         }
         else {
-            currentA = futureA;
+            rCurrentA = futureA;
         }
     }
 
