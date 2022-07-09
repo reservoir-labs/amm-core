@@ -290,12 +290,15 @@ contract HybridPoolTest is Test
         assertEq(_pool.getCurrentA(), lFutureAToSet);
     }
 
-    function testRampA_SwappingDuringIncreasingRamping() public
+    function testRampA_SwappingDuringIncreasingRamping(uint256 aSeed) public
     {
         // arrange
+        uint64 lFutureAToSet = uint64(bound(aSeed, _pool.getCurrentA(), StableMath.MAX_A));
+        uint256 lMinRampDuration = lFutureAToSet / _pool.getCurrentA() * 1 days;
+        uint256 lMaxRampDuration = 30 days; // 1 month
         uint64 lCurrentTimestamp = uint64(block.timestamp);
-        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
-        uint64 lFutureAToSet = 5000;
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aSeed, lMinRampDuration, lMaxRampDuration));
+
         uint256 lAmountToSwap = 10e18;
 
         // act
@@ -306,32 +309,41 @@ contract HybridPoolTest is Test
         );
 
         uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
-        vm.warp(lCurrentTimestamp + 0.5 days);
+        uint64 lCheck1 = uint64(bound(aSeed, 1, lRemainingTime));
+        skip(lCheck1);
         uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        vm.warp(lCurrentTimestamp + 1.5 days);
+        lRemainingTime -= lCheck1;
+        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 1, lRemainingTime));
+        skip(lCheck2);
         uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        vm.warp(lCurrentTimestamp + 2.79 days);
+        lRemainingTime -= lCheck2;
+        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 1, lRemainingTime));
+        skip(lCheck3);
         uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        vm.warp(lCurrentTimestamp + 3 days);
+        lRemainingTime -= lCheck3;
+        skip(lRemainingTime);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
         // assert - output amount over time should be strictly increasing
-        assertGt(lAmountOutT1, lAmountOutBeforeRamp);
-        assertGt(lAmountOutT2, lAmountOutT1);
-        assertGt(lAmountOutT3, lAmountOutT2);
-        assertGt(lAmountOutT4, lAmountOutT3);
+        assertGe(lAmountOutT1, lAmountOutBeforeRamp);
+        assertGe(lAmountOutT2, lAmountOutT1);
+        assertGe(lAmountOutT3, lAmountOutT2);
+        assertGe(lAmountOutT4, lAmountOutT3);
     }
 
-    function testRampA_SwappingDuringDecreasingRamping() public
+    function testRampA_SwappingDuringDecreasingRamping(uint256 aSeed) public
     {
         // arrange
+        uint64 lFutureAToSet = uint64(bound(aSeed, StableMath.MIN_A, _pool.getCurrentA()));
+        uint256 lMinRampDuration = _pool.getCurrentA() / lFutureAToSet * 1 days;
+        uint256 lMaxRampDuration = 1000 days;
         uint64 lCurrentTimestamp = uint64(block.timestamp);
-        uint64 lFutureATimestamp = lCurrentTimestamp + 38 days;
-        uint64 lFutureAToSet = 9;
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aSeed, lMinRampDuration, lMaxRampDuration));
         uint256 lAmountToSwap = 10e18;
 
          // act
@@ -342,23 +354,30 @@ contract HybridPoolTest is Test
         );
 
         uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
-        vm.warp(lCurrentTimestamp + 0.5 days);
+        uint64 lCheck1 = uint64(bound(aSeed, 1, lRemainingTime));
+        skip(lCheck1);
         uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        vm.warp(lCurrentTimestamp + 9.3 days);
+        lRemainingTime -= lCheck1;
+        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 1, lRemainingTime));
+        skip(lCheck2);
         uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        vm.warp(lCurrentTimestamp + 15.6 days);
+        lRemainingTime -= lCheck2;
+        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 1, lRemainingTime));
+        skip(lCheck3);
         uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        vm.warp(lCurrentTimestamp + 38 days);
+        lRemainingTime -= lCheck3;
+        skip(lRemainingTime);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
         // assert - output amount over time should be strictly decreasing
-        assertLt(lAmountOutT1, lAmountOutBeforeRamp);
-        assertLt(lAmountOutT2, lAmountOutT1);
-        assertLt(lAmountOutT3, lAmountOutT2);
-        assertLt(lAmountOutT4, lAmountOutT3);
+        assertLe(lAmountOutT1, lAmountOutBeforeRamp);
+        assertLe(lAmountOutT2, lAmountOutT1);
+        assertLe(lAmountOutT3, lAmountOutT2);
+        assertLe(lAmountOutT4, lAmountOutT3);
     }
 }
