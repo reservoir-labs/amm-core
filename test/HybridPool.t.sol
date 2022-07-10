@@ -329,7 +329,7 @@ contract HybridPoolTest is Test
         skip(lRemainingTime);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        // assert - output amount over time should be strictly increasing
+        // assert - output amount over time should be increasing
         assertGe(lAmountOutT1, lAmountOutBeforeRamp);
         assertGe(lAmountOutT2, lAmountOutT1);
         assertGe(lAmountOutT3, lAmountOutT2);
@@ -374,7 +374,7 @@ contract HybridPoolTest is Test
         skip(lRemainingTime);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        // assert - output amount over time should be strictly decreasing
+        // assert - output amount over time should be decreasing
         assertLe(lAmountOutT1, lAmountOutBeforeRamp);
         assertLe(lAmountOutT2, lAmountOutT1);
         assertLe(lAmountOutT3, lAmountOutT2);
