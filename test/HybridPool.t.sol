@@ -311,17 +311,17 @@ contract HybridPoolTest is Test
         uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
         uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
-        uint64 lCheck1 = uint64(bound(aSeed, 1, lRemainingTime));
+        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
         skip(lCheck1);
         uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck1;
-        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 1, lRemainingTime));
+        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
         skip(lCheck2);
         uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck2;
-        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 1, lRemainingTime));
+        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 0, lRemainingTime));
         skip(lCheck3);
         uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
@@ -356,17 +356,17 @@ contract HybridPoolTest is Test
         uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
         uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
-        uint64 lCheck1 = uint64(bound(aSeed, 1, lRemainingTime));
+        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
         skip(lCheck1);
         uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck1;
-        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 1, lRemainingTime));
+        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
         skip(lCheck2);
         uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck2;
-        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 1, lRemainingTime));
+        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
         skip(lCheck3);
         uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
