@@ -298,8 +298,7 @@ contract HybridPoolTest is Test
         uint256 lMaxRampDuration = 30 days; // 1 month
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aSeed, lMinRampDuration, lMaxRampDuration));
-
-        uint256 lAmountToSwap = 10e18;
+        uint256 lAmountToSwap = bound(aSeed, 1, type(uint128).max / 2);
 
         // act
         _factory.rawCall(
@@ -344,7 +343,7 @@ contract HybridPoolTest is Test
         uint256 lMaxRampDuration = 1000 days;
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aSeed, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = 10e18;
+        uint256 lAmountToSwap = bound(aSeed, 1, type(uint128).max / 2);
 
          // act
         _factory.rawCall(
