@@ -98,7 +98,7 @@ contract HybridPoolTest is Test
     function testMintFee_CallableBySelf() public
     {
         // arrange
-        hoax(address(_pool));
+        vm.prank(address(_pool));
 
         // act
         (uint256 lTotalSupply, ) = _pool.mintFee(0, 0);

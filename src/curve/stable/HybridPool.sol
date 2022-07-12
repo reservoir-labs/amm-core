@@ -231,13 +231,12 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         (uint256 balance0, uint256 balance1) = _balance();
         uint256 liquidity = balanceOf[address(this)];
 
-        uint256 _totalSupply;
-
         // this is a safety feature that prevents revert when removing liquidity
         // i.e. removing liquidity should always succeed under all circumstances
         // so if the iterative functions revert, we just have to forgo the platformFee calculations
         // and use the current totalSupply of LP tokens for calculations since there is no new
         // LP tokens minted for platformFee
+        uint256 _totalSupply;
         try HybridPool(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256 d) {
             _totalSupply = rTotalSupply;
         }
