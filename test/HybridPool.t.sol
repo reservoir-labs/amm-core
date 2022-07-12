@@ -95,6 +95,25 @@ contract HybridPoolTest is Test
         lPair.mint(address(this));
     }
 
+    function testMintFee_CallableBySelf() public
+    {
+        // arrange
+        hoax(address(_pool));
+
+        // act
+        (uint256 lTotalSupply, ) = _pool.mintFee(0, 0);
+
+        // assert
+        assertEq(lTotalSupply, _pool.totalSupply());
+    }
+
+    function testMintFee_NotCallableByOthers() public
+    {
+        // act & assert
+        vm.expectRevert("not self");
+        _pool.mintFee(0, 0);
+    }
+
     function testSwap() public
     {
         // act

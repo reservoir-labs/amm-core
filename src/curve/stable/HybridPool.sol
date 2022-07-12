@@ -85,6 +85,11 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         _;
     }
 
+    modifier onlySelf () {
+        require(msg.sender == address(this), "not self");
+        _;
+    }
+
     constructor(address aToken0, address aToken1) {
         factory     = GenericFactory(msg.sender);
         token0      = aToken0;
@@ -201,7 +206,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         uint256 amount0 = balance0 - _reserve0;
         uint256 amount1 = balance1 - _reserve1;
 
-        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
+        (uint256 _totalSupply, uint256 oldLiq) = HybridPool(this).mintFee(_reserve0, _reserve1);
 
         if (_totalSupply == 0) {
             require(amount0 > 0 && amount1 > 0, "INVALID_AMOUNTS");
@@ -226,7 +231,19 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         (uint256 balance0, uint256 balance1) = _balance();
         uint256 liquidity = balanceOf[address(this)];
 
-        (uint256 _totalSupply, ) = _mintFee(balance0, balance1);
+        uint256 _totalSupply;
+
+        // this is a safety feature that prevents revert when removing liquidity
+        // i.e. removing liquidity should always succeed under all circumstances
+        // so if the iterative functions revert, we just have to forgo the platformFee calculations
+        // and use the current totalSupply of LP tokens for calculations since there is no new
+        // LP tokens minted for platformFee
+        try HybridPool(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256 d) {
+            _totalSupply = rTotalSupply;
+        }
+        catch {
+            _totalSupply = totalSupply;
+        }
 
         uint256 amount0 = (liquidity * balance0) / _totalSupply;
         uint256 amount1 = (liquidity * balance1) / _totalSupply;
@@ -382,7 +399,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
     }
 
-    function _mintFee(uint256 _reserve0, uint256 _reserve1) internal returns (uint256 _totalSupply, uint256 d) {
+    function mintFee(uint256 _reserve0, uint256 _reserve1) public onlySelf returns (uint256 _totalSupply, uint256 d) {
         _totalSupply = totalSupply;
         uint256 _dLast = _computeLiquidity(lastLiquidityEventReserve0, lastLiquidityEventReserve1);
         if (_dLast != 0) {
