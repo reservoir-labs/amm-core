@@ -309,15 +309,15 @@ contract HybridPoolTest is Test
         assertEq(_pool.getCurrentA(), lFutureAToSet);
     }
 
-    function testRampA_SwappingDuringIncreasingRamping(uint256 aSeed) public
+    function testRampA_SwappingDuringIncreasingRamping(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
     {
         // arrange
-        uint64 lFutureAToSet = uint64(bound(aSeed, _pool.getCurrentA(), StableMath.MAX_A));
+        uint64 lFutureAToSet = uint64(bound(aFutureA, _pool.getCurrentA(), StableMath.MAX_A));
         uint256 lMinRampDuration = lFutureAToSet / _pool.getCurrentA() * 1 days;
         uint256 lMaxRampDuration = 30 days; // 1 month
         uint64 lCurrentTimestamp = uint64(block.timestamp);
-        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aSeed, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = bound(aSeed, 1, type(uint128).max / 2);
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
+        uint256 lAmountToSwap = aSwapAmount / 2;
 
         // act
         _factory.rawCall(
@@ -354,15 +354,15 @@ contract HybridPoolTest is Test
         assertGe(lAmountOutT4, lAmountOutT3);
     }
 
-    function testRampA_SwappingDuringDecreasingRamping(uint256 aSeed) public
+    function testRampA_SwappingDuringDecreasingRamping(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
     {
         // arrange
-        uint64 lFutureAToSet = uint64(bound(aSeed, StableMath.MIN_A, _pool.getCurrentA()));
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _pool.getCurrentA()));
         uint256 lMinRampDuration = _pool.getCurrentA() / lFutureAToSet * 1 days;
         uint256 lMaxRampDuration = 1000 days;
         uint64 lCurrentTimestamp = uint64(block.timestamp);
-        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aSeed, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = bound(aSeed, 1, type(uint128).max / 2);
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
+        uint256 lAmountToSwap = aSwapAmount / 2;
 
          // act
         _factory.rawCall(
