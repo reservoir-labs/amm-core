@@ -96,10 +96,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         token1      = aToken1;
         swapFee     = factory.read("UniswapV2Pair::swapFee").toUint256();
         platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
-        ampData.initialA = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
-        ampData.futureA = ampData.initialA;
-        ampData.initialATime = uint64(block.timestamp);
-        ampData.futureATime = uint64(block.timestamp);
+        ampData.initialA        = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
+        ampData.futureA         = ampData.initialA;
+        ampData.initialATime    = uint64(block.timestamp);
+        ampData.futureATime     = uint64(block.timestamp);
 
         token0PrecisionMultiplier = uint256(10)**(18 - ERC20(token0).decimals());
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(token1).decimals());
@@ -110,7 +110,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "INVALID_SWAP_FEE");
         require(
             ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
-            && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION), "INVALID_A"
+            && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
+            "INVALID_A"
         );
     }
 
@@ -156,7 +157,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {
         require(
             futureARaw >= StableMath.MIN_A
-         && futureARaw <= StableMath.MAX_A,
+            && futureARaw <= StableMath.MAX_A,
             "UniswapV2: INVALID A"
         );
 
