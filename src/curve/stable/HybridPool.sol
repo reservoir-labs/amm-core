@@ -238,7 +238,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         // and use the current totalSupply of LP tokens for calculations since there is no new
         // LP tokens minted for platformFee
         uint256 _totalSupply;
-        try HybridPool(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256 d) {
+        try HybridPool(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256) {
             _totalSupply = rTotalSupply;
         }
         catch {
