@@ -207,7 +207,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         uint256 amount0 = balance0 - _reserve0;
         uint256 amount1 = balance1 - _reserve1;
 
-        (uint256 _totalSupply, uint256 oldLiq) = HybridPool(this).mintFee(_reserve0, _reserve1);
+        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
 
         if (_totalSupply == 0) {
             require(amount0 > 0 && amount1 > 0, "INVALID_AMOUNTS");
@@ -312,6 +312,10 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
+    function mintFee(uint256 _reserve0, uint256 _reserve1) public onlySelf returns (uint256 _totalSupply, uint256 d) {
+        return _mintFee(_reserve0, _reserve1);
+    }
+
     function _processSwap(
         address tokenOut,
         address to,
@@ -399,7 +403,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
     }
 
-    function mintFee(uint256 _reserve0, uint256 _reserve1) public onlySelf returns (uint256 _totalSupply, uint256 d) {
+    function _mintFee(uint256 _reserve0, uint256 _reserve1) internal returns (uint256 _totalSupply, uint256 d) {
         _totalSupply = totalSupply;
         uint256 _dLast = _computeLiquidity(lastLiquidityEventReserve0, lastLiquidityEventReserve1);
         if (_dLast != 0) {
