@@ -4,6 +4,7 @@ import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
+import { MathUtils } from "src/libraries/MathUtils.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
@@ -347,11 +348,11 @@ contract HybridPoolTest is Test
         skip(lRemainingTime);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        // assert - output amount over time should be increasing
-        assertGe(lAmountOutT1, lAmountOutBeforeRamp);
-        assertGe(lAmountOutT2, lAmountOutT1);
-        assertGe(lAmountOutT3, lAmountOutT2);
-        assertGe(lAmountOutT4, lAmountOutT3);
+        // assert - output amount over time should be increasing or be within 1 due to rounding error
+        assertTrue(lAmountOutT1 >= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
+        assertTrue(lAmountOutT2 >= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
+        assertTrue(lAmountOutT3 >= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
+        assertTrue(lAmountOutT4 >= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 
     function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
@@ -392,10 +393,10 @@ contract HybridPoolTest is Test
         skip(lRemainingTime);
         uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
 
-        // assert - output amount over time should be decreasing
-        assertLe(lAmountOutT1, lAmountOutBeforeRamp);
-        assertLe(lAmountOutT2, lAmountOutT1);
-        assertLe(lAmountOutT3, lAmountOutT2);
-        assertLe(lAmountOutT4, lAmountOutT3);
+        // assert - output amount over time should be decreasing or within 1 due to rounding error
+        assertTrue(lAmountOutT1 <= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
+        assertTrue(lAmountOutT2 <= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
+        assertTrue(lAmountOutT3 <= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
+        assertTrue(lAmountOutT4 <= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 }
