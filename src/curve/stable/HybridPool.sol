@@ -374,14 +374,14 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         bool token0In
     ) internal view returns (uint256 dy) {
         return StableMath._getAmountOut(
-                amountIn,
-                _reserve0,
-                _reserve1,
-                token0PrecisionMultiplier,
-                token1PrecisionMultiplier,
-                token0In,
-                swapFee,
-                _getNA()
+            amountIn,
+            _reserve0,
+            _reserve1,
+            token0PrecisionMultiplier,
+            token1PrecisionMultiplier,
+            token0In,
+            swapFee,
+            _getNA()
         );
     }
 

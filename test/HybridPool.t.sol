@@ -309,7 +309,7 @@ contract HybridPoolTest is Test
         assertEq(_pool.getCurrentA(), lFutureAToSet);
     }
 
-    function testRampA_SwappingDuringIncreasingRamping(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
+    function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
     {
         // arrange
         uint64 lFutureAToSet = uint64(bound(aFutureA, _pool.getCurrentA(), StableMath.MAX_A));
@@ -354,7 +354,7 @@ contract HybridPoolTest is Test
         assertGe(lAmountOutT4, lAmountOutT3);
     }
 
-    function testRampA_SwappingDuringDecreasingRamping(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
+    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
     {
         // arrange
         uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _pool.getCurrentA()));
