@@ -1,6 +1,7 @@
 pragma solidity 0.8.13;
 
 import "src/libraries/MathUtils.sol";
+import "forge-std/Test.sol";
 
 library StableMath {
     using MathUtils for uint256;
@@ -30,7 +31,7 @@ library StableMath {
         bool token0In,
         uint256 swapFee,
         uint256 N_A        // solhint-disable-line var-name-mixedcase
-    ) internal pure returns(uint256 dy) {
+    ) internal view returns(uint256 dy) {
     unchecked {
         uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
         uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
@@ -86,7 +87,10 @@ library StableMath {
         uint256 x,
         uint256 D,          // solhint-disable-line var-name-mixedcase
         uint256 N_A        // solhint-disable-line var-name-mixedcase
-    ) internal pure returns (uint256 y) {
+    ) internal view returns (uint256 y) {
+        console2.log("x", x);
+        console2.log("D", D);
+        console2.log("N_A", N_A);
         uint256 c = (D * D) / (x * 2);
         c = (c * D) * A_PRECISION / (N_A * 2);
         uint256 b = x + ((D * A_PRECISION) / N_A);
@@ -95,8 +99,10 @@ library StableMath {
         // @dev Iterative approximation.
         for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
             yPrev = y;
+            console2.log("yprev", yPrev);
             y = (y * y + c) / (y * 2 + b - D);
             if (y.within1(yPrev)) {
+                console2.log("y final", y);
                 return y;
             }
         }
