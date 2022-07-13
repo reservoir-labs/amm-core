@@ -85,11 +85,6 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         _;
     }
 
-    modifier onlySelf () {
-        require(msg.sender == address(this), "not self");
-        _;
-    }
-
     constructor(address aToken0, address aToken1) {
         factory     = GenericFactory(msg.sender);
         token0      = aToken0;
@@ -312,7 +307,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
-    function mintFee(uint256 _reserve0, uint256 _reserve1) public onlySelf returns (uint256 _totalSupply, uint256 d) {
+    function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
+        require(msg.sender == address(this), "not self");
         return _mintFee(_reserve0, _reserve1);
     }
 
