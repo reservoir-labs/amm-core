@@ -93,6 +93,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
         ampData.initialA        = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
+        // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
