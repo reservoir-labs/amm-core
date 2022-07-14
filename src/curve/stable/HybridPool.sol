@@ -4,6 +4,7 @@ pragma solidity =0.8.13;
 
 import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/token/ERC20/ERC20.sol";
+import "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -169,9 +170,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         // we do multiplication first before division to avoid
         // losing precision
         uint256 dailyRate = futureAPrecise > currentAPrecise
-            // balancer used divUp for this operation but I find no need for that
-            ? (futureAPrecise * 1 days) / (currentAPrecise * duration)
-            : (currentAPrecise * 1 days) / (futureAPrecise * duration);
+            ? Math.ceilDiv(futureAPrecise * 1 days, currentAPrecise * duration)
+            : Math.ceilDiv(currentAPrecise * 1 days, futureAPrecise * duration);
         require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "UniswapV2: AMP RATE TOO HIGH");
 
         ampData.initialA = currentAPrecise;

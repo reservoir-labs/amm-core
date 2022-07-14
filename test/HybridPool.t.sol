@@ -231,12 +231,51 @@ contract HybridPoolTest is Test
         assertEq(lFutureATime, lFutureATimestamp);
     }
 
-    function testRampA_InvalidA() public
+    function testRampA_SetAtMinimum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 500 days;
+        uint64 lFutureAToSet = uint64(StableMath.MIN_A);
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (, uint64 lFutureA, , ) = _pool.ampData();
+        assertEq(lFutureA / StableMath.A_PRECISION, lFutureAToSet);
+    }
+
+    function testRampA_SetAtMaximum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 5 days;
+        uint64 lFutureAToSet = uint64(StableMath.MAX_A);
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (, uint64 lFutureA, , ) = _pool.ampData();
+        assertEq(lFutureA / StableMath.A_PRECISION, lFutureAToSet);
+    }
+
+
+    function testRampA_BreachMinimum() public
     {
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
-        uint64 lFutureAToSet = 20000;
+        uint64 lFutureAToSet = uint64(StableMath.MIN_A) - 1;
 
         // act & assert
         vm.expectRevert("UniswapV2: INVALID A");
@@ -245,9 +284,52 @@ contract HybridPoolTest is Test
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
+    }
 
-        lFutureAToSet = 0;
+    function testRampA_BreachMaximum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 501 days;
+        uint64 lFutureAToSet = uint64(StableMath.MAX_A) + 1;
+
+        // act & assert
         vm.expectRevert("UniswapV2: INVALID A");
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+    }
+
+    function testRampA_MaxSpeed() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
+        uint64 lFutureAToSet = _pool.getCurrentA() * 2;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (, uint64 lFutureA, , ) = _pool.ampData();
+        assertEq(lFutureA, lFutureAToSet * StableMath.A_PRECISION);
+    }
+
+    function testRampA_BreachMaxSpeed() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 2 days - 1;
+        uint64 lFutureAToSet = _pool.getCurrentA() * 4;
+
+        // act & assert
+        vm.expectRevert("UniswapV2: AMP RATE TOO HIGH");
         _factory.rawCall(
             address(_pool),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
