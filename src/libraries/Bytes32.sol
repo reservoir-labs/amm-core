@@ -31,6 +31,10 @@ library Bytes32Lib
         return uint256(aValue) % 2 == 1;
     }
 
+    function toUint64(bytes32 aValue) internal pure returns (uint64) {
+        return uint64(uint256(aValue));
+    }
+
     function toUint256(bytes32 aValue) internal pure returns (uint256) {
         return uint256(aValue);
     }

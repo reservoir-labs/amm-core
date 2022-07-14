@@ -4,13 +4,17 @@ import "forge-std/Test.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import { HybridPool } from "src/curve/stable/HybridPool.sol";
+import { MathUtils } from "src/libraries/MathUtils.sol";
+import { StableMath } from "src/libraries/StableMath.sol";
+import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract HybridPoolTest is Test
 {
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
+
+    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
 
     address private _platformFeeTo = address(1);
     address private _bentoPlaceholder = address(2);
@@ -92,6 +96,25 @@ contract HybridPoolTest is Test
         lPair.mint(address(this));
     }
 
+    function testMintFee_CallableBySelf() public
+    {
+        // arrange
+        vm.prank(address(_pool));
+
+        // act
+        (uint256 lTotalSupply, ) = _pool.mintFee(0, 0);
+
+        // assert
+        assertEq(lTotalSupply, _pool.totalSupply());
+    }
+
+    function testMintFee_NotCallableByOthers() public
+    {
+        // act & assert
+        vm.expectRevert("not self");
+        _pool.mintFee(0, 0);
+    }
+
     function testSwap() public
     {
         // act
@@ -169,7 +192,7 @@ contract HybridPoolTest is Test
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
     }
 
-    function testRecoverToken() external
+    function testRecoverToken() public
     {
         // arrange
         uint256 lAmountToRecover = 1e18;
@@ -181,5 +204,284 @@ contract HybridPoolTest is Test
         // assert
         assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
         assertEq(_tokenC.balanceOf(address(_pool)), 0);
+    }
+
+    function testRampA() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _pool.ampData();
+        assertEq(lInitialA, 1000 * uint64(StableMath.A_PRECISION));
+        assertEq(_pool.getCurrentA(), 1000);
+        assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
+        assertEq(lInitialATime, block.timestamp);
+        assertEq(lFutureATime, lFutureATimestamp);
+    }
+
+    function testRampA_SetAtMinimum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 500 days;
+        uint64 lFutureAToSet = uint64(StableMath.MIN_A);
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (, uint64 lFutureA, , ) = _pool.ampData();
+        assertEq(lFutureA / StableMath.A_PRECISION, lFutureAToSet);
+    }
+
+    function testRampA_SetAtMaximum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 5 days;
+        uint64 lFutureAToSet = uint64(StableMath.MAX_A);
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (, uint64 lFutureA, , ) = _pool.ampData();
+        assertEq(lFutureA / StableMath.A_PRECISION, lFutureAToSet);
+    }
+
+
+    function testRampA_BreachMinimum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = uint64(StableMath.MIN_A) - 1;
+
+        // act & assert
+        vm.expectRevert("UniswapV2: INVALID A");
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+    }
+
+    function testRampA_BreachMaximum() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 501 days;
+        uint64 lFutureAToSet = uint64(StableMath.MAX_A) + 1;
+
+        // act & assert
+        vm.expectRevert("UniswapV2: INVALID A");
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+    }
+
+    function testRampA_MaxSpeed() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
+        uint64 lFutureAToSet = _pool.getCurrentA() * 2;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        (, uint64 lFutureA, , ) = _pool.ampData();
+        assertEq(lFutureA, lFutureAToSet * StableMath.A_PRECISION);
+    }
+
+    function testRampA_BreachMaxSpeed() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 2 days - 1;
+        uint64 lFutureAToSet = _pool.getCurrentA() * 4;
+
+        // act & assert
+        vm.expectRevert("UniswapV2: AMP RATE TOO HIGH");
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+    }
+
+    function testStopRampA() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        vm.warp(lFutureATimestamp);
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("stopRampA()"),
+            0
+        );
+
+        // assert
+        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _pool.ampData();
+        assertEq(lInitialA, lFutureAToSet * uint64(StableMath.A_PRECISION));
+        assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
+        assertEq(lInitialATime, lFutureATimestamp);
+        assertEq(lFutureATime, lFutureATimestamp);
+    }
+
+    // todo: testStopRampA_Early
+    // todo: testStopRampA_Late
+
+    function testGetCurrentA() public
+    {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureAToSet = 5000;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // assert
+        assertEq(_pool.getCurrentA(), 1000);
+
+        // warp to the midpoint between the initialATime and futureATime
+        vm.warp((lFutureATimestamp + block.timestamp) / 2);
+        assertEq(_pool.getCurrentA(), (1000 + lFutureAToSet) / 2);
+
+        // warp to the end
+        vm.warp(lFutureATimestamp);
+        assertEq(_pool.getCurrentA(), lFutureAToSet);
+    }
+
+    function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
+    {
+        // arrange
+        uint64 lFutureAToSet = uint64(bound(aFutureA, _pool.getCurrentA(), StableMath.MAX_A));
+        uint256 lMinRampDuration = lFutureAToSet / _pool.getCurrentA() * 1 days;
+        uint256 lMaxRampDuration = 30 days; // 1 month
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
+        uint256 lAmountToSwap = aSwapAmount / 2;
+
+        // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
+
+        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
+        skip(lCheck1);
+        uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        lRemainingTime -= lCheck1;
+        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
+        skip(lCheck2);
+        uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        lRemainingTime -= lCheck2;
+        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 0, lRemainingTime));
+        skip(lCheck3);
+        uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        lRemainingTime -= lCheck3;
+        skip(lRemainingTime);
+        uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        // assert - output amount over time should be increasing or be within 1 due to rounding error
+        assertTrue(lAmountOutT1 >= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
+        assertTrue(lAmountOutT2 >= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
+        assertTrue(lAmountOutT3 >= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
+        assertTrue(lAmountOutT4 >= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
+    }
+
+    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
+    {
+        // arrange
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _pool.getCurrentA()));
+        uint256 lMinRampDuration = _pool.getCurrentA() / lFutureAToSet * 1 days;
+        uint256 lMaxRampDuration = 1000 days;
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
+        uint256 lAmountToSwap = aSwapAmount / 2;
+
+         // act
+        _factory.rawCall(
+            address(_pool),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        uint256 lAmountOutBeforeRamp = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
+
+        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
+        skip(lCheck1);
+        uint256 lAmountOutT1 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        lRemainingTime -= lCheck1;
+        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
+        skip(lCheck2);
+        uint256 lAmountOutT2 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        lRemainingTime -= lCheck2;
+        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
+        skip(lCheck3);
+        uint256 lAmountOutT3 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        lRemainingTime -= lCheck3;
+        skip(lRemainingTime);
+        uint256 lAmountOutT4 = _pool.getAmountOut(address(_tokenA), lAmountToSwap);
+
+        // assert - output amount over time should be decreasing or within 1 due to rounding error
+        assertTrue(lAmountOutT1 <= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
+        assertTrue(lAmountOutT2 <= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
+        assertTrue(lAmountOutT3 <= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
+        assertTrue(lAmountOutT4 <= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 }
