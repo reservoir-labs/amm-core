@@ -284,6 +284,9 @@ contract HybridPoolTest is Test
         assertEq(lFutureATime, lFutureATimestamp);
     }
 
+    // todo: testStopRampA_Early
+    // todo: testStopRampA_Late
+
     function testGetCurrentA() public
     {
         // arrange
