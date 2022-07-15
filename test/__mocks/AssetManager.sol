@@ -10,7 +10,7 @@ contract AssetManager is IAssetManager
 {
     mapping(address => mapping(address => uint112)) public getBalance;
 
-    function adjustInvestment(IUniswapV2Pair aPair, int224 aToken0Amount, int224 aToken1Amount) external
+    function adjustManagement(IUniswapV2Pair aPair, int224 aToken0Amount, int224 aToken1Amount) external
     {
         require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "overflow");
 
@@ -37,7 +37,7 @@ contract AssetManager is IAssetManager
             getBalance[address(aPair)][aPair.token1()] -= lAbs;
         }
 
-        aPair.adjustInvestment(aToken0Amount, aToken1Amount);
+        aPair.adjustManagement(aToken0Amount, aToken1Amount);
     }
 
     function adjustBalance(address aOwner, address aToken, uint112 aNewAmount) external

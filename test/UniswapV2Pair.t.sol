@@ -305,13 +305,13 @@ contract UniswapV2PairTest is Test
         assertEq(address(_pair.assetManager()), address(_manager));
     }
 
-    function testSetManager_CannotMigrateWithInvested() external
+    function testSetManager_CannotMigrateWithManaged() external
     {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
-        _manager.adjustInvestment(_pair, 10e18, 10e18);
+        _manager.adjustManagement(_pair, 10e18, 10e18);
 
         // act & assert
         vm.prank(address(_factory));
@@ -330,7 +330,7 @@ contract UniswapV2PairTest is Test
         _pair.setManager(IAssetManager(address(this)));
 
         // act
-        _pair.adjustInvestment(20e18, 20e18);
+        _pair.adjustManagement(20e18, 20e18);
 
         // assert
         assertEq(_tokenA.balanceOf(address(this)), 20e18);
@@ -343,12 +343,12 @@ contract UniswapV2PairTest is Test
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
-        // liquidity prior to adjustInvestment
+        // liquidity prior to adjustManagement
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
         uint256 lLiq1 = _pair.mint(address(this));
 
-        _manager.adjustInvestment(_pair, 50e18, 50e18);
+        _manager.adjustManagement(_pair, 50e18, 50e18);
 
         // act
         _tokenA.mint(address(_pair), 50e18);
@@ -359,7 +359,7 @@ contract UniswapV2PairTest is Test
         assertEq(lLiq1, lLiq2);
     }
 
-    function testManageReserves_DecreaseInvestment() external
+    function testManageReserves_DecreaseManagement() external
     {
         // arrange
         vm.prank(address(_factory));
@@ -373,7 +373,7 @@ contract UniswapV2PairTest is Test
         uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
         uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
 
-        _manager.adjustInvestment(_pair, 20e18, 20e18);
+        _manager.adjustManagement(_pair, 20e18, 20e18);
 
         (uint112 lReserve0_1, uint112 lReserve1_1, ) = _pair.getReserves();
         uint256 lBal0After = IERC20(lToken0).balanceOf(address(_pair));
@@ -390,7 +390,7 @@ contract UniswapV2PairTest is Test
         assertEq(_manager.getBalance(address(_pair), address(lToken1)), 20e18);
 
         // act
-        _manager.adjustInvestment(_pair, -10e18, -10e18);
+        _manager.adjustManagement(_pair, -10e18, -10e18);
 
         (uint112 lReserve0_2, uint112 lReserve1_2, ) = _pair.getReserves();
 
@@ -403,7 +403,7 @@ contract UniswapV2PairTest is Test
         assertEq(_manager.getBalance(address(_pair), address(lToken1)), 10e18);
     }
 
-    function testSyncInvested() external
+    function testSyncManaged() external
     {
         // arrange
         vm.prank(address(_factory));
@@ -412,7 +412,7 @@ contract UniswapV2PairTest is Test
         address lToken0 = _pair.token0();
         address lToken1 = _pair.token1();
 
-        _manager.adjustInvestment(_pair, 20e18, 20e18);
+        _manager.adjustManagement(_pair, 20e18, 20e18);
         _tokenA.mint(address(_pair), 10e18);
         _tokenB.mint(address(_pair), 10e18);
         uint256 lLiq = _pair.mint(address(this));

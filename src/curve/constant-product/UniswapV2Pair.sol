@@ -201,7 +201,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {
-        _syncInvested(); // check asset-manager pnl
+        _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = _totalToken0();
@@ -227,7 +227,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function burn(address to) external lock returns (uint amount0, uint amount1) {
-        _syncInvested(); // check asset-manager pnl
+        _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         address _token0 = token0;                                // gas savings
@@ -314,7 +314,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     IAssetManager public assetManager;
 
     function setManager(IAssetManager manager) external onlyFactory {
-        require(token0Invested == 0 && token1Invested == 0, "UniswapV2: AM_STILL_ACTIVE");
+        require(token0Managed == 0 && token1Managed == 0, "UniswapV2: AM_STILL_ACTIVE");
 
         assetManager = manager;
     }
@@ -335,15 +335,15 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    uint112 public token0Invested;
-    uint112 public token1Invested;
+    uint112 public token0Managed;
+    uint112 public token1Managed;
 
     function _totalToken0() private view returns (uint256) {
-        return IERC20(token0).balanceOf(address(this)) + uint256(token0Invested);
+        return IERC20(token0).balanceOf(address(this)) + uint256(token0Managed);
     }
 
     function _totalToken1() private view returns (uint256) {
-        return IERC20(token1).balanceOf(address(this)) + uint256(token1Invested);
+        return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
     }
 
     event ProfitReported(address token, uint112 amount);
@@ -373,22 +373,22 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         // else do nothing balance is equal
     }
 
-    function _syncInvested() private {
+    function _syncManaged() private {
         if (address(assetManager) == address(0)) {
             return;
         }
 
-        uint112 lToken0Invested = assetManager.getBalance(address(this), token0);
-        uint112 lToken1Invested = assetManager.getBalance(address(this), token1);
+        uint112 lToken0Managed = assetManager.getBalance(address(this), token0);
+        uint112 lToken1Managed = assetManager.getBalance(address(this), token1);
 
-        _handleReport(token0, token0Invested, lToken0Invested);
-        _handleReport(token1, token1Invested, lToken1Invested);
+        _handleReport(token0, token0Managed, lToken0Managed);
+        _handleReport(token1, token1Managed, lToken1Managed);
 
-        token0Invested = lToken0Invested;
-        token1Invested = lToken1Invested;
+        token0Managed = lToken0Managed;
+        token1Managed = lToken1Managed;
     }
 
-    function adjustInvestment(int256 token0Change, int256 token1Change) external onlyManager {
+    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
         require(
             token0Change != type(int256).min && token1Change != type(int256).min,
             "cast would overflow"
@@ -397,14 +397,14 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         if (token0Change > 0) {
             uint112 lDelta = uint112(uint256(int256(token0Change)));
 
-            token0Invested += lDelta;
+            token0Managed += lDelta;
 
             IERC20(token0).transfer(address(assetManager), lDelta);
         }
         else if (token0Change < 0) {
             uint112 lDelta = uint112(uint256(int256(-token0Change)));
 
-            token0Invested -= lDelta;
+            token0Managed -= lDelta;
 
             IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
         }
@@ -412,14 +412,14 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         if (token1Change > 0) {
             uint112 lDelta = uint112(uint256(int256(token1Change)));
 
-            token1Invested += lDelta;
+            token1Managed += lDelta;
 
             IERC20(token1).transfer(address(assetManager), lDelta);
         }
         else if (token1Change < 0) {
             uint112 lDelta = uint112(uint256(int256(-token1Change)));
 
-            token1Invested -= lDelta;
+            token1Managed -= lDelta;
 
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
