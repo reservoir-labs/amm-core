@@ -2,11 +2,15 @@ pragma solidity =0.8.13;
 
 import "forge-std/Test.sol";
 
-import "test/__fixtures/MintableERC20.sol";
+import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
+
+import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
+import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
-import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
+import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
+import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 
 contract UniswapV2PairTest is Test
 {
@@ -20,6 +24,7 @@ contract UniswapV2PairTest is Test
     MintableERC20 private _tokenB = new MintableERC20("TokenB", "TB");
     MintableERC20 private _tokenC = new MintableERC20("TokenC", "TC");
 
+    AssetManager private _manager = new AssetManager();
     GenericFactory private _factory = new GenericFactory();
     UniswapV2Pair private _pair;
 
@@ -281,5 +286,153 @@ contract UniswapV2PairTest is Test
         (address lToken0, address lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
         assertEq(UniswapV2Pair(lToken0).balanceOf(_alice), lLpTokenBalance * lReserve0 / lLpTokenTotalSupply);
         assertEq(UniswapV2Pair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    ASSET MANAGEMENT
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function testSetManager() external
+    {
+        // sanity
+        assertEq(address(_pair.assetManager()), address(0));
+
+        // act
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // assert
+        assertEq(address(_pair.assetManager()), address(_manager));
+    }
+
+    function testSetManager_CannotMigrateWithManaged() external
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+
+        // act & assert
+        vm.prank(address(_factory));
+        vm.expectRevert("UniswapV2: AM_STILL_ACTIVE");
+        _pair.setManager(IAssetManager(address(0)));
+    }
+
+    function testManageReserves() external
+    {
+        // arrange
+        _tokenA.mint(address(_pair), 50e18);
+        _tokenB.mint(address(_pair), 50e18);
+        _pair.mint(address(this));
+
+        vm.prank(address(_factory));
+        _pair.setManager(IAssetManager(address(this)));
+
+        // act
+        _pair.adjustManagement(20e18, 20e18);
+
+        // assert
+        assertEq(_tokenA.balanceOf(address(this)), 20e18);
+        assertEq(_tokenB.balanceOf(address(this)), 20e18);
+    }
+
+    function testManageReserves_KStillHolds() external
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // liquidity prior to adjustManagement
+        _tokenA.mint(address(_pair), 50e18);
+        _tokenB.mint(address(_pair), 50e18);
+        uint256 lLiq1 = _pair.mint(address(this));
+
+        _manager.adjustManagement(_pair, 50e18, 50e18);
+
+        // act
+        _tokenA.mint(address(_pair), 50e18);
+        _tokenB.mint(address(_pair), 50e18);
+        uint256 lLiq2 = _pair.mint(address(this));
+
+        // assert
+        assertEq(lLiq1, lLiq2);
+    }
+
+    function testManageReserves_DecreaseManagement() external
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        address lToken0 = _pair.token0();
+        address lToken1 = _pair.token1();
+
+        // sanity
+        (uint112 lReserve0, uint112 lReserve1, ) = _pair.getReserves();
+        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
+        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
+
+        _manager.adjustManagement(_pair, 20e18, 20e18);
+
+        (uint112 lReserve0_1, uint112 lReserve1_1, ) = _pair.getReserves();
+        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_pair));
+        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_pair));
+
+        assertEq(uint256(lReserve0_1), lReserve0);
+        assertEq(uint256(lReserve1_1), lReserve1);
+        assertEq(lBal0Before - lBal0After, 20e18);
+        assertEq(lBal1Before - lBal1After, 20e18);
+
+        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18);
+        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18);
+        assertEq(_manager.getBalance(address(_pair), address(lToken0)), 20e18);
+        assertEq(_manager.getBalance(address(_pair), address(lToken1)), 20e18);
+
+        // act
+        _manager.adjustManagement(_pair, -10e18, -10e18);
+
+        (uint112 lReserve0_2, uint112 lReserve1_2, ) = _pair.getReserves();
+
+        // assert
+        assertEq(uint256(lReserve0_2), lReserve0);
+        assertEq(uint256(lReserve1_2), lReserve1);
+        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
+        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
+        assertEq(_manager.getBalance(address(_pair), address(lToken0)), 10e18);
+        assertEq(_manager.getBalance(address(_pair), address(lToken1)), 10e18);
+    }
+
+    function testSyncManaged() external
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        address lToken0 = _pair.token0();
+        address lToken1 = _pair.token1();
+
+        _manager.adjustManagement(_pair, 20e18, 20e18);
+        _tokenA.mint(address(_pair), 10e18);
+        _tokenB.mint(address(_pair), 10e18);
+        uint256 lLiq = _pair.mint(address(this));
+
+        // sanity
+        assertEq(lLiq, 10e18); // sqrt(10e18, 10e18)
+        assertEq(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_tokenB.balanceOf(address(this)), 0);
+        assertEq(_manager.getBalance(address(_pair), lToken0), 20e18);
+        assertEq(_manager.getBalance(address(_pair), lToken1), 20e18);
+
+        // act
+        _manager.adjustBalance(address(_pair), lToken0, 19e18); // 1e18 lost
+        _manager.adjustBalance(address(_pair), lToken1, 19e18); // 1e18 lost
+        _pair.transfer(address(_pair), 10e18);
+        _pair.burn(address(this));
+
+        assertEq(_manager.getBalance(address(_pair), lToken0), 19e18);
+        assertEq(_manager.getBalance(address(_pair), lToken1), 19e18);
+        assertLt(_tokenA.balanceOf(address(this)), 10e18);
+        assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 }

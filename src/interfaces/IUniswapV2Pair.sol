@@ -1,5 +1,6 @@
 pragma solidity =0.8.13;
 
+import "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 interface IUniswapV2Pair {
@@ -37,4 +38,9 @@ interface IUniswapV2Pair {
 
     function setCustomSwapFee(uint _customSwapFee) external;
     function setCustomPlatformFee(uint _customPlatformFee) external;
+
+    function assetManager() external returns (IAssetManager);
+    function setManager(IAssetManager manager) external;
+
+    function adjustManagement(int256 token0Change, int256 token1Change) external;
 }
