@@ -15,9 +15,8 @@ abstract contract BaseTest is Test {
     GenericFactory internal _factory = new GenericFactory();
     AssetManager internal _manager = new AssetManager();
 
-    address internal _owner = address(1);
-    address internal _recoverer = address(2);
-    address internal _alice = address(3);
+    address internal _recoverer = address(1);
+    address internal _alice = address(2);
 
     MintableERC20 internal _tokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 internal _tokenB = new MintableERC20("TokenB", "TB");

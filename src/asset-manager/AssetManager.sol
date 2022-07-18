@@ -1,10 +1,11 @@
 pragma solidity 0.8.13;
 
 import { Ownable } from "@openzeppelin/access/Ownable.sol";
-
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
+import { CErc20Interface } from "src/interfaces/CErc20Interface.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
 
 contract AssetManager is IAssetManager, Ownable {
@@ -30,21 +31,37 @@ contract AssetManager is IAssetManager, Ownable {
 
     // optimization: could we cut the intermediate step of transferring to the AM first before transferring to the destination
     // and instead transfer it from the pair to the destination instead?
-    function adjustManagement(address aPair, int256 aAmount0Change, int256 aAmount1Change, address aDestination) external onlyOwner {
+    function adjustManagement(address aPair, int256 aAmount0Change, int256 aAmount1Change, address aCounterParty) external onlyOwner {
+
+        // withdrawal from the counterparty
+        if (aAmount0Change < 0) {
+//            IStrategy(aCounterParty).withdraw();
+        }
+        if (aAmount1Change < 0) {
+
+        }
 
         // transfer tokens from the pair
         IUniswapV2Pair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
         // sanity - mainly to ensure we don't get more token than we expect and end up with some stuck within the contract
         // can remove if deemed unnecessary in the future
-        address token0 = IUniswapV2Pair(aPair).token0();
-        address token1 = IUniswapV2Pair(aPair).token1();
+        IERC20 token0 = IERC20(IUniswapV2Pair(aPair).token0());
+        IERC20 token1 = IERC20(IUniswapV2Pair(aPair).token1());
 
-        require(IERC20(token0).balanceOf(address(this)) == uint256(aAmount0Change), "TOKEN0 AMOUNT MISMATCH");
-        require(IERC20(token1).balanceOf(address(this)) == uint256(aAmount1Change), "TOKEN1 AMOUNT MISMATCH");
+        require(token0.balanceOf(address(this)) == uint256(aAmount0Change), "TOKEN0 AMOUNT MISMATCH");
+        require(token1.balanceOf(address(this)) == uint256(aAmount1Change), "TOKEN1 AMOUNT MISMATCH");
 
         // transfer the managed tokens to the destination
         // safe to cast int256 to uint256?
-//        IERC20(aToken).transfer(aDestination, uint256(aAmount));
+        // not needed as the pair will perform the transfer
+        if (aAmount0Change > 0) {
+            token0.transfer(aCounterParty, uint256(aAmount0Change));
+            CErc20Interface(aCounterParty).mint(uint256(aAmount0Change));
+        }
+        if (aAmount1Change > 0) {
+            token1.transfer(aCounterParty, uint256(aAmount1Change));
+            CErc20Interface(aCounterParty).mint(uint256(aAmount1Change));
+        }
     }
 }
