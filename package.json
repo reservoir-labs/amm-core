@@ -67,7 +67,7 @@
     "test:deployment": "bash scripts/test-deployment.sh",
     "test:trident": "npm run build:trident && ts-node scripts/inject_trident.ts && cd reference/sushi-trident && yarn run test",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
-    "test:unit": "forge test"
+    "test:unit": "forge test --fork-url https://cloudflare-eth.com --block-number 15165804"
   },
   "devDependencies": {
     "@proxima-oss/eslint-config": "6.0.1",

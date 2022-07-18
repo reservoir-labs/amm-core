@@ -11,14 +11,20 @@ contract AssetManagerTest is BaseTest {
 
     function setUp() public
     {
-        deal(ETH_MAINNET_USDC, address(this), INITIAL_MINT_AMOUNT);
-        console2.log(IERC20(ETH_MAINNET_USDC).balanceOf(address(this)));
+        // sanity - to make sure that we are talking to a real contract and not on the wrong network
+        assertTrue(ETH_MAINNET_CUSDC.code.length != 0);
+
+        // mint some USDC to this address
+        deal(ETH_MAINNET_USDC, address(this), INITIAL_MINT_AMOUNT, true);
+
+        _uniswapV2Pair = UniswapV2Pair(_factory.createPair(address(_tokenA), address(ETH_MAINNET_USDC), 0));
 
         vm.prank(address(_factory));
         _uniswapV2Pair.setManager(_manager);
 
-        // sanity - to make sure that we are talking to a real contract and not on the wrong network
-        assertTrue(ETH_MAINNET_CUSDC.code.length != 0);
+        IERC20(ETH_MAINNET_USDC).transfer(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint((address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT);
+        _uniswapV2Pair.mint(_alice);
     }
 
     function testAdjustManagement_OneToken() public
@@ -31,6 +37,7 @@ contract AssetManagerTest is BaseTest {
 
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), uint256(lAmountToManage));
+        assertEq(IERC20(ETH_MAINNET_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT - uint256(lAmountToManage));
     }
 
     function testGetBalance() public
