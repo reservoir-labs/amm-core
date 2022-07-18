@@ -50,6 +50,4 @@ abstract contract BaseTest is Test {
     {
         rPair = UniswapV2Pair(_factory.createPair(address(aTokenA), address(aTokenB), 0));
     }
-
-
 }
