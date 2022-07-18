@@ -35,7 +35,7 @@ contract AssetManager is IAssetManager, Ownable {
 
         // withdrawal from the counterparty
         if (aAmount0Change < 0) {
-//            IStrategy(aCounterParty).withdraw();
+
         }
         if (aAmount1Change < 0) {
 
@@ -44,11 +44,11 @@ contract AssetManager is IAssetManager, Ownable {
         // transfer tokens from the pair
         IUniswapV2Pair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
-        // sanity - mainly to ensure we don't get more token than we expect and end up with some stuck within the contract
-        // can remove if deemed unnecessary in the future
         IERC20 token0 = IERC20(IUniswapV2Pair(aPair).token0());
         IERC20 token1 = IERC20(IUniswapV2Pair(aPair).token1());
 
+        // sanity - mainly to ensure we don't get more token than we expect and end up with some stuck within the contract
+        // can remove if deemed unnecessary in the future
         require(token0.balanceOf(address(this)) == uint256(aAmount0Change), "TOKEN0 AMOUNT MISMATCH");
         require(token1.balanceOf(address(this)) == uint256(aAmount1Change), "TOKEN1 AMOUNT MISMATCH");
 
@@ -56,12 +56,18 @@ contract AssetManager is IAssetManager, Ownable {
         // safe to cast int256 to uint256?
         // not needed as the pair will perform the transfer
         if (aAmount0Change > 0) {
-            token0.transfer(aCounterParty, uint256(aAmount0Change));
-            CErc20Interface(aCounterParty).mint(uint256(aAmount0Change));
+            token0.approve(aCounterParty, uint256(aAmount0Change));
+            uint256 res = CErc20Interface(aCounterParty).mint(uint256(aAmount0Change));
+            require(res == 0, "MINT DID NOT SUCCEED");
         }
         if (aAmount1Change > 0) {
-            token1.transfer(aCounterParty, uint256(aAmount1Change));
-            CErc20Interface(aCounterParty).mint(uint256(aAmount1Change));
+            token1.approve(aCounterParty, uint256(aAmount1Change));
+            uint256 res = CErc20Interface(aCounterParty).mint(uint256(aAmount1Change));
+            require(res == 0, "MINT DID NOT SUCCEED");
         }
+    }
+
+    function trackCounterparties() internal {
+
     }
 }

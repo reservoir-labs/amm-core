@@ -1,8 +1,9 @@
 pragma solidity 0.8.13;
 
-import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
-
 import "test/__fixtures/BaseTest.sol";
+
+import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 
 contract AssetManagerTest is BaseTest {
 
@@ -31,6 +32,7 @@ contract AssetManagerTest is BaseTest {
     {
         // arrange
         int256 lAmountToManage = 5e18;
+        uint256 lExchangeRate = CTokenInterface(ETH_MAINNET_CUSDC).exchangeRateStored();
 
         // act
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
@@ -38,6 +40,8 @@ contract AssetManagerTest is BaseTest {
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), uint256(lAmountToManage));
         assertEq(IERC20(ETH_MAINNET_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT - uint256(lAmountToManage));
+        // TODO: clean up the math that calculates the amount of cUSDC received. Currently off by a bit
+        // assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(_manager)), uint256(lAmountToManage) * 10e18 / lExchangeRate);
     }
 
     function testGetBalance() public

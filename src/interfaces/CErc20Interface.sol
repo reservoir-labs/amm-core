@@ -8,3 +8,7 @@ interface CErc20Interface {
     function repayBorrow(uint repayAmount) external returns (uint);
     function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint);
 }
+
+interface CTokenInterface {
+    function exchangeRateStored() external returns (uint);
+}
