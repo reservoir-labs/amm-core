@@ -11,17 +11,15 @@ import { IStrategy } from "src/interfaces/IStrategy.sol";
 
 contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
+    // are two distinct events necessary? Or can we just have one generic one
+    // for both investing and divesting
+    event FundsInvested(address pair, uint256 amount, address counterParty);
+    event FundsReturned(address pair, uint256 amount, address counterParty);
+
     /// @dev maps from the address of the pairs to a token (of the pair) to an array of strategies
     mapping(address => mapping(address => IStrategy[])) public strategies;
 
     constructor() {}
-
-    function addStrategy(address aPair, address aToken, IStrategy aStrategy) external onlyOwner {
-        require(aPair != address(0), "PAIR ADDRESS ZERO");
-        require(address(aStrategy) != address(0), "STRATEGY ADDRESS ZERO");
-
-        strategies[aPair][aToken].push(aStrategy);
-    }
 
     function getBalance(address aOwner, address aToken) external returns (uint112 tokenBalance) {
         IStrategy[] memory lStrategies = strategies[aOwner][aToken];
@@ -43,16 +41,22 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         // withdrawal from the counterparty
         if (aAmount0Change < 0) {
-            uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(uint256(-aAmount0Change));
+            uint256 amount = uint256(-aAmount0Change);
+            uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(amount);
             require(res == 0, "REDEEM DID NOT SUCCEED");
 
-            token0.approve(aPair, uint256(-aAmount0Change));
+            token0.approve(aPair, amount);
+
+            emit FundsReturned(aPair, amount, aCounterParty);
         }
         if (aAmount1Change < 0) {
-            uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(uint256(-aAmount1Change));
+            uint256 amount = uint256(-aAmount1Change);
+            uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(amount);
             require(res == 0, "REDEEM DID NOT SUCCEED");
 
-            token1.approve(aPair, uint256(-aAmount1Change));
+            token1.approve(aPair, amount);
+
+            emit FundsReturned(aPair, amount, aCounterParty);
         }
 
         // transfer tokens to/from the pair
@@ -62,20 +66,22 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         // safe to cast int256 to uint256?
         // not needed as the pair will perform the transfer
         if (aAmount0Change > 0) {
-            require(token0.balanceOf(address(this)) == uint256(aAmount0Change), "TOKEN0 AMOUNT MISMATCH");
-            token0.approve(aCounterParty, uint256(aAmount0Change));
-            uint256 res = CErc20Interface(aCounterParty).mint(uint256(aAmount0Change));
+            uint256 amount = uint256(aAmount0Change);
+            require(token0.balanceOf(address(this)) == amount, "TOKEN0 AMOUNT MISMATCH");
+            token0.approve(aCounterParty, amount);
+            uint256 res = CErc20Interface(aCounterParty).mint(amount);
             require(res == 0, "MINT DID NOT SUCCEED");
+
+            emit FundsInvested(aPair, amount, aCounterParty);
         }
         if (aAmount1Change > 0) {
-            require(token1.balanceOf(address(this)) == uint256(aAmount1Change), "TOKEN1 AMOUNT MISMATCH");
-            token1.approve(aCounterParty, uint256(aAmount1Change));
-            uint256 res = CErc20Interface(aCounterParty).mint(uint256(aAmount1Change));
+            uint256 amount = uint256(aAmount1Change);
+            require(token1.balanceOf(address(this)) == amount, "TOKEN1 AMOUNT MISMATCH");
+            token1.approve(aCounterParty, amount);
+            uint256 res = CErc20Interface(aCounterParty).mint(amount);
             require(res == 0, "MINT DID NOT SUCCEED");
+
+            emit FundsInvested(aPair, amount, aCounterParty);
         }
-    }
-
-    function trackCounterparties() internal {
-
     }
 }
