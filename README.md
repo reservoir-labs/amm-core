@@ -17,7 +17,8 @@ forge build
 forge test
 ```
 
-Asset manager tests forks the ETH mainnet and uses Compound's contracts for integration testing. 
+Asset manager tests forks the ETH mainnet and uses
+Compound's contracts for integration testing.
 To fork the mainnet and run the tests:
 
 ```shell

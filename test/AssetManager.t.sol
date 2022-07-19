@@ -1,7 +1,7 @@
 pragma solidity 0.8.13;
 
 import "test/__fixtures/BaseTest.sol";
-
+//import "forge-std/console2.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 
@@ -28,7 +28,7 @@ contract AssetManagerTest is BaseTest {
         _uniswapV2Pair.mint(_alice);
     }
 
-    function testAdjustManagement_OneToken() public
+    function testAdjustManagement_IncreaseManagementOneToken() public
     {
         // arrange
         int256 lAmountToManage = 5e18;
@@ -42,6 +42,22 @@ contract AssetManagerTest is BaseTest {
         assertEq(IERC20(ETH_MAINNET_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT - uint256(lAmountToManage));
         // TODO: clean up the math that calculates the amount of cUSDC received. Currently off by a bit
         // assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(_manager)), uint256(lAmountToManage) * 10e18 / lExchangeRate);
+    }
+
+    function testAdjustManagement_DecreaseManagementOneToken() public
+    {
+        // arrange
+        int256 lAmountToManage = 5e18;
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
+
+        // act
+        _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0, ETH_MAINNET_CUSDC);
+
+        // assert
+        assertEq(_uniswapV2Pair.token0Managed(), 0);
+        assertEq(IERC20(ETH_MAINNET_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT);
+
+        assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(this)), 0);
     }
 
     function testGetBalance() public
