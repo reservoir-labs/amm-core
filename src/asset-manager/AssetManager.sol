@@ -7,7 +7,6 @@ import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 import { CErc20Interface, CTokenInterface } from "src/interfaces/CErc20Interface.sol";
-import { IStrategy } from "src/interfaces/IStrategy.sol";
 
 contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     event FundsInvested(address pair, uint256 amount, address counterParty);
@@ -21,7 +20,7 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
     constructor() {}
 
-    /// @dev returns the balance of the token managed by various strategies in the native amount
+    /// @dev returns the balance of the token managed by various strategies in the native precision
     function getBalance(address aOwner, address aToken) external view returns (uint112 tokenBalance) {
         address[] memory lStrategies = strategies[aOwner][aToken];
         for (uint i = 0; i < lStrategies.length; ++i) {
@@ -34,8 +33,6 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         }
     }
 
-    // optimization: could we cut the intermediate step of transferring to the AM first before transferring to the destination
-    // and instead transfer it from the pair to the destination instead?
     function adjustManagement(address aPair, int256 aAmount0Change, int256 aAmount1Change, address aCounterParty) external nonReentrant onlyOwner {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
@@ -69,8 +66,6 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         IUniswapV2Pair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
         // transfer the managed tokens to the destination
-        // safe to cast int256 to uint256?
-        // not needed as the pair will perform the transfer
         if (aAmount0Change > 0) {
             uint256 amount = uint256(aAmount0Change);
             require(token0.balanceOf(address(this)) == amount, "TOKEN0 AMOUNT MISMATCH");

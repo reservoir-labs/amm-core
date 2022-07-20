@@ -64,7 +64,6 @@ contract AssetManagerTest is BaseTest {
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), 0);
         assertEq(IERC20(ETH_MAINNET_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT);
-
         assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(this)), 0);
     }
 
