@@ -10,5 +10,6 @@ interface CErc20Interface {
 }
 
 interface CTokenInterface {
+    function exchangeRateCurrent() external returns (uint);
     function exchangeRateStored() external view returns (uint);
 }
