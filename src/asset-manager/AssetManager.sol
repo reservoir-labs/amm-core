@@ -16,8 +16,11 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     event FundsInvested(address pair, uint256 amount, address counterParty);
     event FundsReturned(address pair, uint256 amount, address counterParty);
 
-    /// @dev maps from the address of the pairs to a token (of the pair) to an array of strategies
-    mapping(address => mapping(address => IStrategy[])) public strategies;
+    /// @dev maps from the address of the pairs to a token (of the pair) to an array of counterparties
+    mapping(address => mapping(address => address[])) public strategies;
+
+    /// @dev to track if the strategy for the given pair and token has been registered before
+    mapping(address => mapping(address => mapping(address => bool))) registered;
 
     constructor() {}
 
@@ -73,6 +76,11 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
             require(res == 0, "MINT DID NOT SUCCEED");
 
             emit FundsInvested(aPair, amount, aCounterParty);
+
+            if (!registered[aPair][address(token0)][aCounterParty]) {
+                strategies[aPair][address(token0)].push(aCounterParty);
+                registered[aPair][address(token0)][aCounterParty] = true;
+            }
         }
         if (aAmount1Change > 0) {
             uint256 amount = uint256(aAmount1Change);
@@ -82,6 +90,11 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
             require(res == 0, "MINT DID NOT SUCCEED");
 
             emit FundsInvested(aPair, amount, aCounterParty);
+
+            if (!registered[aPair][address(token1)][aCounterParty]) {
+                strategies[aPair][address(token1)].push(aCounterParty);
+                registered[aPair][address(token1)][aCounterParty] = true;
+            }
         }
     }
 }
