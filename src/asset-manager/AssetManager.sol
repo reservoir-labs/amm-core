@@ -6,13 +6,10 @@ import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
-import { CErc20Interface } from "src/interfaces/CErc20Interface.sol";
+import { CErc20Interface, CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
 
 contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
-
-    // are two distinct events necessary? Or can we just have one generic one
-    // for both investing and divesting
     event FundsInvested(address pair, uint256 amount, address counterParty);
     event FundsReturned(address pair, uint256 amount, address counterParty);
 
@@ -24,10 +21,16 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
     constructor() {}
 
-    function getBalance(address aOwner, address aToken) external returns (uint112 tokenBalance) {
-        IStrategy[] memory lStrategies = strategies[aOwner][aToken];
+    /// @dev returns the balance of the token managed by various strategies in the native amount
+    function getBalance(address aOwner, address aToken) external view returns (uint112 tokenBalance) {
+        address[] memory lStrategies = strategies[aOwner][aToken];
         for (uint i = 0; i < lStrategies.length; ++i) {
-            tokenBalance += lStrategies[i].getBalance();
+            address a = lStrategies[i];
+            // the exchange rate is scaled by 1e18
+            uint256 exchangeRate = CTokenInterface(a).exchangeRateStored();
+            uint256 cTokenBalance = IERC20(a).balanceOf(address(this));
+
+            tokenBalance += uint112(cTokenBalance * exchangeRate / 1e18);
         }
     }
 

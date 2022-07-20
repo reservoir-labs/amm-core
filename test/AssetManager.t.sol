@@ -1,9 +1,10 @@
 pragma solidity 0.8.13;
 
 import "test/__fixtures/BaseTest.sol";
-//import "forge-std/console2.sol";
+
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { CTokenInterface } from "src/interfaces/CErc20Interface.sol";
+import { MathUtils } from "src/libraries/MathUtils.sol";
 
 contract AssetManagerTest is BaseTest {
 
@@ -31,7 +32,7 @@ contract AssetManagerTest is BaseTest {
     function testAdjustManagement_IncreaseManagementOneToken() public
     {
         // arrange
-        int256 lAmountToManage = 5e18;
+        int256 lAmountToManage = 500e6;
         uint256 lExchangeRate = CTokenInterface(ETH_MAINNET_CUSDC).exchangeRateStored();
 
         // act
@@ -47,7 +48,7 @@ contract AssetManagerTest is BaseTest {
     function testAdjustManagement_DecreaseManagementOneToken() public
     {
         // arrange
-        int256 lAmountToManage = 5e18;
+        int256 lAmountToManage = 500e6;
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
 
         // act
@@ -62,6 +63,14 @@ contract AssetManagerTest is BaseTest {
 
     function testGetBalance() public
     {
+        // arrange
+        int256 lAmountToManage = 500e6;
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
 
+        // act
+        uint112 lBalance = _manager.getBalance(address(_uniswapV2Pair), ETH_MAINNET_USDC);
+
+        // assert
+        assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManage)));
     }
 }
