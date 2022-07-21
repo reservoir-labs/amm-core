@@ -44,7 +44,7 @@ contract AssetManagerTest is BaseTest {
         // uint256 lExchangeRate = abi.decode(data, (uint256));
 
         // act
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
 
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), uint256(lAmountToManage));
@@ -56,10 +56,10 @@ contract AssetManagerTest is BaseTest {
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
 
         // act
-        _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0, ETH_MAINNET_CUSDC);
+        _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
 
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), 0);
@@ -71,7 +71,7 @@ contract AssetManagerTest is BaseTest {
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC);
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
 
         // act
         uint112 lBalance = _manager.getBalance(address(_uniswapV2Pair), ETH_MAINNET_USDC);

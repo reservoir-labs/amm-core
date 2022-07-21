@@ -10,30 +10,35 @@ import { CErc20Interface, CTokenInterface } from "src/interfaces/CErc20Interface
 
 contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     event FundsInvested(address pair, uint256 amount, address counterParty);
-    event FundsReturned(address pair, uint256 amount, address counterParty);
+    event FundsDivested(address pair, uint256 amount, address counterParty);
 
     /// @dev maps from the address of the pairs to a token (of the pair) to an array of counterparties
-    mapping(address => mapping(address => address[])) public strategies;
-
-    /// @dev to track if the strategy for the given pair and token has been registered before
-    mapping(address => mapping(address => mapping(address => bool))) registered;
+    mapping(address => mapping(address => address)) public counterparties;
 
     constructor() {}
 
-    /// @dev returns the balance of the token managed by various strategies in the native precision
+    /// @dev returns the balance of the token managed by various counterparties in the native precision
     function getBalance(address aOwner, address aToken) external view returns (uint112 tokenBalance) {
-        address[] memory lStrategies = strategies[aOwner][aToken];
-        for (uint i = 0; i < lStrategies.length; ++i) {
-            address a = lStrategies[i];
-            // the exchange rate is scaled by 1e18
-            uint256 exchangeRate = CTokenInterface(a).exchangeRateStored();
-            uint256 cTokenBalance = IERC20(a).balanceOf(address(this));
+        address lCounterparty = counterparties[aOwner][aToken];
 
-            tokenBalance += uint112(cTokenBalance * exchangeRate / 1e18);
+        if (lCounterparty == address(0)) {
+            return 0;
         }
+
+        // the exchange rate is scaled by 1e18
+        uint256 exchangeRate = CTokenInterface(lCounterparty).exchangeRateStored();
+        uint256 cTokenBalance = IERC20(lCounterparty).balanceOf(address(this));
+
+        tokenBalance += uint112(cTokenBalance * exchangeRate / 1e18);
     }
 
-    function adjustManagement(address aPair, int256 aAmount0Change, int256 aAmount1Change, address aCounterParty) external nonReentrant onlyOwner {
+    function adjustManagement(
+        address aPair,
+        int256 aAmount0Change,
+        int256 aAmount1Change,
+        address aToken0CounterParty,
+        address aToken1CounterParty
+    ) external nonReentrant onlyOwner {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
             "cast would overflow"
@@ -44,22 +49,10 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         // withdrawal from the counterparty
         if (aAmount0Change < 0) {
-            uint256 amount = uint256(-aAmount0Change);
-            uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(amount);
-            require(res == 0, "REDEEM DID NOT SUCCEED");
-
-            token0.approve(aPair, amount);
-
-            emit FundsReturned(aPair, amount, aCounterParty);
+            _doDivest(aPair, token0, uint256(-aAmount0Change), aToken0CounterParty);
         }
         if (aAmount1Change < 0) {
-            uint256 amount = uint256(-aAmount1Change);
-            uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(amount);
-            require(res == 0, "REDEEM DID NOT SUCCEED");
-
-            token1.approve(aPair, amount);
-
-            emit FundsReturned(aPair, amount, aCounterParty);
+            _doDivest(aPair, token1, uint256(-aAmount1Change), aToken1CounterParty);
         }
 
         // transfer tokens to/from the pair
@@ -67,32 +60,35 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            uint256 amount = uint256(aAmount0Change);
-            require(token0.balanceOf(address(this)) == amount, "TOKEN0 AMOUNT MISMATCH");
-            token0.approve(aCounterParty, amount);
-            uint256 res = CErc20Interface(aCounterParty).mint(amount);
-            require(res == 0, "MINT DID NOT SUCCEED");
-
-            emit FundsInvested(aPair, amount, aCounterParty);
-
-            if (!registered[aPair][address(token0)][aCounterParty]) {
-                strategies[aPair][address(token0)].push(aCounterParty);
-                registered[aPair][address(token0)][aCounterParty] = true;
-            }
+            _doInvest(aPair, token0, uint256(aAmount0Change), aToken0CounterParty);
         }
         if (aAmount1Change > 0) {
-            uint256 amount = uint256(aAmount1Change);
-            require(token1.balanceOf(address(this)) == amount, "TOKEN1 AMOUNT MISMATCH");
-            token1.approve(aCounterParty, amount);
-            uint256 res = CErc20Interface(aCounterParty).mint(amount);
-            require(res == 0, "MINT DID NOT SUCCEED");
-
-            emit FundsInvested(aPair, amount, aCounterParty);
-
-            if (!registered[aPair][address(token1)][aCounterParty]) {
-                strategies[aPair][address(token1)].push(aCounterParty);
-                registered[aPair][address(token1)][aCounterParty] = true;
-            }
+            _doInvest(aPair, token1, uint256(aAmount1Change), aToken1CounterParty);
         }
+    }
+
+    function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, address aCounterParty) internal {
+        uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(aAmountDecrease);
+        require(res == 0, "REDEEM DID NOT SUCCEED");
+
+        aToken.approve(aPair, aAmountDecrease);
+
+        emit FundsDivested(aPair, aAmountDecrease, aCounterParty);
+    }
+
+    function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, address aCounterParty) internal {
+        require(aToken.balanceOf(address(this)) == aAmountIncrease, "TOKEN0 AMOUNT MISMATCH");
+        if (counterparties[aPair][address(aToken)] == address(0)) {
+            counterparties[aPair][address(aToken)] = aCounterParty;
+        }
+        else {
+            require(counterparties[aPair][address(aToken)] == aCounterParty, "ANOTHER STRATEGY ACTIVE");
+        }
+
+        aToken.approve(aCounterParty, aAmountIncrease);
+        uint256 res = CErc20Interface(aCounterParty).mint(aAmountIncrease);
+        require(res == 0, "MINT DID NOT SUCCEED");
+
+        emit FundsInvested(aPair, aAmountIncrease, aCounterParty);
     }
 }
