@@ -73,11 +73,16 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         aToken.approve(aPair, aAmountDecrease);
 
+        // todo: to update the counterparties mapping (set to address 0) if there are no more receipt tokens left
+        // but this could be tricky due to dust amounts left
+        // especially when using redeemUnderlying instead of redeem
+
         emit FundsDivested(aPair, aAmountDecrease, aCounterParty);
     }
 
     function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, address aCounterParty) internal {
-        require(aToken.balanceOf(address(this)) == aAmountIncrease, "TOKEN0 AMOUNT MISMATCH");
+        require(aToken.balanceOf(address(this)) == aAmountIncrease, "TOKEN AMOUNT MISMATCH");
+
         if (counterparties[aPair][address(aToken)] == address(0)) {
             counterparties[aPair][address(aToken)] = aCounterParty;
         }
