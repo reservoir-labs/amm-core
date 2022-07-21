@@ -63,11 +63,12 @@
     "submodule:check": "cd lib && find . -mindepth 1 -maxdepth 1 -type d -exec bash -c 'cd \"{}\" && pwd && ../../scripts/git-master-diff.sh && echo' \\;",
     "submodule:reset": "git submodule update --recursive",
     "test": "npm run test:unit",
-    "test:all": "npm run test:unit && npm run test:deployment && npm run test:saddle && npm run test:tectonic",
+    "test:all": "npm run test:unit && npm run test:integration",
     "test:deployment": "bash scripts/test-deployment.sh",
+    "test:integration": "FOUNDRY_PROFILE=integration forge test ",
     "test:trident": "npm run build:trident && ts-node scripts/inject_trident.ts && cd reference/sushi-trident && yarn run test",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
-    "test:unit": "forge test --fork-url https://cloudflare-eth.com --block-number 15165804"
+    "test:unit": "forge test"
   },
   "devDependencies": {
     "@proxima-oss/eslint-config": "6.0.1",

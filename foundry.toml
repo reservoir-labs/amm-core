@@ -8,5 +8,10 @@ remappings = [
 match_contract = "Test"
 verbosity = 3
 
+[integration]
+match_contract = "Integration"
+eth_rpc_url = "https://cloudflare-eth.com"
+block_number = 15165804
+
 [ci]
 fuzz-runs = 10_000
