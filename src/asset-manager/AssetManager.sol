@@ -9,8 +9,8 @@ import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 import { CErc20Interface, CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 
 contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
-    event FundsInvested(address pair, uint256 amount, address counterParty);
-    event FundsDivested(address pair, uint256 amount, address counterParty);
+    event FundsInvested(address pair, address token, address counterParty, uint256 amount);
+    event FundsDivested(address pair, address token, address counterParty, uint256 amount);
 
     /// @dev maps from the address of the pairs to a token (of the pair) to an array of counterparties
     mapping(address => mapping(address => address)) public counterparties;
@@ -18,18 +18,18 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     constructor() {}
 
     /// @dev returns the balance of the token managed by various counterparties in the native precision
-    function getBalance(address aOwner, address aToken) external view returns (uint112 tokenBalance) {
-        address lCounterparty = counterparties[aOwner][aToken];
+    function getBalance(address aOwner, address aToken) external view returns (uint112 rTokenBalance) {
+        CTokenInterface lCounterparty = CTokenInterface(counterparties[aOwner][aToken]);
 
-        if (lCounterparty == address(0)) {
+        if (address(lCounterparty) == address(0)) {
             return 0;
         }
 
         // the exchange rate is scaled by 1e18
-        uint256 exchangeRate = CTokenInterface(lCounterparty).exchangeRateStored();
-        uint256 cTokenBalance = IERC20(lCounterparty).balanceOf(address(this));
+        uint256 lExchangeRate = lCounterparty.exchangeRateStored();
+        uint256 lCTokenBalance = lCounterparty.balanceOf(address(this));
 
-        tokenBalance += uint112(cTokenBalance * exchangeRate / 1e18);
+        rTokenBalance += uint112(lCTokenBalance * lExchangeRate / 1e18);
     }
 
     function adjustManagement(
@@ -67,9 +67,9 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         }
     }
 
-    function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, address aCounterParty) internal {
-        uint256 res = CErc20Interface(aCounterParty).redeemUnderlying(aAmountDecrease);
-        require(res == 0, "REDEEM DID NOT SUCCEED");
+    function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, address aCounterParty) private {
+        uint256 lRes = CErc20Interface(aCounterParty).redeemUnderlying(aAmountDecrease);
+        require(lRes == 0, "REDEEM DID NOT SUCCEED");
 
         aToken.approve(aPair, aAmountDecrease);
 
@@ -77,10 +77,10 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         // but this could be tricky due to dust amounts left
         // especially when using redeemUnderlying instead of redeem
 
-        emit FundsDivested(aPair, aAmountDecrease, aCounterParty);
+        emit FundsDivested(aPair, address(aToken), aCounterParty, aAmountDecrease);
     }
 
-    function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, address aCounterParty) internal {
+    function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, address aCounterParty) private {
         require(aToken.balanceOf(address(this)) == aAmountIncrease, "TOKEN AMOUNT MISMATCH");
 
         if (counterparties[aPair][address(aToken)] == address(0)) {
@@ -94,6 +94,6 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         uint256 res = CErc20Interface(aCounterParty).mint(aAmountIncrease);
         require(res == 0, "MINT DID NOT SUCCEED");
 
-        emit FundsInvested(aPair, aAmountIncrease, aCounterParty);
+        emit FundsInvested(aPair, address(aToken), aCounterParty, aAmountIncrease);
     }
 }

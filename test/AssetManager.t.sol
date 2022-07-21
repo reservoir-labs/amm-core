@@ -3,10 +3,12 @@ pragma solidity 0.8.13;
 import "test/__fixtures/BaseTest.sol";
 
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+
 import { CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 
-contract AssetManagerTest is BaseTest {
+contract AssetManagerTest is BaseTest
+{
 
     address public constant ETH_MAINNET_CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
     address public constant ETH_MAINNET_USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
