@@ -1,5 +1,5 @@
 /* solhint-disable const-name-snakecase */
-pragma solidity =0.8.13;
+pragma solidity 0.8.13;
 
 import "src/interfaces/IUniswapV2ERC20.sol";
 
