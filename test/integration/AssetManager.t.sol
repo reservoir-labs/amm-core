@@ -4,6 +4,7 @@ import "test/__fixtures/BaseTest.sol";
 
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { CERC20 } from "libcompound/interfaces/CERC20.sol";
+import { LibCompound } from "libcompound/LibCompound.sol";
 
 import { IComptroller } from "src/interfaces/IComptroller.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
@@ -34,13 +35,11 @@ contract AssetManagerIntegrationTest is BaseTest
         // arrange
         int256 lAmountToManage = 500e6;
 
-        // this function is not view. Costs gas just to get the updated exchange rate
-        uint256 lExchangeRate = CERC20(ETH_MAINNET_CUSDC).exchangeRateCurrent();
-
         // act
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
 
         // assert
+        uint256 lExchangeRate = LibCompound.viewExchangeRate(CERC20(ETH_MAINNET_CUSDC));
         assertEq(_uniswapV2Pair.token0Managed(), uint256(lAmountToManage));
         assertEq(IERC20(ETH_MAINNET_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT - uint256(lAmountToManage));
         assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(_manager)), uint256(lAmountToManage) * 1e18 / lExchangeRate);
