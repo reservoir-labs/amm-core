@@ -13,3 +13,6 @@
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/Rari-Capital/solmate
+[submodule "lib/libcompound"]
+	path = lib/libcompound
+	url = https://github.com/transmissions11/libcompound
