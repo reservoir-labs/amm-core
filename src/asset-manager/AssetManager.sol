@@ -42,30 +42,30 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         address aPair,
         int256 aAmount0Change,
         int256 aAmount1Change,
-        uint256 token0MarketIndex,
-        uint256 token1MarketIndex
+        uint256 aToken0MarketIndex,
+        uint256 aToken1MarketIndex
     ) external nonReentrant onlyOwner {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
             "cast would overflow"
         );
 
-        IERC20 token0 = IERC20(IUniswapV2Pair(aPair).token0());
-        IERC20 token1 = IERC20(IUniswapV2Pair(aPair).token1());
+        IERC20 lToken0 = IERC20(IUniswapV2Pair(aPair).token0());
+        IERC20 lToken1 = IERC20(IUniswapV2Pair(aPair).token1());
 
         // if the indexes provided by the caller are out of range, it will revert
-        CErc20Interface lMarket0 = CErc20Interface(compoundComptroller.allMarkets(token0MarketIndex));
-        CErc20Interface lMarket1 = CErc20Interface(compoundComptroller.allMarkets(token1MarketIndex));
+        CErc20Interface lMarket0 = CErc20Interface(compoundComptroller.allMarkets(aToken0MarketIndex));
+        CErc20Interface lMarket1 = CErc20Interface(compoundComptroller.allMarkets(aToken1MarketIndex));
 
-        require(aAmount0Change == 0 || lMarket0.underlying() == address(token0));
-        require(aAmount1Change == 0 || lMarket1.underlying() == address(token1));
+        require(aAmount0Change == 0 || lMarket0.underlying() == address(lToken0));
+        require(aAmount1Change == 0 || lMarket1.underlying() == address(lToken1));
 
         // withdrawal from the market
         if (aAmount0Change < 0) {
-            _doDivest(aPair, token0, uint256(-aAmount0Change), lMarket0);
+            _doDivest(aPair, lToken0, uint256(-aAmount0Change), lMarket0);
         }
         if (aAmount1Change < 0) {
-            _doDivest(aPair, token1, uint256(-aAmount1Change), lMarket1);
+            _doDivest(aPair, lToken1, uint256(-aAmount1Change), lMarket1);
         }
 
         // transfer tokens to/from the pair
@@ -73,10 +73,10 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            _doInvest(aPair, token0, uint256(aAmount0Change), lMarket0);
+            _doInvest(aPair, lToken0, uint256(aAmount0Change), lMarket0);
         }
         if (aAmount1Change > 0) {
-            _doInvest(aPair, token1, uint256(aAmount1Change), lMarket1);
+            _doInvest(aPair, lToken1, uint256(aAmount1Change), lMarket1);
         }
     }
 
@@ -104,8 +104,8 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         }
 
         aToken.approve(address(aMarket), aAmountIncrease);
-        uint256 res = aMarket.mint(aAmountIncrease);
-        require(res == 0, "MINT DID NOT SUCCEED");
+        uint256 lRes = aMarket.mint(aAmountIncrease);
+        require(lRes == 0, "MINT DID NOT SUCCEED");
 
         emit FundsInvested(aPair, address(aToken), address(aMarket), aAmountIncrease);
     }
