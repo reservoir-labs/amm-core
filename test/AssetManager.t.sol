@@ -9,15 +9,12 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 
 contract AssetManagerIntegration is BaseTest
 {
-
-    address public constant ETH_MAINNET_CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
     address public constant ETH_MAINNET_USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    address public constant ETH_MAINNET_CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
+    uint256 public constant ETH_MAINNET_CUSDC_MARKET_INDEX = 4;
 
     function setUp() public
     {
-        // sanity - to make sure that we are talking to a real contract and not on the wrong network
-        assertTrue(ETH_MAINNET_CUSDC.code.length != 0);
-
         // mint some USDC to this address
         deal(ETH_MAINNET_USDC, address(this), INITIAL_MINT_AMOUNT, true);
 
@@ -46,7 +43,7 @@ contract AssetManagerIntegration is BaseTest
         // uint256 lExchangeRate = abi.decode(data, (uint256));
 
         // act
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
 
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), uint256(lAmountToManage));
@@ -58,10 +55,10 @@ contract AssetManagerIntegration is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
 
         // act
-        _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
+        _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
 
         // assert
         assertEq(_uniswapV2Pair.token0Managed(), 0);
@@ -73,7 +70,7 @@ contract AssetManagerIntegration is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC, address(0));
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
 
         // act
         uint112 lBalance = _manager.getBalance(address(_uniswapV2Pair), ETH_MAINNET_USDC);

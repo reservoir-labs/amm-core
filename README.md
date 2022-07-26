@@ -16,11 +16,3 @@ forge build
 ```shell
 forge test
 ```
-
-Asset manager tests forks the ETH mainnet and uses Compound's contracts for
-integration testing.
-To fork the mainnet and run the tests:
-
-```shell
-forge test -vvv --fork-url https://cloudflare-eth.com --block-number 15165804 
-```

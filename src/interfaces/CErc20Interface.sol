@@ -2,6 +2,8 @@ pragma solidity 0.8.13;
 
 interface CErc20Interface
 {
+    function underlying() external view returns (address);
+
     function mint(uint mintAmount) external returns (uint);
     function redeem(uint redeemTokens) external returns (uint);
     function redeemUnderlying(uint redeemAmount) external returns (uint);

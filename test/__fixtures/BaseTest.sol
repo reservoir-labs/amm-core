@@ -10,10 +10,12 @@ import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { AssetManager } from "src/asset-manager/AssetManager.sol";
 
 abstract contract BaseTest is Test {
+    address public constant ETH_MAINNET_COMPOUND_COMPTROLLER = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
 
     GenericFactory internal _factory = new GenericFactory();
-    AssetManager internal _manager = new AssetManager();
+    AssetManager internal _manager = new AssetManager(ETH_MAINNET_COMPOUND_COMPTROLLER);
 
     address internal _recoverer = address(1);
     address internal _alice = address(2);
