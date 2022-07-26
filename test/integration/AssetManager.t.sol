@@ -5,6 +5,7 @@ import "test/__fixtures/BaseTest.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
 import { CTokenInterface } from "src/interfaces/CErc20Interface.sol";
+import { IComptroller } from "src/interfaces/IComptroller.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 
 contract AssetManagerIntegrationTest is BaseTest
@@ -80,10 +81,11 @@ contract AssetManagerIntegrationTest is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
+        address[] memory lAllMarkets = IComptroller(ETH_MAINNET_COMPOUND_COMPTROLLER).getAllMarkets();
 
         // act & assert
         vm.expectRevert();
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, 99, 0);
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, lAllMarkets.length, 0);
     }
 
     function testGetBalance() public
