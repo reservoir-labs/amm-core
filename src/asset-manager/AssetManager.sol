@@ -3,18 +3,22 @@ pragma solidity 0.8.13;
 import { ReentrancyGuard } from "@openzeppelin/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { LibCompound } from "libcompound/LibCompound.sol";
+import { CERC20 } from "libcompound/interfaces/CERC20.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IComptroller } from "src/interfaces/IComptroller.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
-import { CErc20Interface, CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 
 contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     event FundsInvested(address pair, address token, address market, uint256 amount);
     event FundsDivested(address pair, address token, address market, uint256 amount);
 
     /// @dev maps from the address of the pairs to a token (of the pair) to a market
-    mapping(address => mapping(address => address)) public markets;
+    /// here we do not delete entries as we are only integrating with compound
+    /// and that there is one and only one address for each underlying token
+    /// so once an entry is written it will not be overwritten
+    mapping(address => mapping(address => CERC20)) public markets;
 
     IComptroller public immutable compoundComptroller;
 
@@ -25,17 +29,17 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
     /// @dev returns the balance of the token managed by various markets in the native precision
     function getBalance(address aOwner, address aToken) external view returns (uint112 rTokenBalance) {
-        CTokenInterface lMarket = CTokenInterface(markets[aOwner][aToken]);
+        CERC20 lMarket = markets[aOwner][aToken];
 
         if (address(lMarket) == address(0)) {
             return 0;
         }
 
         // the exchange rate is scaled by 1e18
-        uint256 lExchangeRate = lMarket.exchangeRateStored();
+        uint256 lExchangeRate = LibCompound.viewExchangeRate(lMarket);
         uint256 lCTokenBalance = lMarket.balanceOf(address(this));
 
-        rTokenBalance += uint112(lCTokenBalance * lExchangeRate / 1e18);
+        rTokenBalance = uint112(lCTokenBalance * lExchangeRate / 1e18);
     }
 
     function adjustManagement(
@@ -54,11 +58,11 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         IERC20 lToken1 = IERC20(IUniswapV2Pair(aPair).token1());
 
         // if the indexes provided by the caller are out of range, it will revert
-        CErc20Interface lMarket0 = CErc20Interface(compoundComptroller.allMarkets(aToken0MarketIndex));
-        CErc20Interface lMarket1 = CErc20Interface(compoundComptroller.allMarkets(aToken1MarketIndex));
+        CERC20 lMarket0 = compoundComptroller.allMarkets(aToken0MarketIndex);
+        CERC20 lMarket1 = compoundComptroller.allMarkets(aToken1MarketIndex);
 
-        require(aAmount0Change == 0 || lMarket0.underlying() == address(lToken0), "WRONG MARKET FOR TOKEN");
-        require(aAmount1Change == 0 || lMarket1.underlying() == address(lToken1), "WRONG MARKET FOR TOKEN");
+        require(aAmount0Change == 0 || address(lMarket0.underlying()) == address(lToken0), "WRONG MARKET FOR TOKEN");
+        require(aAmount1Change == 0 || address(lMarket1.underlying()) == address(lToken1), "WRONG MARKET FOR TOKEN");
 
         // withdrawal from the market
         if (aAmount0Change < 0) {
@@ -80,27 +84,23 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         }
     }
 
-    function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, CErc20Interface aMarket) private {
+    function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, CERC20 aMarket) private {
         uint256 lRes = aMarket.redeemUnderlying(aAmountDecrease);
         require(lRes == 0, "REDEEM DID NOT SUCCEED");
 
         aToken.approve(aPair, aAmountDecrease);
 
-        // todo: to update the markets mapping (set to address 0) if there are no more receipt tokens left
-        // but this could be tricky due to dust amounts left
-        // especially when using redeemUnderlying instead of redeem
-
         emit FundsDivested(aPair, address(aToken), address(aMarket), aAmountDecrease);
     }
 
-    function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, CErc20Interface aMarket) private {
+    function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, CERC20 aMarket) private {
         require(aToken.balanceOf(address(this)) == aAmountIncrease, "TOKEN AMOUNT MISMATCH");
 
-        if (markets[aPair][address(aToken)] == address(0)) {
-            markets[aPair][address(aToken)] = address(aMarket);
+        if (address(markets[aPair][address(aToken)]) == address(0)) {
+            markets[aPair][address(aToken)] = aMarket;
         }
         else {
-            require(markets[aPair][address(aToken)] == address(aMarket), "ANOTHER MARKET ACTIVE");
+            require(markets[aPair][address(aToken)] == aMarket, "ANOTHER MARKET ACTIVE");
         }
 
         aToken.approve(address(aMarket), aAmountIncrease);

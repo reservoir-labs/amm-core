@@ -3,8 +3,8 @@ pragma solidity 0.8.13;
 import "test/__fixtures/BaseTest.sol";
 
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { CERC20 } from "libcompound/interfaces/CERC20.sol";
 
-import { CTokenInterface } from "src/interfaces/CErc20Interface.sol";
 import { IComptroller } from "src/interfaces/IComptroller.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 
@@ -33,15 +33,9 @@ contract AssetManagerIntegrationTest is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        // uint256 lExchangeRate = CTokenInterface(ETH_MAINNET_CUSDC).exchangeRateStored();
 
         // this function is not view. Costs gas just to get the updated exchange rate
-        uint256 lExchangeRate = CTokenInterface(ETH_MAINNET_CUSDC).exchangeRateCurrent();
-
-        // todo: for some reason this keeps failing
-        // (bool success, bytes memory data) = address(ETH_MAINNET_CUSDC).staticcall(abi.encodeWithSignature("exchangeRateCurrent()"));
-        // require(success);
-        // uint256 lExchangeRate = abi.decode(data, (uint256));
+        uint256 lExchangeRate = CERC20(ETH_MAINNET_CUSDC).exchangeRateCurrent();
 
         // act
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
@@ -81,7 +75,7 @@ contract AssetManagerIntegrationTest is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        address[] memory lAllMarkets = IComptroller(ETH_MAINNET_COMPOUND_COMPTROLLER).getAllMarkets();
+        CERC20[] memory lAllMarkets = IComptroller(ETH_MAINNET_COMPOUND_COMPTROLLER).getAllMarkets();
 
         // act & assert
         vm.expectRevert();
