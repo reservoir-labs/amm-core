@@ -57,8 +57,8 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         CErc20Interface lMarket0 = CErc20Interface(compoundComptroller.allMarkets(aToken0MarketIndex));
         CErc20Interface lMarket1 = CErc20Interface(compoundComptroller.allMarkets(aToken1MarketIndex));
 
-        require(aAmount0Change == 0 || lMarket0.underlying() == address(lToken0));
-        require(aAmount1Change == 0 || lMarket1.underlying() == address(lToken1));
+        require(aAmount0Change == 0 || lMarket0.underlying() == address(lToken0), "WRONG MARKET FOR TOKEN");
+        require(aAmount1Change == 0 || lMarket1.underlying() == address(lToken1), "WRONG MARKET FOR TOKEN");
 
         // withdrawal from the market
         if (aAmount0Change < 0) {

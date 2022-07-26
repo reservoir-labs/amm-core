@@ -66,6 +66,26 @@ contract AssetManagerIntegrationTest is BaseTest
         assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(this)), 0);
     }
 
+    function testAdjustManagement_MarketIndexIncorrect() public
+    {
+        // arrange
+        int256 lAmountToManage = 500e6;
+
+        // act & assert
+        vm.expectRevert("WRONG MARKET FOR TOKEN");
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, 0, 0);
+    }
+
+    function testAdjustManagement_MarketIndexOutOfBound() public
+    {
+        // arrange
+        int256 lAmountToManage = 500e6;
+
+        // act & assert
+        vm.expectRevert();
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, 99, 0);
+    }
+
     function testGetBalance() public
     {
         // arrange
