@@ -17,8 +17,8 @@ abstract contract BaseTest is Test {
     GenericFactory internal _factory = new GenericFactory();
     AssetManager internal _manager = new AssetManager(ETH_MAINNET_COMPOUND_COMPTROLLER);
 
-    address internal _recoverer = address(1);
-    address internal _alice = address(2);
+    address internal _recoverer = _makeAddress("recoverer");
+    address internal _alice     = _makeAddress("alice");
 
     MintableERC20 internal _tokenA = new MintableERC20("TokenA", "TA");
     MintableERC20 internal _tokenB = new MintableERC20("TokenB", "TB");
@@ -45,6 +45,18 @@ abstract contract BaseTest is Test {
         _tokenA.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _uniswapV2Pair.mint(_alice);
+    }
+
+    function _makeAddress(string memory aName) internal returns (address)
+    {
+        address lAddress = address(
+            uint160(uint256(
+                keccak256(abi.encodePacked(aName))
+            ))
+        );
+        vm.label(lAddress, aName);
+
+        return lAddress;
     }
 
     function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)

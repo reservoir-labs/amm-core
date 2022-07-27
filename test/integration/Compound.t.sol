@@ -9,7 +9,13 @@ import { LibCompound } from "libcompound/LibCompound.sol";
 import { IComptroller } from "src/interfaces/IComptroller.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 
-contract AssetManagerIntegrationTest is BaseTest
+/// @dev we extend the interface here instead of placing it in IComptroller
+/// to eliminate mistakenly calling it in production code
+interface IComptrollerTest is IComptroller {
+    function getAllMarkets() external view returns (CERC20[] memory);
+}
+
+contract CompoundIntegrationTest is BaseTest
 {
     address public constant ETH_MAINNET_USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address public constant ETH_MAINNET_CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
@@ -74,7 +80,7 @@ contract AssetManagerIntegrationTest is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        CERC20[] memory lAllMarkets = IComptroller(ETH_MAINNET_COMPOUND_COMPTROLLER).getAllMarkets();
+        CERC20[] memory lAllMarkets = IComptrollerTest(ETH_MAINNET_COMPOUND_COMPTROLLER).getAllMarkets();
 
         // act & assert
         vm.expectRevert();
