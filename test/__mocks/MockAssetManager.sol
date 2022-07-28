@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 
-contract AssetManager is IAssetManager
+contract MockAssetManager is IAssetManager
 {
     mapping(address => mapping(address => uint112)) public getBalance;
 
