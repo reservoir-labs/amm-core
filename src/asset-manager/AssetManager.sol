@@ -20,6 +20,9 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     /// so once an entry is written it will not be overwritten
     mapping(address => mapping(address => CERC20)) public markets;
 
+    /// @dev tracks how many cTokens each pair+token owns
+    mapping(address => mapping(address => uint256)) public shares;
+
     IComptroller public immutable compoundComptroller;
 
     constructor(address aComptroller) {
@@ -29,17 +32,7 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
     /// @dev returns the balance of the token managed by various markets in the native precision
     function getBalance(address aOwner, address aToken) external view returns (uint112 rTokenBalance) {
-        CERC20 lMarket = markets[aOwner][aToken];
-
-        if (address(lMarket) == address(0)) {
-            return 0;
-        }
-
-        // the exchange rate is scaled by 1e18
-        uint256 lExchangeRate = LibCompound.viewExchangeRate(lMarket);
-        uint256 lCTokenBalance = lMarket.balanceOf(address(this));
-
-        rTokenBalance = uint112(lCTokenBalance * lExchangeRate / 1e18);
+        return _getBalance(aOwner, aToken);
     }
 
     function adjustManagement(
@@ -84,9 +77,28 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         }
     }
 
+    function _getBalance(address aOwner, address aToken) private view returns (uint112 rTokenBalance) {
+        uint256 lShare = shares[aOwner][aToken];
+
+        if (lShare == 0) {
+            return 0;
+        }
+
+        // the exchange rate is scaled by 1e18
+        uint256 lExchangeRate = LibCompound.viewExchangeRate(markets[aOwner][aToken]);
+
+        rTokenBalance = uint112(lShare * lExchangeRate / 1e18);
+    }
+
     function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, CERC20 aMarket) private {
-        uint256 lRes = aMarket.redeemUnderlying(aAmountDecrease);
-        require(lRes == 0, "REDEEM DID NOT SUCCEED");
+        // explicit check here albeit arguably if the pair tried to redeem more than its share
+        // the substraction of shares would underflow
+        require(_getBalance(aPair, address(aToken)) >= aAmountDecrease, "INSUFFICIENT BALANCE");
+
+        uint256 lPrevCTokenBalance = aMarket.balanceOf(address(this));
+        require(aMarket.redeemUnderlying(aAmountDecrease) == 0, "REDEEM DID NOT SUCCEED");
+        uint256 lCurrentCTokenBalance = aMarket.balanceOf(address(this));
+        shares[aPair][address(aToken)] -= lPrevCTokenBalance - lCurrentCTokenBalance;
 
         aToken.approve(aPair, aAmountDecrease);
 
@@ -104,8 +116,11 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
         }
 
         aToken.approve(address(aMarket), aAmountIncrease);
-        uint256 lRes = aMarket.mint(aAmountIncrease);
-        require(lRes == 0, "MINT DID NOT SUCCEED");
+
+        uint256 lPrevCTokenBalance = aMarket.balanceOf(address(this));
+        require(aMarket.mint(aAmountIncrease) == 0, "MINT DID NOT SUCCEED");
+        uint256 lCurrentCTokenBalance = aMarket.balanceOf(address(this));
+        shares[aPair][address(aToken)] += lCurrentCTokenBalance - lPrevCTokenBalance;
 
         emit FundsInvested(aPair, address(aToken), address(aMarket), aAmountIncrease);
     }

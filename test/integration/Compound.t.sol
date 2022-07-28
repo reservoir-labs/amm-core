@@ -26,7 +26,7 @@ contract CompoundIntegrationTest is BaseTest
         // mint some USDC to this address
         deal(ETH_MAINNET_USDC, address(this), INITIAL_MINT_AMOUNT, true);
 
-        _uniswapV2Pair = UniswapV2Pair(_factory.createPair(address(_tokenA), address(ETH_MAINNET_USDC), 0));
+        _uniswapV2Pair = _createPair(address(_tokenA), ETH_MAINNET_USDC);
 
         vm.prank(address(_factory));
         _uniswapV2Pair.setManager(_manager);
@@ -66,6 +66,26 @@ contract CompoundIntegrationTest is BaseTest
         assertEq(IERC20(ETH_MAINNET_CUSDC).balanceOf(address(this)), 0);
     }
 
+    function testAdjustManagement_DecreaseManagementBeyondShare() public
+    {
+        // arrange
+        UniswapV2Pair lOtherPair = _createPair(address(_tokenB), ETH_MAINNET_USDC);
+        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        deal(ETH_MAINNET_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
+        lOtherPair.mint(_alice);
+        vm.prank(address(_factory));
+        lOtherPair.setManager(_manager);
+        int256 lAmountToManage1 = 500e6;
+        int256 lAmountToManage2 = 500e6;
+
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
+        _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
+
+        // act & assert
+        vm.expectRevert("INSUFFICIENT BALANCE");
+        _manager.adjustManagement(address(lOtherPair), -lAmountToManage2-1, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
+    }
+
     function testAdjustManagement_MarketIndexIncorrect() public
     {
         // arrange
@@ -98,5 +118,27 @@ contract CompoundIntegrationTest is BaseTest
 
         // assert
         assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManage)));
+    }
+
+    function testGetBalance_TwoPairsInSameMarket(uint256 aAmountToManage1, uint256 aAmountToManage2) public
+    {
+        // arrange
+        UniswapV2Pair lOtherPair = _createPair(address(_tokenB), ETH_MAINNET_USDC);
+        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        deal(ETH_MAINNET_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
+        lOtherPair.mint(_alice);
+        vm.prank(address(_factory));
+        lOtherPair.setManager(_manager);
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, INITIAL_MINT_AMOUNT));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, INITIAL_MINT_AMOUNT));
+
+        // act
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
+        _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
+
+        // assert
+        assertEq(address(_manager.markets(address(_uniswapV2Pair), ETH_MAINNET_USDC)), address(_manager.markets(address(lOtherPair), ETH_MAINNET_USDC)));
+        assertTrue(MathUtils.within1(_manager.getBalance(address(_uniswapV2Pair), ETH_MAINNET_USDC), uint256(lAmountToManage1)));
+        assertTrue(MathUtils.within1(_manager.getBalance(address(lOtherPair), ETH_MAINNET_USDC), uint256(lAmountToManage2)));
     }
 }

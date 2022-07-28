@@ -41,7 +41,7 @@ abstract contract BaseTest is Test {
         _factory.set(keccak256("UniswapV2Pair::amplificationCoefficient"), bytes32(uint256(1000)));
 
         // initial mint
-        _uniswapV2Pair = _createPair(_tokenA, _tokenB);
+        _uniswapV2Pair = _createPair(address(_tokenA), address(_tokenB));
         _tokenA.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _uniswapV2Pair.mint(_alice);
@@ -59,8 +59,8 @@ abstract contract BaseTest is Test {
         return lAddress;
     }
 
-    function _createPair(MintableERC20 aTokenA, MintableERC20 aTokenB) private returns (UniswapV2Pair rPair)
+    function _createPair(address aTokenA, address aTokenB) internal returns (UniswapV2Pair rPair)
     {
-        rPair = UniswapV2Pair(_factory.createPair(address(aTokenA), address(aTokenB), 0));
+        rPair = UniswapV2Pair(_factory.createPair(aTokenA, aTokenB, 0));
     }
 }
