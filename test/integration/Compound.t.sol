@@ -11,7 +11,8 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 
 /// @dev we extend the interface here instead of placing it in IComptroller
 /// to eliminate mistakenly calling it in production code
-interface IComptrollerTest is IComptroller {
+interface IComptrollerTest is IComptroller
+{
     function getAllMarkets() external view returns (CERC20[] memory);
 }
 
@@ -82,7 +83,7 @@ contract CompoundIntegrationTest is BaseTest
         _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
 
         // act & assert
-        vm.expectRevert("INSUFFICIENT BALANCE");
+        vm.expectRevert(stdError.arithmeticError);
         _manager.adjustManagement(address(lOtherPair), -lAmountToManage2-1, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
     }
 

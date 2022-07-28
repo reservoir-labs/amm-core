@@ -91,13 +91,10 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
     }
 
     function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, CERC20 aMarket) private {
-        // explicit check here albeit arguably if the pair tried to redeem more than its share
-        // the substraction of shares would underflow
-        require(_getBalance(aPair, address(aToken)) >= aAmountDecrease, "INSUFFICIENT BALANCE");
-
         uint256 lPrevCTokenBalance = aMarket.balanceOf(address(this));
         require(aMarket.redeemUnderlying(aAmountDecrease) == 0, "REDEEM DID NOT SUCCEED");
         uint256 lCurrentCTokenBalance = aMarket.balanceOf(address(this));
+        // if attempting to redeem more than the pair+token's share, this will revert
         shares[aPair][address(aToken)] -= lPrevCTokenBalance - lCurrentCTokenBalance;
 
         aToken.approve(aPair, aAmountDecrease);
