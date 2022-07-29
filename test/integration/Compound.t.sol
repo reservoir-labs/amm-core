@@ -27,7 +27,7 @@ contract CompoundIntegrationTest is BaseTest
         // mint some USDC to this address
         deal(ETH_MAINNET_USDC, address(this), INITIAL_MINT_AMOUNT, true);
 
-        _uniswapV2Pair = _createPair(address(_tokenA), ETH_MAINNET_USDC);
+        _uniswapV2Pair = UniswapV2Pair(_createPair(address(_tokenA), ETH_MAINNET_USDC, 0));
 
         vm.prank(address(_factory));
         _uniswapV2Pair.setManager(_manager);
@@ -70,7 +70,7 @@ contract CompoundIntegrationTest is BaseTest
     function testAdjustManagement_DecreaseManagementBeyondShare() public
     {
         // arrange
-        UniswapV2Pair lOtherPair = _createPair(address(_tokenB), ETH_MAINNET_USDC);
+        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), ETH_MAINNET_USDC, 0));
         _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
         deal(ETH_MAINNET_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
         lOtherPair.mint(_alice);
@@ -127,7 +127,7 @@ contract CompoundIntegrationTest is BaseTest
     function testGetBalance_TwoPairsInSameMarket(uint256 aAmountToManage1, uint256 aAmountToManage2) public
     {
         // arrange
-        UniswapV2Pair lOtherPair = _createPair(address(_tokenB), ETH_MAINNET_USDC);
+        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), ETH_MAINNET_USDC, 0));
         _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
         deal(ETH_MAINNET_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
         lOtherPair.mint(_alice);

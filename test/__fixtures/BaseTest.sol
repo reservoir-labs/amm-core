@@ -10,21 +10,22 @@ import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { CompoundManager } from "src/asset-manager/CompoundManager.sol";
 
 abstract contract BaseTest is Test {
-    address public constant ETH_MAINNET_COMPOUND_COMPTROLLER = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    address public constant ETH_MAINNET_COMPOUND_COMPTROLLER    = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    uint256 public constant INITIAL_MINT_AMOUNT                 = 100e18;
 
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
+    GenericFactory  internal _factory       = new GenericFactory();
+    CompoundManager internal _manager       = new CompoundManager(ETH_MAINNET_COMPOUND_COMPTROLLER);
 
-    GenericFactory internal _factory = new GenericFactory();
-    CompoundManager internal _manager = new CompoundManager(ETH_MAINNET_COMPOUND_COMPTROLLER);
+    address         internal _recoverer     = _makeAddress("recoverer");
+    address         internal _platformFeeTo = _makeAddress("platformFeeTo");
+    address         internal _alice         = _makeAddress("alice");
 
-    address internal _recoverer = _makeAddress("recoverer");
-    address internal _alice     = _makeAddress("alice");
+    MintableERC20   internal _tokenA        = new MintableERC20("TokenA", "TA");
+    MintableERC20   internal _tokenB        = new MintableERC20("TokenB", "TB");
+    MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC");
 
-    MintableERC20 internal _tokenA = new MintableERC20("TokenA", "TA");
-    MintableERC20 internal _tokenB = new MintableERC20("TokenB", "TB");
-    MintableERC20 internal _tokenC = new MintableERC20("TokenC", "TC");
-
-    UniswapV2Pair internal _uniswapV2Pair;
+    UniswapV2Pair   internal _uniswapV2Pair;
+    HybridPool      internal _hybridPool;
 
     constructor()
     {
@@ -41,10 +42,15 @@ abstract contract BaseTest is Test {
         _factory.set(keccak256("UniswapV2Pair::amplificationCoefficient"), bytes32(uint256(1000)));
 
         // initial mint
-        _uniswapV2Pair = _createPair(address(_tokenA), address(_tokenB));
+        _uniswapV2Pair = UniswapV2Pair(_createPair(address(_tokenA), address(_tokenB), 0));
         _tokenA.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _uniswapV2Pair.mint(_alice);
+
+        _hybridPool = HybridPool(_createPair(address(_tokenA), address(_tokenB), 1));
+        _tokenA.mint(address(_hybridPool), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_hybridPool), INITIAL_MINT_AMOUNT);
+        _hybridPool.mint(_alice);
     }
 
     function _makeAddress(string memory aName) internal returns (address)
@@ -59,8 +65,8 @@ abstract contract BaseTest is Test {
         return lAddress;
     }
 
-    function _createPair(address aTokenA, address aTokenB) internal returns (UniswapV2Pair rPair)
+    function _createPair(address aTokenA, address aTokenB, uint256 aCurveId) internal returns (address rPair)
     {
-        rPair = UniswapV2Pair(_factory.createPair(aTokenA, aTokenB, 0));
+        rPair = _factory.createPair(aTokenA, aTokenB, aCurveId);
     }
 }
