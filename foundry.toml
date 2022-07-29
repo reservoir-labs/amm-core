@@ -10,7 +10,6 @@ verbosity = 3
 
 [profile.integration]
 match_path = "test/integration/*.sol"
-verbosity = 3
 eth_rpc_url = "https://cloudflare-eth.com"
 block_number = 15165804
 
