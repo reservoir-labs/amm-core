@@ -16,9 +16,6 @@ contract UniswapV2PairTest is BaseTest
 {
     MockAssetManager private _mockManager = new MockAssetManager();
 
-    function setUp() public
-    {}
-
     function _calculateOutput(
         uint256 aReserveIn,
         uint256 aReserveOut,

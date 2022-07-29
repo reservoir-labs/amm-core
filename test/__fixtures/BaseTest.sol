@@ -10,23 +10,22 @@ import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
 import { AssetManager } from "src/asset-manager/AssetManager.sol";
 
 abstract contract BaseTest is Test {
-    address public constant ETH_MAINNET_COMPOUND_COMPTROLLER = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    address public constant ETH_MAINNET_COMPOUND_COMPTROLLER    = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    uint256 public constant INITIAL_MINT_AMOUNT                 = 100e18;
 
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
+    GenericFactory  internal _factory       = new GenericFactory();
+    AssetManager    internal _manager       = new AssetManager(ETH_MAINNET_COMPOUND_COMPTROLLER);
 
-    GenericFactory internal _factory = new GenericFactory();
-    AssetManager internal _manager = new AssetManager(ETH_MAINNET_COMPOUND_COMPTROLLER);
+    address         internal _recoverer     = _makeAddress("recoverer");
+    address         internal _platformFeeTo = _makeAddress("platformFeeTo");
+    address         internal _alice         = _makeAddress("alice");
 
-    address internal _recoverer     = _makeAddress("recoverer");
-    address internal _platformFeeTo = _makeAddress("platformFeeTo");
-    address internal _alice         = _makeAddress("alice");
+    MintableERC20   internal _tokenA        = new MintableERC20("TokenA", "TA");
+    MintableERC20   internal _tokenB        = new MintableERC20("TokenB", "TB");
+    MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC");
 
-    MintableERC20 internal _tokenA = new MintableERC20("TokenA", "TA");
-    MintableERC20 internal _tokenB = new MintableERC20("TokenB", "TB");
-    MintableERC20 internal _tokenC = new MintableERC20("TokenC", "TC");
-
-    UniswapV2Pair internal _uniswapV2Pair;
-    HybridPool internal _hybridPool;
+    UniswapV2Pair   internal _uniswapV2Pair;
+    HybridPool      internal _hybridPool;
 
     constructor()
     {

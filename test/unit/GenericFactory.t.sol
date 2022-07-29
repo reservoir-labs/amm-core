@@ -10,9 +10,6 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 contract GenericFactoryTest is BaseTest
 {
-    function setUp() public
-    {}
-
     function testCreatePair_ConstantProduct() public
     {
         // act

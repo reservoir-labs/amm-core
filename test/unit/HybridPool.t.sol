@@ -14,9 +14,6 @@ contract HybridPoolTest is BaseTest
 {
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
 
-    function setUp() public
-    {}
-
     function _calculateConstantProductOutput(
         uint256 aReserveIn,
         uint256 aReserveOut,
