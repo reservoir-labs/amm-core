@@ -10,7 +10,8 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IComptroller } from "src/interfaces/IComptroller.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 
-contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
+contract CompoundManager is IAssetManager, Ownable, ReentrancyGuard
+{
     event FundsInvested(address pair, address token, address market, uint256 amount);
     event FundsDivested(address pair, address token, address market, uint256 amount);
 
@@ -59,10 +60,10 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         // withdrawal from the market
         if (aAmount0Change < 0) {
-            _doDivest(aPair, lToken0, uint256(-aAmount0Change), lMarket0);
+            _doDivest(aPair, lToken0, lMarket0, uint256(-aAmount0Change));
         }
         if (aAmount1Change < 0) {
-            _doDivest(aPair, lToken1, uint256(-aAmount1Change), lMarket1);
+            _doDivest(aPair, lToken1, lMarket1, uint256(-aAmount1Change));
         }
 
         // transfer tokens to/from the pair
@@ -70,40 +71,40 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
 
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            _doInvest(aPair, lToken0, uint256(aAmount0Change), lMarket0);
+            _doInvest(aPair, lToken0, lMarket0, uint256(aAmount0Change));
         }
         if (aAmount1Change > 0) {
-            _doInvest(aPair, lToken1, uint256(aAmount1Change), lMarket1);
+            _doInvest(aPair, lToken1, lMarket1, uint256(aAmount1Change));
         }
     }
 
     function _getBalance(address aOwner, address aToken) private view returns (uint112 rTokenBalance) {
-        uint256 lShare = shares[aOwner][aToken];
+        uint256 lShares = shares[aOwner][aToken];
 
-        if (lShare == 0) {
+        if (lShares == 0) {
             return 0;
         }
 
         // the exchange rate is scaled by 1e18
         uint256 lExchangeRate = LibCompound.viewExchangeRate(markets[aOwner][aToken]);
 
-        rTokenBalance = uint112(lShare * lExchangeRate / 1e18);
+        rTokenBalance = uint112(lShares * lExchangeRate / 1e18);
     }
 
-    function _doDivest(address aPair, IERC20 aToken, uint256 aAmountDecrease, CERC20 aMarket) private {
+    function _doDivest(address aPair, IERC20 aToken, CERC20 aMarket, uint256 aAmount) private {
         uint256 lPrevCTokenBalance = aMarket.balanceOf(address(this));
-        require(aMarket.redeemUnderlying(aAmountDecrease) == 0, "REDEEM DID NOT SUCCEED");
+        require(aMarket.redeemUnderlying(aAmount) == 0, "REDEEM DID NOT SUCCEED");
         uint256 lCurrentCTokenBalance = aMarket.balanceOf(address(this));
         // if attempting to redeem more than the pair+token's share, this will revert
         shares[aPair][address(aToken)] -= lPrevCTokenBalance - lCurrentCTokenBalance;
 
-        aToken.approve(aPair, aAmountDecrease);
+        aToken.approve(aPair, aAmount);
 
-        emit FundsDivested(aPair, address(aToken), address(aMarket), aAmountDecrease);
+        emit FundsDivested(aPair, address(aToken), address(aMarket), aAmount);
     }
 
-    function _doInvest(address aPair, IERC20 aToken, uint256 aAmountIncrease, CERC20 aMarket) private {
-        require(aToken.balanceOf(address(this)) == aAmountIncrease, "TOKEN AMOUNT MISMATCH");
+    function _doInvest(address aPair, IERC20 aToken, CERC20 aMarket, uint256 aAmount) private {
+        require(aToken.balanceOf(address(this)) == aAmount, "TOKEN AMOUNT MISMATCH");
 
         if (address(markets[aPair][address(aToken)]) == address(0)) {
             markets[aPair][address(aToken)] = aMarket;
@@ -112,13 +113,13 @@ contract AssetManager is IAssetManager, Ownable, ReentrancyGuard {
             require(markets[aPair][address(aToken)] == aMarket, "ANOTHER MARKET ACTIVE");
         }
 
-        aToken.approve(address(aMarket), aAmountIncrease);
+        aToken.approve(address(aMarket), aAmount);
 
         uint256 lPrevCTokenBalance = aMarket.balanceOf(address(this));
-        require(aMarket.mint(aAmountIncrease) == 0, "MINT DID NOT SUCCEED");
+        require(aMarket.mint(aAmount) == 0, "MINT DID NOT SUCCEED");
         uint256 lCurrentCTokenBalance = aMarket.balanceOf(address(this));
         shares[aPair][address(aToken)] += lCurrentCTokenBalance - lPrevCTokenBalance;
 
-        emit FundsInvested(aPair, address(aToken), address(aMarket), aAmountIncrease);
+        emit FundsInvested(aPair, address(aToken), address(aMarket), aAmount);
     }
 }

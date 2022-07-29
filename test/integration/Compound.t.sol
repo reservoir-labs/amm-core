@@ -87,14 +87,17 @@ contract CompoundIntegrationTest is BaseTest
         _manager.adjustManagement(address(lOtherPair), -lAmountToManage2-1, 0, ETH_MAINNET_CUSDC_MARKET_INDEX, 0);
     }
 
-    function testAdjustManagement_MarketIndexIncorrect() public
+    function testAdjustManagement_MarketIndexIncorrect(uint256 aIndex) public
     {
         // arrange
         int256 lAmountToManage = 500e6;
+        CERC20[] memory lAllMarkets = IComptrollerTest(ETH_MAINNET_COMPOUND_COMPTROLLER).getAllMarkets();
+        aIndex = bound(aIndex, 0, lAllMarkets.length - 1);
+        vm.assume(aIndex != ETH_MAINNET_CUSDC_MARKET_INDEX);
 
         // act & assert
         vm.expectRevert("WRONG MARKET FOR TOKEN");
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, 0, 0);
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0, aIndex, 0);
     }
 
     function testAdjustManagement_MarketIndexOutOfBound() public
