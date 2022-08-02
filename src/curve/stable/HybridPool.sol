@@ -309,7 +309,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
-        require(msg.sender == address(this), "not self");
+        require(msg.sender == address(this), "CP: NOT SELF");
         return _mintFee(_reserve0, _reserve1);
     }
 
