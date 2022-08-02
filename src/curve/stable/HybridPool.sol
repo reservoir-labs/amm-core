@@ -81,7 +81,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     uint128 internal lastLiquidityEventReserve1;
 
     modifier onlyFactory() {
-        require(msg.sender == address(factory), "CP: FORBIDDEN");
+        require(msg.sender == address(factory), "SS: FORBIDDEN");
         _;
     }
 
@@ -101,8 +101,8 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         token1PrecisionMultiplier = uint256(10)**(18 - ERC20(token1).decimals());
 
         // @dev Factory ensures that the tokens are sorted.
-        require(token0 != address(0), "CP: ZERO_ADDRESS");
-        require(token0 != token1, "CP: IDENTICAL_ADDRESSES");
+        require(token0 != address(0), "SS: ZERO_ADDRESS");
+        require(token0 != token1, "SS: IDENTICAL_ADDRESSES");
         require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "INVALID_SWAP_FEE");
         require(
             // perf: check if an immutable/constant var is cheaper than always casting
@@ -133,7 +133,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         : factory.read("UniswapV2Pair::swapFee").toUint256();
         if (_swapFee == swapFee) { return; }
 
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "SS: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
@@ -145,7 +145,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         : factory.read("UniswapV2Pair::platformFee").toUint256();
         if (_platformFee == platformFee) { return; }
 
-        require(_platformFee <= MAX_PLATFORM_FEE, "CP: INVALID_PLATFORM_FEE");
+        require(_platformFee <= MAX_PLATFORM_FEE, "SS: INVALID_PLATFORM_FEE");
 
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
@@ -155,13 +155,13 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(
             futureARaw >= StableMath.MIN_A
             && futureARaw <= StableMath.MAX_A,
-            "CP: INVALID A"
+            "SS: INVALID A"
         );
 
         uint64 futureAPrecise = futureARaw * uint64(StableMath.A_PRECISION);
 
         uint256 duration = futureATime - block.timestamp;
-        require(duration >= StableMath.MIN_RAMP_TIME, "CP: INVALID DURATION");
+        require(duration >= StableMath.MIN_RAMP_TIME, "SS: INVALID DURATION");
 
         uint64 currentAPrecise = _getCurrentAPrecise();
 
@@ -171,7 +171,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         uint256 dailyRate = futureAPrecise > currentAPrecise
             ? Math.ceilDiv(futureAPrecise * 1 days, currentAPrecise * duration)
             : Math.ceilDiv(currentAPrecise * 1 days, futureAPrecise * duration);
-        require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "CP: AMP RATE TOO HIGH");
+        require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "SS: AMP RATE TOO HIGH");
 
         ampData.initialA = currentAPrecise;
         ampData.futureA = futureAPrecise;
@@ -295,21 +295,21 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
             _processSwap(token1, to, amountOut, context);
             uint256 balance0 = ERC20(token0).balanceOf(address(this));
-            require(balance0 - _reserve0 >= amountIn, "CP: INSUFFICIENT_AMOUNT_IN");
+            require(balance0 - _reserve0 >= amountIn, "SS: INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "INVALID_INPUT_TOKEN");
             tokenOut = token0;
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
             _processSwap(token0, to, amountOut, context);
             uint256 balance1 = ERC20(token1).balanceOf(address(this));
-            require(balance1 - _reserve1 >= amountIn, "CP: INSUFFICIENT_AMOUNT_IN");
+            require(balance1 - _reserve1 >= amountIn, "SS: INSUFFICIENT_AMOUNT_IN");
         }
         _updateReserves();
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
-        require(msg.sender == address(this), "CP: NOT SELF");
+        require(msg.sender == address(this), "SS: NOT SELF");
         return _mintFee(_reserve0, _reserve1);
     }
 
@@ -385,7 +385,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     function _safeTransfer(address token, address to, uint value) private {
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(TRANSFER, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "CP: TRANSFER_FAILED");
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "SS: TRANSFER_FAILED");
     }
 
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
@@ -489,9 +489,9 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     function recoverToken(address token) external {
         address _recoverer = factory.read("UniswapV2Pair::defaultRecoverer").toAddress();
-        require(token != token0, "CP: INVALID_TOKEN_TO_RECOVER");
-        require(token != token1, "CP: INVALID_TOKEN_TO_RECOVER");
-        require(_recoverer != address(0), "CP: RECOVERER_ZERO_ADDRESS");
+        require(token != token0, "SS: INVALID_TOKEN_TO_RECOVER");
+        require(token != token1, "SS: INVALID_TOKEN_TO_RECOVER");
+        require(_recoverer != address(0), "SS: RECOVERER_ZERO_ADDRESS");
 
         uint _amountToRecover = ERC20(token).balanceOf(address(this));
 
