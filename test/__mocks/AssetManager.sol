@@ -12,7 +12,7 @@ contract AssetManager is IAssetManager
 
     function adjustManagement(IUniswapV2Pair aPair, int224 aToken0Amount, int224 aToken1Amount) external
     {
-        require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "overflow");
+        require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "SS: OVERFLOW");
 
         if (aToken0Amount >= 0) {
             uint112 lAbs = uint112(uint256(int256(aToken0Amount)));

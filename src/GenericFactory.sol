@@ -52,11 +52,11 @@ contract GenericFactory is IGenericFactory, Ownable
 
     function createPair(address aTokenA, address aTokenB, uint256 aCurveId) external returns (address rPair)
     {
-        require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
-        require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
-        require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
+        require(aTokenA != aTokenB, "SS: IDENTICAL_ADDRESSES");
+        require(aTokenA != address(0), "SS: ZERO_ADDRESS");
+        require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "SS: PAIR_EXISTS");
         address lCodePointer = _getByteCode[aCurveId];
-        require(lCodePointer != address(0), "FACTORY: INVALID_CURVE_ID");
+        require(lCodePointer != address(0), "SS: INVALID_CURVE_ID");
 
         (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
 
