@@ -64,6 +64,23 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
+  test-integration:
+    name: Test Unit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run unit tests
+        run: npm run test:integration
+
   test-uniswap-v2:
     name: Test Uniswap V2
     runs-on: ubuntu-latest
