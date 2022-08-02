@@ -111,7 +111,7 @@ contract HybridPoolTest is Test
     function testMintFee_NotCallableByOthers() public
     {
         // act & assert
-        vm.expectRevert("CP: NOT_SELF");
+        vm.expectRevert("SS: NOT_SELF");
         _pool.mintFee(0, 0);
     }
 
@@ -128,7 +128,7 @@ contract HybridPoolTest is Test
     function testSwap_ZeroInput() public
     {
         // act & assert
-        vm.expectRevert("CP: TRANSFER_FAILED");
+        vm.expectRevert("SS: TRANSFER_FAILED");
         _pool.swap(address(_tokenA), address(this));
     }
 
@@ -278,7 +278,7 @@ contract HybridPoolTest is Test
         uint64 lFutureAToSet = uint64(StableMath.MIN_A) - 1;
 
         // act & assert
-        vm.expectRevert("CP: INVALID_A");
+        vm.expectRevert("SS: INVALID_A");
         _factory.rawCall(
             address(_pool),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -294,7 +294,7 @@ contract HybridPoolTest is Test
         uint64 lFutureAToSet = uint64(StableMath.MAX_A) + 1;
 
         // act & assert
-        vm.expectRevert("CP: INVALID_A");
+        vm.expectRevert("SS: INVALID_A");
         _factory.rawCall(
             address(_pool),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -329,7 +329,7 @@ contract HybridPoolTest is Test
         uint64 lFutureAToSet = _pool.getCurrentA() * 4;
 
         // act & assert
-        vm.expectRevert("CP: AMP_RATE_TOO_HIGH");
+        vm.expectRevert("SS: AMP_RATE_TOO_HIGH");
         _factory.rawCall(
             address(_pool),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),

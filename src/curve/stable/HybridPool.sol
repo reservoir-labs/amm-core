@@ -103,7 +103,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         // @dev Factory ensures that the tokens are sorted.
         require(token0 != address(0), "SS: ZERO_ADDRESS");
         require(token0 != token1, "SS: IDENTICAL_ADDRESSES");
-        require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "INVALID_SWAP_FEE");
+        require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "SS: INVALID_SWAP_FEE");
         require(
             // perf: check if an immutable/constant var is cheaper than always casting
             ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
@@ -206,13 +206,13 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
 
         if (_totalSupply == 0) {
-            require(amount0 > 0 && amount1 > 0, "INVALID_AMOUNTS");
+            require(amount0 > 0 && amount1 > 0, "SS: INVALID_AMOUNTS");
             liquidity = newLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
             liquidity = ((newLiq - oldLiq) * _totalSupply) / oldLiq;
         }
-        require(liquidity != 0, "INSUFFICIENT_LIQUIDITY_MINTED");
+        require(liquidity != 0, "SS: INSUFFICIENT_LIQUIDITY_MINTED");
         _mint(to, liquidity);
         _updateReserves();
 
@@ -273,7 +273,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         }
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
         } else {
-            require(tokenIn == token1, "INVALID_INPUT_TOKEN");
+            require(tokenIn == token1, "SS: INVALID_INPUT_TOKEN");
             tokenOut = token0;
         unchecked {
             amountIn = balance1 - _reserve1;
@@ -297,7 +297,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
             uint256 balance0 = ERC20(token0).balanceOf(address(this));
             require(balance0 - _reserve0 >= amountIn, "SS: INSUFFICIENT_AMOUNT_IN");
         } else {
-            require(tokenIn == token1, "INVALID_INPUT_TOKEN");
+            require(tokenIn == token1, "SS: INVALID_INPUT_TOKEN");
             tokenOut = token0;
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
             _processSwap(token0, to, amountOut, context);
@@ -353,7 +353,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
 
     function _updateReserves() internal {
         (uint256 _reserve0, uint256 _reserve1) = _balance();
-        require(_reserve0 <= type(uint128).max && _reserve1 <= type(uint128).max, "OVERFLOW");
+        require(_reserve0 <= type(uint128).max && _reserve1 <= type(uint128).max, "SS: OVERFLOW");
         reserve0 = uint128(_reserve0);
         reserve1 = uint128(_reserve1);
         emit Sync(_reserve0, _reserve1);
@@ -472,7 +472,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         if (tokenIn == token0) {
             finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
         } else {
-            require(tokenIn == token1, "INVALID_INPUT_TOKEN");
+            require(tokenIn == token1, "SS: INVALID_INPUT_TOKEN");
             finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
     }
