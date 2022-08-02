@@ -320,7 +320,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     modifier onlyManager() {
-        require(msg.sender == address(assetManager), "CP: AUTH NOT ASSET MANAGER");
+        require(msg.sender == address(assetManager), "CP: AUTH_NOT_ASSET_MANAGER");
         _;
     }
 

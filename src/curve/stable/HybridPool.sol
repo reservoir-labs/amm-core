@@ -155,13 +155,13 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         require(
             futureARaw >= StableMath.MIN_A
             && futureARaw <= StableMath.MAX_A,
-            "SS: INVALID A"
+            "SS: INVALID_A"
         );
 
         uint64 futureAPrecise = futureARaw * uint64(StableMath.A_PRECISION);
 
         uint256 duration = futureATime - block.timestamp;
-        require(duration >= StableMath.MIN_RAMP_TIME, "SS: INVALID DURATION");
+        require(duration >= StableMath.MIN_RAMP_TIME, "SS: INVALID_DURATION");
 
         uint64 currentAPrecise = _getCurrentAPrecise();
 
@@ -171,7 +171,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         uint256 dailyRate = futureAPrecise > currentAPrecise
             ? Math.ceilDiv(futureAPrecise * 1 days, currentAPrecise * duration)
             : Math.ceilDiv(currentAPrecise * 1 days, futureAPrecise * duration);
-        require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "SS: AMP RATE TOO HIGH");
+        require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "SS: AMP_RATE_TOO_HIGH");
 
         ampData.initialA = currentAPrecise;
         ampData.futureA = futureAPrecise;
@@ -309,7 +309,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
-        require(msg.sender == address(this), "SS: NOT SELF");
+        require(msg.sender == address(this), "SS: NOT_SELF");
         return _mintFee(_reserve0, _reserve1);
     }
 
