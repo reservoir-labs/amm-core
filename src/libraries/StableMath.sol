@@ -72,7 +72,7 @@ library StableMath {
                 return D;
             }
         }
-        revert("_computeLiquidity did not converge");
+        revert("SM: DID_NOT_CONVERGE");
     }
 
     /// @notice Calculate the new balances of the tokens given the indexes of the token

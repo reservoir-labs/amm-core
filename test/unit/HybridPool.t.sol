@@ -73,7 +73,7 @@ contract HybridPoolTest is BaseTest
     function testMintFee_NotCallableByOthers() public
     {
         // act & assert
-        vm.expectRevert("not self");
+        vm.expectRevert("SS: NOT_SELF");
         _hybridPool.mintFee(0, 0);
     }
 
@@ -90,7 +90,7 @@ contract HybridPoolTest is BaseTest
     function testSwap_ZeroInput() public
     {
         // act & assert
-        vm.expectRevert("UniswapV2: TRANSFER_FAILED");
+        vm.expectRevert("SS: TRANSFER_FAILED");
         _hybridPool.swap(address(_tokenA), address(this));
     }
 

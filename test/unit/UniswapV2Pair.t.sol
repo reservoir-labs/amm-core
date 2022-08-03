@@ -284,7 +284,7 @@ contract UniswapV2PairTest is BaseTest
 
         // act & assert
         vm.prank(address(_factory));
-        vm.expectRevert("UniswapV2: AM_STILL_ACTIVE");
+        vm.expectRevert("CP: AM_STILL_ACTIVE");
         _uniswapV2Pair.setManager(IAssetManager(address(0)));
     }
 
