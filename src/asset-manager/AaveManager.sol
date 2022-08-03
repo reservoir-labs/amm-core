@@ -5,8 +5,9 @@ import { Ownable } from "@openzeppelin/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { IPoolAddressesProvider } from "src/interfaces/IPoolAddressesProvider.sol";
-import { IPool } from "src/interfaces/IPool.sol";
+import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
+import { IPool } from "src/interfaces/aave/IPool.sol";
+import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
@@ -18,16 +19,27 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     /// here we do not delete entries as we are only integrating with AAVE
     /// and that there is one and only one address for each underlying token
     /// so once an entry is written it will not be overwritten
-    mapping(address => mapping(address => address)) public markets;
+//    mapping(address => mapping(address => address)) public markets;
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(address => mapping(address => uint256)) public shares;
 
+    /// @dev this contract itself is immutable and is the source of truth for all relevant addresses for aave
+    IPoolAddressesProvider public immutable addressesProvider;
+
+    /// @dev this address will never change since it is a proxy and can be upgraded
     IPool public immutable pool;
+
+    /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
+    IAaveProtocolDataProvider public dataProvider;
 
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "COMPTROLLER ADDRESS ZERO");
-        pool = IPool(IPoolAddressesProvider(aPoolAddressesProvider).getPool());
+
+        addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
+
+        pool = IPool(addressesProvider.getPool());
+        dataProvider = IAaveProtocolDataProvider(addressesProvider.getPoolDataProvider());
     }
 
     /// @dev returns the balance of the token managed by various markets in the native precision
@@ -39,8 +51,6 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         address aPair,
         int256 aAmount0Change,
         int256 aAmount1Change
-//        uint256 aToken0MarketIndex,
-//        uint256 aToken1MarketIndex
     ) external nonReentrant onlyOwner {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
@@ -62,15 +72,15 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 //        }
 //
 //        // transfer tokens to/from the pair
-//        IUniswapV2Pair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
+        IUniswapV2Pair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 //
-//        // transfer the managed tokens to the destination
-//        if (aAmount0Change > 0) {
-//            _doInvest(aPair, lToken0, lMarket0, uint256(aAmount0Change));
-//        }
-//        if (aAmount1Change > 0) {
-//            _doInvest(aPair, lToken1, lMarket1, uint256(aAmount1Change));
-//        }
+        // transfer the managed tokens to the destination
+        if (aAmount0Change > 0) {
+            _doInvest(aPair, lToken0, uint256(aAmount0Change));
+        }
+        if (aAmount1Change > 0) {
+            _doInvest(aPair, lToken1, uint256(aAmount1Change));
+        }
     }
 
     function _getBalance(address aOwner, address aToken) private view returns (uint112 rTokenBalance) {
@@ -100,25 +110,19 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 //        emit FundsDivested(aPair, address(aToken), address(aMarket), aAmount);
     }
 
-    function _doInvest(address aPair, IERC20 aToken, IPool aMarket, uint256 aAmount) private {
-//        require(aToken.balanceOf(address(this)) == aAmount, "TOKEN AMOUNT MISMATCH");
-//
-//        if (address(markets[aPair][address(aToken)]) == address(0)) {
-//            markets[aPair][address(aToken)] = aMarket;
-//        }
-//        else {
-//            require(markets[aPair][address(aToken)] == aMarket, "ANOTHER MARKET ACTIVE");
-//        }
-//
-//        aToken.approve(address(aMarket), aAmount);
-//
-//        uint256 lPrevCTokenBalance = aMarket.balanceOf(address(this));
-//
-//        aMarket.supply(address(aToken), aAmount, address(this), 0);
-//
-//        uint256 lCurrentCTokenBalance = aMarket.balanceOf(address(this));
-//        shares[aPair][address(aToken)] += lCurrentCTokenBalance - lPrevCTokenBalance;
-//
-//        emit FundsInvested(aPair, address(aToken), address(aMarket), aAmount);
+    function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
+        require(aToken.balanceOf(address(this)) == aAmount, "TOKEN AMOUNT MISMATCH");
+
+        (address lATokenAddress , , ) = dataProvider.getReserveTokensAddresses(address(aToken));
+
+        aToken.approve(address(pool), aAmount);
+
+        uint256 lPrevATokenBalance = IERC20(lATokenAddress).balanceOf(address(this));
+        pool.supply(address(aToken), aAmount, address(this), 0);
+        uint256 lCurrATokenBalance = IERC20(lATokenAddress).balanceOf(address(this));
+
+        shares[aPair][address(aToken)] += lCurrATokenBalance - lPrevATokenBalance;
+
+        emit FundsInvested(aPair, address(aToken), address(lATokenAddress), aAmount);
     }
 }
