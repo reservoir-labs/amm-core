@@ -57,4 +57,76 @@ contract AaveIntegrationTest is BaseTest
         assertEq(_manager.shares(address(_uniswapV2Pair), _uniswapV2Pair.token0()), uint256(lAmountToManage));
         assertEq(IERC20(lATokenAddress).balanceOf(address(_manager)), uint256(lAmountToManage));
     }
+
+    function testAdjustManagement_DecreaseManagementOneToken() public
+    {
+        // arrange
+        int256 lAmountToManage = 500e6;
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0);
+
+        // act
+        _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0);
+
+        // assert
+        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
+        (address lATokenAddress, , ) = lDataProvider.getReserveTokensAddresses(_uniswapV2Pair.token0());
+
+        assertEq(_uniswapV2Pair.token0Managed(), 0);
+        assertEq(IERC20(FTM_USDC).balanceOf(address(_uniswapV2Pair)), INITIAL_MINT_AMOUNT);
+        assertEq(IERC20(lATokenAddress).balanceOf(address(this)), 0);
+    }
+
+    function testAdjustManagement_DecreaseManagementBeyondShare() public
+    {
+        // arrange
+        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
+        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        deal(FTM_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
+        lOtherPair.mint(_alice);
+        vm.prank(address(_factory));
+        lOtherPair.setManager(_manager);
+        int256 lAmountToManage1 = 500e6;
+        int256 lAmountToManage2 = 500e6;
+
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0);
+        _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0);
+
+        // act & assert
+        vm.expectRevert(stdError.arithmeticError);
+        _manager.adjustManagement(address(lOtherPair), -lAmountToManage2-1, 0);
+    }
+
+    function testGetBalance() public
+    {
+        // arrange
+        int256 lAmountToManage = 500e6;
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0);
+
+        // act
+        uint112 lBalance = _manager.getBalance(address(_uniswapV2Pair), FTM_USDC);
+
+        // assert
+        assertEq(lBalance, uint256(lAmountToManage));
+    }
+
+    function testGetBalance_TwoPairsInSameMarket(uint256 aAmountToManage1, uint256 aAmountToManage2) public
+    {
+        // arrange
+        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
+        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        deal(FTM_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
+        lOtherPair.mint(_alice);
+        vm.prank(address(_factory));
+        lOtherPair.setManager(_manager);
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, INITIAL_MINT_AMOUNT));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, INITIAL_MINT_AMOUNT));
+
+        // act
+        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0);
+        _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0);
+
+        // assert
+        assertEq(_manager.getBalance(address(_uniswapV2Pair), FTM_USDC), uint256(lAmountToManage1));
+        assertEq(_manager.getBalance(address(lOtherPair), FTM_USDC), uint256(lAmountToManage2));
+    }
 }
