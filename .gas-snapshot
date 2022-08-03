@@ -1,4 +1,4 @@
-GenericFactoryTest:testCreatePair_ConstantProduct() (gas: 3652423)
+GenericFactoryTest:testCreatePair_ConstantProduct() (gas: 3606332)
 HybridPoolTest:testBurn() (gas: 133658)
 HybridPoolTest:testGetCurrentA() (gas: 32560)
 HybridPoolTest:testMint() (gas: 102313)
