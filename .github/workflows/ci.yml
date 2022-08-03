@@ -65,7 +65,7 @@ jobs:
         run: npm run test:unit
 
   test-integration:
-    name: Test Unit
+    name: Test Integration
     runs-on: ubuntu-latest
 
     steps:
