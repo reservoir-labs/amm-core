@@ -8,7 +8,7 @@ import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvid
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 
-
+import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager } from "src/asset-manager/AaveManager.sol";
 
 contract AaveIntegrationTest is BaseTest
@@ -96,17 +96,20 @@ contract AaveIntegrationTest is BaseTest
         _manager.adjustManagement(address(lOtherPair), -lAmountToManage2-1, 0);
     }
 
-    function testGetBalance() public
+    function testGetBalance(uint256 aAmountToManage) public
     {
         // arrange
-        int256 lAmountToManage = 500e6;
+        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
+        (address lATokenAddress, , ) = lDataProvider.getReserveTokensAddresses(_uniswapV2Pair.token0());
+        uint256 lTotalSupply = IERC20(lATokenAddress).totalSupply();
+        int256 lAmountToManage = int256(bound(aAmountToManage, 0, lTotalSupply));
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0);
 
         // act
         uint112 lBalance = _manager.getBalance(address(_uniswapV2Pair), FTM_USDC);
 
         // assert
-        assertEq(lBalance, uint256(lAmountToManage));
+        assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManage)));
     }
 
     function testGetBalance_TwoPairsInSameMarket(uint256 aAmountToManage1, uint256 aAmountToManage2) public
@@ -118,15 +121,18 @@ contract AaveIntegrationTest is BaseTest
         lOtherPair.mint(_alice);
         vm.prank(address(_factory));
         lOtherPair.setManager(_manager);
-        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, INITIAL_MINT_AMOUNT));
-        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, INITIAL_MINT_AMOUNT));
+        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
+        (address lATokenAddress, , ) = lDataProvider.getReserveTokensAddresses(_uniswapV2Pair.token0());
+        uint256 lTotalSupply = IERC20(lATokenAddress).totalSupply();
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lTotalSupply));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lTotalSupply));
 
         // act
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0);
         _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0);
 
         // assert
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), FTM_USDC), uint256(lAmountToManage1));
-        assertEq(_manager.getBalance(address(lOtherPair), FTM_USDC), uint256(lAmountToManage2));
+        assertTrue(MathUtils.within1(_manager.getBalance(address(_uniswapV2Pair), FTM_USDC), uint256(lAmountToManage1)));
+        assertTrue(MathUtils.within1(_manager.getBalance(address(lOtherPair), FTM_USDC), uint256(lAmountToManage2)));
     }
 }

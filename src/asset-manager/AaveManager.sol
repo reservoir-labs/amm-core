@@ -29,9 +29,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "COMPTROLLER ADDRESS ZERO");
-
         addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
-
         pool = IPool(addressesProvider.getPool());
         dataProvider = IAaveProtocolDataProvider(addressesProvider.getPoolDataProvider());
     }
