@@ -6,7 +6,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
-import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
+import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
 abstract contract BaseTest is Test {
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
@@ -22,7 +22,7 @@ abstract contract BaseTest is Test {
     MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC");
 
     UniswapV2Pair   internal _uniswapV2Pair;
-    HybridPool      internal _hybridPool;
+    StablePair      internal _hybridPool;
 
     constructor()
     {
@@ -35,7 +35,7 @@ abstract contract BaseTest is Test {
         _factory.addCurve(type(UniswapV2Pair).creationCode);
 
         // add hybridpool curve
-        _factory.addCurve(type(HybridPool).creationCode);
+        _factory.addCurve(type(StablePair).creationCode);
         _factory.set(keccak256("UniswapV2Pair::amplificationCoefficient"), bytes32(uint256(1000)));
 
         // initial mint
@@ -44,7 +44,7 @@ abstract contract BaseTest is Test {
         _tokenB.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _uniswapV2Pair.mint(_alice);
 
-        _hybridPool = HybridPool(_createPair(address(_tokenA), address(_tokenB), 1));
+        _hybridPool = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
         _tokenA.mint(address(_hybridPool), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_hybridPool), INITIAL_MINT_AMOUNT);
         _hybridPool.mint(_alice);

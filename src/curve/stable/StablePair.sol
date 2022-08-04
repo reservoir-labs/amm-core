@@ -27,7 +27,7 @@ struct AmplificationData {
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
+contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
@@ -234,7 +234,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         // and use the current totalSupply of LP tokens for calculations since there is no new
         // LP tokens minted for platformFee
         uint256 _totalSupply;
-        try HybridPool(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256) {
+        try StablePair(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256) {
             _totalSupply = rTotalSupply;
         }
         catch {

@@ -6,11 +6,11 @@ import "test/__fixtures/MintableERC20.sol";
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
-import { HybridPool, AmplificationData } from "src/curve/stable/HybridPool.sol";
+import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-contract HybridPoolTest is BaseTest
+contract StablePairTest is BaseTest
 {
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
 
@@ -50,7 +50,7 @@ contract HybridPoolTest is BaseTest
     function testMint_OnlyTransferOneToken() public
     {
         // arrange
-        HybridPool lPair = HybridPool(_createPair(address(_tokenA), address(_tokenC), 1));
+        StablePair lPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
         _tokenA.mint(address(lPair), 5e18);
 
         // act & assert
@@ -100,15 +100,15 @@ contract HybridPoolTest is BaseTest
         uint256 lSwapAmount = 5e18;
         _tokenA.mint(address(_hybridPool), lSwapAmount);
         _hybridPool.swap(address(_tokenA), address(this));
-        uint256 lHybridPoolOutput = _tokenB.balanceOf(address(this));
+        uint256 lStablePairOutput = _tokenB.balanceOf(address(this));
 
         uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
         _tokenA.mint(address(_uniswapV2Pair), lSwapAmount);
         _uniswapV2Pair.swap(lExpectedConstantProductOutput, 0, address(this), "");
-        uint256 lConstantProductOutput = _tokenB.balanceOf(address(this)) - lHybridPoolOutput;
+        uint256 lConstantProductOutput = _tokenB.balanceOf(address(this)) - lStablePairOutput;
 
         // assert
-        assertGt(lHybridPoolOutput, lConstantProductOutput);
+        assertGt(lStablePairOutput, lConstantProductOutput);
     }
 
     function testBurn() public
