@@ -217,7 +217,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         } else {
             liquidity = Math.min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
         }
-        require(liquidity > 0, "CP: INSUFFICIENT_LIQUIDITY_MINTED");
+        require(liquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -240,7 +240,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQUIDITY_BURNED");
+        require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
@@ -256,7 +256,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
         require(amount0Out > 0 || amount1Out > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, "CP: INSUFFICIENT_LIQUIDITY");
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, "CP: INSUFFICIENT_LIQ_SWAP");
 
         uint balance0;
         uint balance1;

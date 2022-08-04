@@ -212,7 +212,7 @@ contract HybridPool is UniswapV2ERC20, ReentrancyGuard {
         } else {
             liquidity = ((newLiq - oldLiq) * _totalSupply) / oldLiq;
         }
-        require(liquidity != 0, "SS: INSUFFICIENT_LIQUIDITY");
+        require(liquidity != 0, "SS: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
         _updateReserves();
 

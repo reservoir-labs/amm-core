@@ -203,7 +203,7 @@ contract UniswapV2PairTest is BaseTest
         _tokenC.mint(address(lPair), 1000);
 
         // act & assert
-        vm.expectRevert("CP: INSUFFICIENT_LIQUIDITY_MINTED");
+        vm.expectRevert("CP: INSUFFICIENT_LIQ_MINTED");
         lPair.mint(address(this));
     }
 
