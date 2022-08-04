@@ -22,7 +22,7 @@ abstract contract BaseTest is Test {
     MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC");
 
     UniswapV2Pair   internal _uniswapV2Pair;
-    StablePair      internal _hybridPool;
+    StablePair      internal _stablePair;
 
     constructor()
     {
@@ -44,10 +44,10 @@ abstract contract BaseTest is Test {
         _tokenB.mint(address(_uniswapV2Pair), INITIAL_MINT_AMOUNT);
         _uniswapV2Pair.mint(_alice);
 
-        _hybridPool = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
-        _tokenA.mint(address(_hybridPool), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_hybridPool), INITIAL_MINT_AMOUNT);
-        _hybridPool.mint(_alice);
+        _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
+        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _stablePair.mint(_alice);
     }
 
     function _makeAddress(string memory aName) internal returns (address)

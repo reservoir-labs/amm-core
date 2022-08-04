@@ -31,20 +31,20 @@ contract StablePairTest is BaseTest
     function testMint() public
     {
         // arrange
-        uint256 lLpTokenTotalSupply = _hybridPool.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1) = _hybridPool.getReserves();
+        uint256 lLpTokenTotalSupply = _stablePair.totalSupply();
+        (uint256 lReserve0, uint256 lReserve1) = _stablePair.getReserves();
         uint256 lOldLiquidity = lReserve0 + lReserve1;
         uint256 lLiquidityToAdd = 5e18;
 
         // act
-        _tokenA.mint(address(_hybridPool), lLiquidityToAdd);
-        _tokenB.mint(address(_hybridPool), lLiquidityToAdd);
-        _hybridPool.mint(address(this));
+        _tokenA.mint(address(_stablePair), lLiquidityToAdd);
+        _tokenB.mint(address(_stablePair), lLiquidityToAdd);
+        _stablePair.mint(address(this));
 
         // assert
         // this works only because the pools are balanced. When the pool is imbalanced the calculation will differ
         uint256 lAdditionalLpTokens = ((INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity) * lLpTokenTotalSupply / lOldLiquidity;
-        assertEq(_hybridPool.balanceOf(address(this)), lAdditionalLpTokens);
+        assertEq(_stablePair.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
     function testMint_OnlyTransferOneToken() public
@@ -61,27 +61,27 @@ contract StablePairTest is BaseTest
     function testMintFee_CallableBySelf() public
     {
         // arrange
-        vm.prank(address(_hybridPool));
+        vm.prank(address(_stablePair));
 
         // act
-        (uint256 lTotalSupply, ) = _hybridPool.mintFee(0, 0);
+        (uint256 lTotalSupply, ) = _stablePair.mintFee(0, 0);
 
         // assert
-        assertEq(lTotalSupply, _hybridPool.totalSupply());
+        assertEq(lTotalSupply, _stablePair.totalSupply());
     }
 
     function testMintFee_NotCallableByOthers() public
     {
         // act & assert
         vm.expectRevert("not self");
-        _hybridPool.mintFee(0, 0);
+        _stablePair.mintFee(0, 0);
     }
 
     function testSwap() public
     {
         // act
-        _tokenA.mint(address(address(_hybridPool)), 5e18);
-        uint256 lAmountOut = _hybridPool.swap(address(_tokenA), address(this));
+        _tokenA.mint(address(address(_stablePair)), 5e18);
+        uint256 lAmountOut = _stablePair.swap(address(_tokenA), address(this));
 
         // assert
         assertEq(lAmountOut, _tokenB.balanceOf(address(this)));
@@ -91,15 +91,15 @@ contract StablePairTest is BaseTest
     {
         // act & assert
         vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        _hybridPool.swap(address(_tokenA), address(this));
+        _stablePair.swap(address(_tokenA), address(this));
     }
 
     function testSwap_BetterPerformanceThanConstantProduct() public
     {
         // act
         uint256 lSwapAmount = 5e18;
-        _tokenA.mint(address(_hybridPool), lSwapAmount);
-        _hybridPool.swap(address(_tokenA), address(this));
+        _tokenA.mint(address(_stablePair), lSwapAmount);
+        _stablePair.swap(address(_tokenA), address(this));
         uint256 lStablePairOutput = _tokenB.balanceOf(address(this));
 
         uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
@@ -115,15 +115,15 @@ contract StablePairTest is BaseTest
     {
         // arrange
         vm.startPrank(_alice);
-        uint256 lLpTokenBalance = _hybridPool.balanceOf(_alice);
-        uint256 lLpTokenTotalSupply = _hybridPool.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1) = _hybridPool.getReserves();
-        address[] memory lAssets = _hybridPool.getAssets();
+        uint256 lLpTokenBalance = _stablePair.balanceOf(_alice);
+        uint256 lLpTokenTotalSupply = _stablePair.totalSupply();
+        (uint256 lReserve0, uint256 lReserve1) = _stablePair.getReserves();
+        address[] memory lAssets = _stablePair.getAssets();
         address lToken0 = lAssets[0];
 
         // act
-        _hybridPool.transfer(address(_hybridPool), _hybridPool.balanceOf(_alice));
-        _hybridPool.burn(_alice);
+        _stablePair.transfer(address(_stablePair), _stablePair.balanceOf(_alice));
+        _stablePair.burn(_alice);
 
         // assert
         uint256 lExpectedTokenAReceived;
@@ -137,7 +137,7 @@ contract StablePairTest is BaseTest
             lExpectedTokenBReceived = lLpTokenBalance * lReserve0 / lLpTokenTotalSupply;
         }
 
-        assertEq(_hybridPool.balanceOf(_alice), 0);
+        assertEq(_stablePair.balanceOf(_alice), 0);
         assertGt(lExpectedTokenAReceived, 0);
         assertEq(_tokenA.balanceOf(_alice), lExpectedTokenAReceived);
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
@@ -147,14 +147,14 @@ contract StablePairTest is BaseTest
     {
         // arrange
         uint256 lAmountToRecover = 1e18;
-        _tokenC.mint(address(_hybridPool), 1e18);
+        _tokenC.mint(address(_stablePair), 1e18);
 
         // act
-        _hybridPool.recoverToken(address(_tokenC));
+        _stablePair.recoverToken(address(_tokenC));
 
         // assert
         assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
-        assertEq(_tokenC.balanceOf(address(_hybridPool)), 0);
+        assertEq(_tokenC.balanceOf(address(_stablePair)), 0);
     }
 
     function testRampA() public
@@ -168,15 +168,15 @@ contract StablePairTest is BaseTest
         vm.expectEmit(true, true, true, true);
         emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
         // assert
-        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _hybridPool.ampData();
+        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
         assertEq(lInitialA, 1000 * uint64(StableMath.A_PRECISION));
-        assertEq(_hybridPool.getCurrentA(), 1000);
+        assertEq(_stablePair.getCurrentA(), 1000);
         assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, block.timestamp);
         assertEq(lFutureATime, lFutureATimestamp);
@@ -191,13 +191,13 @@ contract StablePairTest is BaseTest
 
         // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
         // assert
-        (, uint64 lFutureA, , ) = _hybridPool.ampData();
+        (, uint64 lFutureA, , ) = _stablePair.ampData();
         assertEq(lFutureA / StableMath.A_PRECISION, lFutureAToSet);
     }
 
@@ -210,13 +210,13 @@ contract StablePairTest is BaseTest
 
         // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
         // assert
-        (, uint64 lFutureA, , ) = _hybridPool.ampData();
+        (, uint64 lFutureA, , ) = _stablePair.ampData();
         assertEq(lFutureA / StableMath.A_PRECISION, lFutureAToSet);
     }
 
@@ -231,7 +231,7 @@ contract StablePairTest is BaseTest
         // act & assert
         vm.expectRevert("UniswapV2: INVALID A");
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
@@ -247,7 +247,7 @@ contract StablePairTest is BaseTest
         // act & assert
         vm.expectRevert("UniswapV2: INVALID A");
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
@@ -258,17 +258,17 @@ contract StablePairTest is BaseTest
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
-        uint64 lFutureAToSet = _hybridPool.getCurrentA() * 2;
+        uint64 lFutureAToSet = _stablePair.getCurrentA() * 2;
 
         // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
         // assert
-        (, uint64 lFutureA, , ) = _hybridPool.ampData();
+        (, uint64 lFutureA, , ) = _stablePair.ampData();
         assertEq(lFutureA, lFutureAToSet * StableMath.A_PRECISION);
     }
 
@@ -277,12 +277,12 @@ contract StablePairTest is BaseTest
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 2 days - 1;
-        uint64 lFutureAToSet = _hybridPool.getCurrentA() * 4;
+        uint64 lFutureAToSet = _stablePair.getCurrentA() * 4;
 
         // act & assert
         vm.expectRevert("UniswapV2: AMP RATE TOO HIGH");
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
@@ -295,7 +295,7 @@ contract StablePairTest is BaseTest
         uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
         uint64 lFutureAToSet = 5000;
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
@@ -304,13 +304,13 @@ contract StablePairTest is BaseTest
 
         // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("stopRampA()"),
             0
         );
 
         // assert
-        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _hybridPool.ampData();
+        (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
         assertEq(lInitialA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, lFutureATimestamp);
@@ -329,28 +329,28 @@ contract StablePairTest is BaseTest
 
         // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
         // assert
-        assertEq(_hybridPool.getCurrentA(), 1000);
+        assertEq(_stablePair.getCurrentA(), 1000);
 
         // warp to the midpoint between the initialATime and futureATime
         vm.warp((lFutureATimestamp + block.timestamp) / 2);
-        assertEq(_hybridPool.getCurrentA(), (1000 + lFutureAToSet) / 2);
+        assertEq(_stablePair.getCurrentA(), (1000 + lFutureAToSet) / 2);
 
         // warp to the end
         vm.warp(lFutureATimestamp);
-        assertEq(_hybridPool.getCurrentA(), lFutureAToSet);
+        assertEq(_stablePair.getCurrentA(), lFutureAToSet);
     }
 
     function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
     {
         // arrange
-        uint64 lFutureAToSet = uint64(bound(aFutureA, _hybridPool.getCurrentA(), StableMath.MAX_A));
-        uint256 lMinRampDuration = lFutureAToSet / _hybridPool.getCurrentA() * 1 days;
+        uint64 lFutureAToSet = uint64(bound(aFutureA, _stablePair.getCurrentA(), StableMath.MAX_A));
+        uint256 lMinRampDuration = lFutureAToSet / _stablePair.getCurrentA() * 1 days;
         uint256 lMaxRampDuration = 30 days; // 1 month
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
@@ -358,31 +358,31 @@ contract StablePairTest is BaseTest
 
         // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
-        uint256 lAmountOutBeforeRamp = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutBeforeRamp = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
         uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
         uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
         skip(lCheck1);
-        uint256 lAmountOutT1 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT1 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck1;
         uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
         skip(lCheck2);
-        uint256 lAmountOutT2 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT2 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck2;
         uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 0, lRemainingTime));
         skip(lCheck3);
-        uint256 lAmountOutT3 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT3 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck3;
         skip(lRemainingTime);
-        uint256 lAmountOutT4 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT4 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         // assert - output amount over time should be increasing or be within 1 due to rounding error
         assertTrue(lAmountOutT1 >= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
@@ -394,8 +394,8 @@ contract StablePairTest is BaseTest
     function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount) public
     {
         // arrange
-        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _hybridPool.getCurrentA()));
-        uint256 lMinRampDuration = _hybridPool.getCurrentA() / lFutureAToSet * 1 days;
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _stablePair.getCurrentA()));
+        uint256 lMinRampDuration = _stablePair.getCurrentA() / lFutureAToSet * 1 days;
         uint256 lMaxRampDuration = 1000 days;
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
@@ -403,31 +403,31 @@ contract StablePairTest is BaseTest
 
          // act
         _factory.rawCall(
-            address(_hybridPool),
+            address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
-        uint256 lAmountOutBeforeRamp = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutBeforeRamp = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
         uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
         uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
         skip(lCheck1);
-        uint256 lAmountOutT1 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT1 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck1;
         uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
         skip(lCheck2);
-        uint256 lAmountOutT2 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT2 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck2;
         uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
         skip(lCheck3);
-        uint256 lAmountOutT3 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT3 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         lRemainingTime -= lCheck3;
         skip(lRemainingTime);
-        uint256 lAmountOutT4 = _hybridPool.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lAmountOutT4 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
 
         // assert - output amount over time should be decreasing or within 1 due to rounding error
         assertTrue(lAmountOutT1 <= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
