@@ -18,6 +18,9 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     /// @dev tracks how many aToken each pair+token owns
     mapping(address => mapping(address => uint256)) public shares;
 
+    // @dev for each aToken, tracks the number of shares issued to each pair+token combo
+    mapping(address => uint256) public totalShares;
+
     /// @dev this contract itself is immutable and is the source of truth for all relevant addresses for aave
     IPoolAddressesProvider public immutable addressesProvider;
 
@@ -73,38 +76,71 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function _getBalance(address aOwner, address aToken) private view returns (uint112 rTokenBalance) {
-        rTokenBalance = uint112(shares[aOwner][aToken]);
+        address lAaveToken = _getATokenAddress(aToken);
+        uint256 lTotalShares = totalShares[lAaveToken];
+        if (lTotalShares == 0) {
+            return 0;
+        }
+        rTokenBalance = uint112(shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]);
+    }
+
+    /// @dev expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18
+    function _getExchangeRate(address aAaveToken) private view returns (uint256 rExchangeRate) {
+        uint256 lTotalShares = totalShares[aAaveToken];
+        if (lTotalShares == 0) {
+            return 1e18;
+        }
+        rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)) * 1e18 / totalShares[aAaveToken];
+    }
+
+    function _updateShares(address aPair, address aToken, address aAaveToken, uint256 aAmount, bool increase) private {
+        uint256 lShares = aAmount * 1e18 / _getExchangeRate(aAaveToken);
+        if (increase) {
+            shares[aPair][aToken] += lShares;
+            totalShares[aAaveToken] += lShares;
+        }
+        else {
+            shares[aPair][aToken] -= lShares;
+            totalShares[aAaveToken] -= lShares;
+        }
+    }
+
+    function _getATokenAddress(address aToken) private view returns (address rATokenAddress) {
+        (rATokenAddress , ,) = dataProvider.getReserveTokensAddresses(aToken);
     }
 
     function _doDivest(address aPair, IERC20 aToken, uint256 aAmount) private {
-        (address lATokenAddress , ,) = dataProvider.getReserveTokensAddresses(address(aToken));
-        IERC20 lAaveToken = IERC20(lATokenAddress);
+        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
+
+        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, false);
 
         uint256 lPrevATokenBalance = lAaveToken.balanceOf(address(this));
         pool.withdraw(address(aToken), aAmount, address(this));
         uint256 lCurrATokenBalance = lAaveToken.balanceOf(address(this));
+        // uint256 lIncrease = lPrevATokenBalance - lCurrATokenBalance;
+        // sanity check for catching cases when they don't match, can remove in production if needed
+        // require(lIncrease == aAmount, "AMOUNT_NOT_MATCH");
 
-        // if attempting to redeem more than the pair+token's share, this will revert
-        shares[aPair][address(aToken)] -= lPrevATokenBalance - lCurrATokenBalance;
+        emit FundsDivested(aPair, address(aToken), address(lAaveToken), aAmount);
 
         aToken.approve(aPair, aAmount);
-
-        emit FundsDivested(aPair, address(aToken), address(lATokenAddress), aAmount);
     }
 
     function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "TOKEN AMOUNT MISMATCH");
+        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
 
-        (address lATokenAddress , ,) = dataProvider.getReserveTokensAddresses(address(aToken));
+        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, true);
 
         aToken.approve(address(pool), aAmount);
 
-        uint256 lPrevATokenBalance = IERC20(lATokenAddress).balanceOf(address(this));
+        uint256 lPrevATokenBalance = lAaveToken.balanceOf(address(this));
         pool.supply(address(aToken), aAmount, address(this), 0);
-        uint256 lCurrATokenBalance = IERC20(lATokenAddress).balanceOf(address(this));
+        uint256 lCurrATokenBalance = lAaveToken.balanceOf(address(this));
+        // uint256 lIncrease = lCurrATokenBalance - lPrevATokenBalance;
+        // sanity check for catching cases when they don't match, can remove in production if needed
+        // require(lIncrease == aAmount, "AMOUNT_NOT_MATCH");
 
-        shares[aPair][address(aToken)] += lCurrATokenBalance - lPrevATokenBalance;
-
-        emit FundsInvested(aPair, address(aToken), address(lATokenAddress), aAmount);
+        emit FundsInvested(aPair, address(aToken), address(lAaveToken), aAmount);
     }
 }
