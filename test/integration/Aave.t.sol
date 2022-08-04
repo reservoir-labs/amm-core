@@ -145,7 +145,11 @@ contract AaveIntegrationTest is BaseTest
         assertTrue(MathUtils.within1(_manager.getBalance(address(lOtherPair), FTM_USDC), uint256(lAmountToManage2)));
     }
 
-    function testGetBalance_AddingAfterExchangeRateChange(uint256 aAmountToManage1, uint256 aAmountToManage2) public
+    function testGetBalance_AddingAfterExchangeRateChange(
+        uint256 aAmountToManage1,
+        uint256 aAmountToManage2,
+        uint256 aTime
+    ) public
     {
         // arrange
         UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
@@ -161,7 +165,7 @@ contract AaveIntegrationTest is BaseTest
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0);
 
         // act
-        skip(10 weeks);
+        skip(bound(aTime, 1, 52 weeks));
         uint256 lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
         int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lTotalSupply));
         _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0);
@@ -170,10 +174,10 @@ contract AaveIntegrationTest is BaseTest
         assertEq(_manager.shares(address(_uniswapV2Pair), FTM_USDC), uint256(lAmountToManage1));
         assertTrue(MathUtils.within1(_manager.getBalance(address(_uniswapV2Pair), FTM_USDC), lAaveTokenAmt2));
 
-        uint256 lSharesOtherPairSupposedToHave
+        uint256 lExpectedShares
             = uint256(lAmountToManage2) * 1e18
             / (lAaveTokenAmt2 * 1e18 / uint256(lAmountToManage1));
-        assertEq(_manager.shares(address(lOtherPair), FTM_USDC), lSharesOtherPairSupposedToHave);
+        assertEq(_manager.shares(address(lOtherPair), FTM_USDC), lExpectedShares);
         assertTrue(MathUtils.within1(_manager.getBalance(address(lOtherPair), FTM_USDC), uint256(lAmountToManage2)));
     }
 
