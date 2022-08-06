@@ -12,8 +12,8 @@ import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
-    event FundsInvested(address pair, address token, address aaveToken, uint256 amount);
-    event FundsDivested(address pair, address token, address aaveToken, uint256 amount);
+    event FundsInvested(address pair, address token, uint256 amount);
+    event FundsDivested(address pair, address token, uint256 amount);
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(address => mapping(address => uint256)) public shares;
@@ -93,23 +93,20 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function _doDivest(address aPair, IERC20 aToken, uint256 aAmount) private {
-        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
-
-        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, false);
+        _updateShares(aPair, address(aToken), aAmount, false);
         pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, address(aToken), address(lAaveToken), aAmount);
+        emit FundsDivested(aPair, address(aToken), aAmount);
 
         aToken.approve(aPair, aAmount);
     }
 
     function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
-        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
 
-        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, true);
+        _updateShares(aPair, address(aToken), aAmount, true);
         aToken.approve(address(pool), aAmount);
         pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, address(aToken), address(lAaveToken), aAmount);
+        emit FundsInvested(aPair, address(aToken), aAmount);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -125,15 +122,16 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)) * 1e18 / totalShares[aAaveToken];
     }
 
-    function _updateShares(address aPair, address aToken, address aAaveToken, uint256 aAmount, bool increase) private {
-        uint256 lShares = aAmount * 1e18 / _getExchangeRate(aAaveToken);
+    function _updateShares(address aPair, address aToken, uint256 aAmount, bool increase) private {
+        address lAaveToken = _getATokenAddress(aToken);
+        uint256 lShares = aAmount * 1e18 / _getExchangeRate(lAaveToken);
         if (increase) {
             shares[aPair][aToken] += lShares;
-            totalShares[aAaveToken] += lShares;
+            totalShares[lAaveToken] += lShares;
         }
         else {
             shares[aPair][aToken] -= lShares;
-            totalShares[aAaveToken] -= lShares;
+            totalShares[lAaveToken] -= lShares;
         }
     }
 
