@@ -55,7 +55,7 @@ contract AaveIntegrationTest is BaseTest
     {
         // arrange
         int256 lAmountToManage = 500e6;
-        _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage, 0);
+        testAdjustManagement_IncreaseManagementOneToken();
 
         // act
         _manager.adjustManagement(address(_uniswapV2Pair), -lAmountToManage, 0);
