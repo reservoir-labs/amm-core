@@ -37,10 +37,27 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         dataProvider = IAaveProtocolDataProvider(addressesProvider.getPoolDataProvider());
     }
 
+    /*//////////////////////////////////////////////////////////////////////////
+                                    GET BALANCE
+    //////////////////////////////////////////////////////////////////////////*/
+
     /// @dev returns the balance of the token managed by various markets in the native precision
     function getBalance(address aOwner, address aToken) external view returns (uint112 rTokenBalance) {
         return _getBalance(aOwner, aToken);
     }
+
+    function _getBalance(address aOwner, address aToken) private view returns (uint112 rTokenBalance) {
+        address lAaveToken = _getATokenAddress(aToken);
+        uint256 lTotalShares = totalShares[lAaveToken];
+        if (lTotalShares == 0) {
+            return 0;
+        }
+        rTokenBalance = uint112(shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ADJUST MANAGEMENT
+    //////////////////////////////////////////////////////////////////////////*/
 
     function adjustManagement(
         address aPair,
@@ -75,14 +92,29 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
     }
 
-    function _getBalance(address aOwner, address aToken) private view returns (uint112 rTokenBalance) {
-        address lAaveToken = _getATokenAddress(aToken);
-        uint256 lTotalShares = totalShares[lAaveToken];
-        if (lTotalShares == 0) {
-            return 0;
-        }
-        rTokenBalance = uint112(shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]);
+    function _doDivest(address aPair, IERC20 aToken, uint256 aAmount) private {
+        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
+
+        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, false);
+        pool.withdraw(address(aToken), aAmount, address(this));
+        emit FundsDivested(aPair, address(aToken), address(lAaveToken), aAmount);
+
+        aToken.approve(aPair, aAmount);
     }
+
+    function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
+        require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
+        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
+
+        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, true);
+        aToken.approve(address(pool), aAmount);
+        pool.supply(address(aToken), aAmount, address(this), 0);
+        emit FundsInvested(aPair, address(aToken), address(lAaveToken), aAmount);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18
     function _getExchangeRate(address aAaveToken) private view returns (uint256 rExchangeRate) {
@@ -107,25 +139,5 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
     function _getATokenAddress(address aToken) private view returns (address rATokenAddress) {
         (rATokenAddress , ,) = dataProvider.getReserveTokensAddresses(aToken);
-    }
-
-    function _doDivest(address aPair, IERC20 aToken, uint256 aAmount) private {
-        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
-
-        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, false);
-        pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, address(aToken), address(lAaveToken), aAmount);
-
-        aToken.approve(aPair, aAmount);
-    }
-
-    function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
-        require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
-        IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
-
-        _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, true);
-        aToken.approve(address(pool), aAmount);
-        pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, address(aToken), address(lAaveToken), aAmount);
     }
 }
