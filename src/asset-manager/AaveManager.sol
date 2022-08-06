@@ -31,7 +31,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     IAaveProtocolDataProvider public dataProvider;
 
     constructor(address aPoolAddressesProvider) {
-        require(aPoolAddressesProvider != address(0), "COMPTROLLER ADDRESS ZERO");
+        require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
         addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
         pool = IPool(addressesProvider.getPool());
         dataProvider = IAaveProtocolDataProvider(addressesProvider.getPoolDataProvider());
@@ -49,7 +49,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     ) external nonReentrant onlyOwner {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
-            "cast would overflow"
+            "AM: CAST_WOULD_OVERFLOW"
         );
 
         IERC20 lToken0 = IERC20(IUniswapV2Pair(aPair).token0());
@@ -113,34 +113,19 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
 
         _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, false);
-
-        uint256 lPrevATokenBalance = lAaveToken.balanceOf(address(this));
         pool.withdraw(address(aToken), aAmount, address(this));
-        uint256 lCurrATokenBalance = lAaveToken.balanceOf(address(this));
-        // uint256 lIncrease = lPrevATokenBalance - lCurrATokenBalance;
-        // sanity check for catching cases when they don't match, can remove in production if needed
-        // require(lIncrease == aAmount, "AMOUNT_NOT_MATCH");
-
         emit FundsDivested(aPair, address(aToken), address(lAaveToken), aAmount);
 
         aToken.approve(aPair, aAmount);
     }
 
     function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
-        require(aToken.balanceOf(address(this)) == aAmount, "TOKEN AMOUNT MISMATCH");
+        require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
         IERC20 lAaveToken = IERC20(_getATokenAddress(address(aToken)));
 
         _updateShares(aPair, address(aToken), address(lAaveToken), aAmount, true);
-
         aToken.approve(address(pool), aAmount);
-
-        uint256 lPrevATokenBalance = lAaveToken.balanceOf(address(this));
         pool.supply(address(aToken), aAmount, address(this), 0);
-        uint256 lCurrATokenBalance = lAaveToken.balanceOf(address(this));
-        // uint256 lIncrease = lCurrATokenBalance - lPrevATokenBalance;
-        // sanity check for catching cases when they don't match, can remove in production if needed
-        // require(lIncrease == aAmount, "AMOUNT_NOT_MATCH");
-
         emit FundsInvested(aPair, address(aToken), address(lAaveToken), aAmount);
     }
 }
