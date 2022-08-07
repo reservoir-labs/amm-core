@@ -32,6 +32,16 @@ contract AaveIntegrationTest is BaseTest
         _uniswapV2Pair.setManager(_manager);
     }
 
+    function _createOtherPair() private returns (UniswapV2Pair rOtherPair)
+    {
+        rOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
+        _tokenB.mint(address(rOtherPair), INITIAL_MINT_AMOUNT);
+        deal(FTM_USDC, address(rOtherPair), INITIAL_MINT_AMOUNT, true);
+        rOtherPair.mint(_alice);
+        vm.prank(address(_factory));
+        rOtherPair.setManager(_manager);
+    }
+
     function testAdjustManagement_IncreaseManagementOneToken() public
     {
         // arrange
@@ -74,12 +84,7 @@ contract AaveIntegrationTest is BaseTest
     function testAdjustManagement_DecreaseManagementBeyondShare() public
     {
         // arrange
-        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
-        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
-        deal(FTM_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
-        lOtherPair.mint(_alice);
-        vm.prank(address(_factory));
-        lOtherPair.setManager(_manager);
+        UniswapV2Pair lOtherPair = _createOtherPair();
         int256 lAmountToManage1 = 500e6;
         int256 lAmountToManage2 = 500e6;
 
@@ -124,14 +129,8 @@ contract AaveIntegrationTest is BaseTest
     function testGetBalance_TwoPairsInSameMarket(uint256 aAmountToManage1, uint256 aAmountToManage2) public
     {
         // arrange
-        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
-        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
-        deal(FTM_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
-        lOtherPair.mint(_alice);
-        vm.prank(address(_factory));
-        lOtherPair.setManager(_manager);
-        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
-        (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(_uniswapV2Pair.token0());
+        UniswapV2Pair lOtherPair = _createOtherPair();
+        (address lAaveToken, , ) = _manager.dataProvider().getReserveTokensAddresses(_uniswapV2Pair.token0());
         uint256 lTotalSupply = IERC20(lAaveToken).totalSupply();
         int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lTotalSupply));
         int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lTotalSupply));
@@ -152,14 +151,8 @@ contract AaveIntegrationTest is BaseTest
     ) public
     {
         // arrange
-        UniswapV2Pair lOtherPair = UniswapV2Pair(_createPair(address(_tokenB), FTM_USDC, 0));
-        _tokenB.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
-        deal(FTM_USDC, address(lOtherPair), INITIAL_MINT_AMOUNT, true);
-        lOtherPair.mint(_alice);
-        vm.prank(address(_factory));
-        lOtherPair.setManager(_manager);
-        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
-        (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(_uniswapV2Pair.token0());
+        UniswapV2Pair lOtherPair = _createOtherPair();
+        (address lAaveToken, , ) = _manager.dataProvider().getReserveTokensAddresses(_uniswapV2Pair.token0());
         uint256 lTotalSupply = IERC20(lAaveToken).totalSupply();
         int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lTotalSupply));
         _manager.adjustManagement(address(_uniswapV2Pair), lAmountToManage1, 0);
