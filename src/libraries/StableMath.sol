@@ -100,6 +100,6 @@ library StableMath {
                 return y;
             }
         }
-        revert("SM: GETY_DID_NOT_CONVERGE");
+        revert("SM: DID_NOT_CONVERGE");
     }
 }
