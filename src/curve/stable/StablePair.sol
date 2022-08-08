@@ -89,9 +89,9 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         factory     = GenericFactory(msg.sender);
         token0      = aToken0;
         token1      = aToken1;
-        swapFee     = factory.read("UniswapV2Pair::swapFee").toUint256();
-        platformFee = factory.read("UniswapV2Pair::platformFee").toUint256();
-        ampData.initialA        = factory.read("UniswapV2Pair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
+        swapFee     = factory.read("ConstantProductPair::swapFee").toUint256();
+        platformFee = factory.read("ConstantProductPair::platformFee").toUint256();
+        ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
@@ -130,7 +130,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     function updateSwapFee() public {
         uint256 _swapFee = customSwapFee != type(uint).max
         ? customSwapFee
-        : factory.read("UniswapV2Pair::swapFee").toUint256();
+        : factory.read("ConstantProductPair::swapFee").toUint256();
         if (_swapFee == swapFee) { return; }
 
         require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
@@ -142,7 +142,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
         ? customPlatformFee
-        : factory.read("UniswapV2Pair::platformFee").toUint256();
+        : factory.read("ConstantProductPair::platformFee").toUint256();
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
@@ -413,7 +413,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    address platformFeeTo = factory.read("UniswapV2Pair::platformFeeTo").toAddress();
+                    address platformFeeTo = factory.read("ConstantProductPair::platformFeeTo").toAddress();
 
                     _mint(platformFeeTo, liquidity);
                     _totalSupply += liquidity;
@@ -488,7 +488,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = factory.read("UniswapV2Pair::defaultRecoverer").toAddress();
+        address _recoverer = factory.read("ConstantProductPair::defaultRecoverer").toAddress();
         require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");

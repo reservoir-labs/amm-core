@@ -3,7 +3,7 @@ pragma solidity 0.8.13;
 import "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-interface IUniswapV2Pair {
+interface IConstantProductPair {
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
     event Swap(

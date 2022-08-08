@@ -4,7 +4,7 @@ import "test/__fixtures/BaseTest.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
+import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 

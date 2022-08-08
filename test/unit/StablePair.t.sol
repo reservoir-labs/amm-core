@@ -7,7 +7,7 @@ import "test/__fixtures/MintableERC20.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
-import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
+import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract StablePairTest is BaseTest
@@ -103,8 +103,8 @@ contract StablePairTest is BaseTest
         uint256 lStablePairOutput = _tokenB.balanceOf(address(this));
 
         uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
-        _tokenA.mint(address(_uniswapV2Pair), lSwapAmount);
-        _uniswapV2Pair.swap(lExpectedConstantProductOutput, 0, address(this), "");
+        _tokenA.mint(address(_constantProductPair), lSwapAmount);
+        _constantProductPair.swap(lExpectedConstantProductOutput, 0, address(this), "");
         uint256 lConstantProductOutput = _tokenB.balanceOf(address(this)) - lStablePairOutput;
 
         // assert
