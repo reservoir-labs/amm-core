@@ -12,13 +12,13 @@ import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
-    event FundsInvested(address pair, address token, uint256 amount);
-    event FundsDivested(address pair, address token, uint256 amount);
+    event FundsInvested(address pair, address token, uint256 shares);
+    event FundsDivested(address pair, address token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(address => mapping(address => uint256)) public shares;
 
-    // @dev for each aToken, tracks the number of shares issued to each pair+token combo
+    // @dev for each aToken, tracks the total number of shares issued
     mapping(address => uint256) public totalShares;
 
     /// @dev this contract itself is immutable and is the source of truth for all relevant addresses for aave
@@ -93,9 +93,9 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function _doDivest(address aPair, IERC20 aToken, uint256 aAmount) private {
-        _updateShares(aPair, address(aToken), aAmount, false);
+        uint256 lShares = _updateShares(aPair, address(aToken), aAmount, false);
         pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, address(aToken), aAmount);
+        emit FundsDivested(aPair, address(aToken), lShares);
 
         aToken.approve(aPair, aAmount);
     }
@@ -103,10 +103,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     function _doInvest(address aPair, IERC20 aToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
 
-        _updateShares(aPair, address(aToken), aAmount, true);
+        uint256 lShares = _updateShares(aPair, address(aToken), aAmount, true);
         aToken.approve(address(pool), aAmount);
         pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, address(aToken), aAmount);
+        emit FundsInvested(aPair, address(aToken), lShares);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -122,16 +122,16 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)) * 1e18 / totalShares[aAaveToken];
     }
 
-    function _updateShares(address aPair, address aToken, uint256 aAmount, bool increase) private {
+    function _updateShares(address aPair, address aToken, uint256 aAmount, bool increase) private returns (uint256 rShares) {
         address lAaveToken = _getATokenAddress(aToken);
-        uint256 lShares = aAmount * 1e18 / _getExchangeRate(lAaveToken);
+        rShares = aAmount * 1e18 / _getExchangeRate(lAaveToken);
         if (increase) {
-            shares[aPair][aToken] += lShares;
-            totalShares[lAaveToken] += lShares;
+            shares[aPair][aToken] += rShares;
+            totalShares[lAaveToken] += rShares;
         }
         else {
-            shares[aPair][aToken] -= lShares;
-            totalShares[lAaveToken] -= lShares;
+            shares[aPair][aToken] -= rShares;
+            totalShares[lAaveToken] -= rShares;
         }
     }
 
