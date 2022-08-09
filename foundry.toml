@@ -8,5 +8,10 @@ remappings = [
 match_path = "test/unit/*.sol"
 verbosity = 3
 
+[profile.integration]
+match_path = "test/integration/*.sol"
+eth_rpc_url = "https://rpc.ftm.tools/"
+block_number = 44084665
+
 [profile.ci]
 fuzz-runs = 10_000
