@@ -8,7 +8,7 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
-import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
+import { IConstantProductPair } from "src/interfaces/IConstantProductPair.sol";
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
@@ -69,8 +69,8 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
             "AM: CAST_WOULD_OVERFLOW"
         );
 
-        IERC20 lToken0 = IERC20(IUniswapV2Pair(aPair).token0());
-        IERC20 lToken1 = IERC20(IUniswapV2Pair(aPair).token1());
+        IERC20 lToken0 = IERC20(IConstantProductPair(aPair).token0());
+        IERC20 lToken1 = IERC20(IConstantProductPair(aPair).token1());
 
         // withdraw from the market
         if (aAmount0Change < 0) {
@@ -81,7 +81,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
 
         // transfer tokens to/from the pair
-        IUniswapV2Pair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
+        IConstantProductPair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
