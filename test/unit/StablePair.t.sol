@@ -73,7 +73,7 @@ contract StablePairTest is BaseTest
     function testMintFee_NotCallableByOthers() public
     {
         // act & assert
-        vm.expectRevert("not self");
+        vm.expectRevert("SS: NOT_SELF");
         _stablePair.mintFee(0, 0);
     }
 
@@ -90,7 +90,7 @@ contract StablePairTest is BaseTest
     function testSwap_ZeroInput() public
     {
         // act & assert
-        vm.expectRevert("UniswapV2: TRANSFER_FAILED");
+        vm.expectRevert("SS: TRANSFER_FAILED");
         _stablePair.swap(address(_tokenA), address(this));
     }
 
@@ -229,7 +229,7 @@ contract StablePairTest is BaseTest
         uint64 lFutureAToSet = uint64(StableMath.MIN_A) - 1;
 
         // act & assert
-        vm.expectRevert("UniswapV2: INVALID A");
+        vm.expectRevert("SS: INVALID_A");
         _factory.rawCall(
             address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -245,7 +245,7 @@ contract StablePairTest is BaseTest
         uint64 lFutureAToSet = uint64(StableMath.MAX_A) + 1;
 
         // act & assert
-        vm.expectRevert("UniswapV2: INVALID A");
+        vm.expectRevert("SS: INVALID_A");
         _factory.rawCall(
             address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -280,7 +280,7 @@ contract StablePairTest is BaseTest
         uint64 lFutureAToSet = _stablePair.getCurrentA() * 4;
 
         // act & assert
-        vm.expectRevert("UniswapV2: AMP RATE TOO HIGH");
+        vm.expectRevert("SS: AMP_RATE_TOO_HIGH");
         _factory.rawCall(
             address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),

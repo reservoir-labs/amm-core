@@ -48,14 +48,14 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     uint private unlocked = 1;
     modifier lock() {
-        require(unlocked == 1, "UniswapV2: LOCKED");
+        require(unlocked == 1, "CP: LOCKED");
         unlocked = 0;
         _;
         unlocked = 1;
     }
 
     modifier onlyFactory() {
-        require(msg.sender == address(factory), "UniswapV2: FORBIDDEN");
+        require(msg.sender == address(factory), "CP: FORBIDDEN");
         _;
     }
 
@@ -98,7 +98,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             : uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
         if (_swapFee == swapFee) { return; }
 
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "UniswapV2: INVALID_SWAP_FEE");
+        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
@@ -110,7 +110,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             : uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
         if (_platformFee == platformFee) { return; }
 
-        require(_platformFee <= MAX_PLATFORM_FEE, "UniswapV2: INVALID_PLATFORM_FEE");
+        require(_platformFee <= MAX_PLATFORM_FEE, "CP: INVALID_PLATFORM_FEE");
 
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
@@ -125,12 +125,12 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function _safeTransfer(address token, address to, uint value) private {
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "UniswapV2: TRANSFER_FAILED");
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "CP: TRANSFER_FAILED");
     }
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "UniswapV2: OVERFLOW");
+        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
         // solhint-disable-next-line not-rely-on-time
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
@@ -217,7 +217,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         } else {
             liquidity = Math.min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
         }
-        require(liquidity > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
+        require(liquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -240,7 +240,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, "UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED");
+        require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
@@ -254,16 +254,16 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
-        require(amount0Out > 0 || amount1Out > 0, "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amount0Out > 0 || amount1Out > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, "UniswapV2: INSUFFICIENT_LIQUIDITY");
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, "CP: INSUFFICIENT_LIQ_SWAP");
 
         uint balance0;
         uint balance1;
         { // scope for _token{0,1}, avoids stack too deep errors
             address _token0 = token0;
             address _token1 = token1;
-            require(to != _token0 && to != _token1, "UniswapV2: INVALID_TO");
+            require(to != _token0 && to != _token1, "CP: INVALID_TO");
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
             if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
@@ -272,11 +272,11 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0, "UniswapV2: INSUFFICIENT_INPUT_AMOUNT");
+        require(amount0In > 0 || amount1In > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
         { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
             uint balance0Adjusted = (balance0 * 10000) - (amount0In * swapFee);
             uint balance1Adjusted = (balance1 * 10000) - (amount1In * swapFee);
-            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (10000**2), "UniswapV2: K");
+            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (10000**2), "CP: K");
         }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -293,9 +293,9 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     function recoverToken(address token) external {
         address _recoverer = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::defaultRecoverer")))));
-        require(token != token0, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
-        require(token != token1, "UniswapV2: INVALID_TOKEN_TO_RECOVER");
-        require(_recoverer != address(0), "UniswapV2: RECOVERER_ZERO_ADDRESS");
+        require(token != token0, "CP: INVALID_TOKEN_TO_RECOVER");
+        require(token != token1, "CP: INVALID_TOKEN_TO_RECOVER");
+        require(_recoverer != address(0), "CP: RECOVERER_ZERO_ADDRESS");
 
         uint _amountToRecover = IERC20(token).balanceOf(address(this));
 
@@ -314,13 +314,13 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     IAssetManager public assetManager;
 
     function setManager(IAssetManager manager) external onlyFactory {
-        require(token0Managed == 0 && token1Managed == 0, "UniswapV2: AM_STILL_ACTIVE");
+        require(token0Managed == 0 && token1Managed == 0, "CP: AM_STILL_ACTIVE");
 
         assetManager = manager;
     }
 
     modifier onlyManager() {
-        require(msg.sender == address(assetManager), "auth: not asset manager");
+        require(msg.sender == address(assetManager), "CP: AUTH_NOT_ASSET_MANAGER");
         _;
     }
 
@@ -391,7 +391,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
         require(
             token0Change != type(int256).min && token1Change != type(int256).min,
-            "cast would overflow"
+            "CP: CAST_WOULD_OVERFLOW"
         );
 
         if (token0Change > 0) {

@@ -80,7 +80,7 @@ contract ConstantProductPairTest is BaseTest
     function testSetSwapFeeForPair_BreachMaximum() public
     {
         // act & assert
-        vm.expectRevert("UniswapV2: INVALID_SWAP_FEE");
+        vm.expectRevert("CP: INVALID_SWAP_FEE");
         _factory.rawCall(
             address(_constantProductPair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", 4000),
@@ -133,7 +133,7 @@ contract ConstantProductPairTest is BaseTest
     function testSetPlatformFeeForPair_BreachMaximum() public
     {
         // act & assert
-        vm.expectRevert("UniswapV2: INVALID_PLATFORM_FEE");
+        vm.expectRevert("CP: INVALID_PLATFORM_FEE");
         _factory.rawCall(
             address(_constantProductPair),
             abi.encodeWithSignature("setCustomPlatformFee(uint256)", 9000),
@@ -203,7 +203,7 @@ contract ConstantProductPairTest is BaseTest
         _tokenC.mint(address(lPair), 1000);
 
         // act & assert
-        vm.expectRevert("UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED");
+        vm.expectRevert("CP: INSUFFICIENT_LIQ_MINTED");
         lPair.mint(address(this));
     }
 
@@ -284,7 +284,7 @@ contract ConstantProductPairTest is BaseTest
 
         // act & assert
         vm.prank(address(_factory));
-        vm.expectRevert("UniswapV2: AM_STILL_ACTIVE");
+        vm.expectRevert("CP: AM_STILL_ACTIVE");
         _constantProductPair.setManager(IAssetManager(address(0)));
     }
 
