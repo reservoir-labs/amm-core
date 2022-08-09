@@ -391,7 +391,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
         require(
             token0Change != type(int256).min && token1Change != type(int256).min,
-            "CP: CAST WOULD OVERFLOW"
+            "CP: CAST_WOULD_OVERFLOW"
         );
 
         if (token0Change > 0) {

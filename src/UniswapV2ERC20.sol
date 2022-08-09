@@ -76,7 +76,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
 
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         // solhint-disable-next-line not-rely-on-time
-        require(deadline >= block.timestamp, "ERC20: EXPIRED");
+        require(deadline >= block.timestamp, "CP: EXPIRED");
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
