@@ -28,7 +28,7 @@
   "scripts": {
     "build": "forge build",
     "build:trident": "cd reference/sushi-trident && yarn run build",
-    "ci": "forge build --force && npm run lint:check && npm run test:unit && npm run test:deployment && npm run gas:check && npm run slither:check",
+    "ci": "forge build --force && npm run lint:check && npm run test:unit && npm run gas:check && npm run slither:check",
     "clean": "forge clean",
     "eslint": "npm run eslint:check",
     "eslint:check": "eslint scripts",

@@ -6,13 +6,13 @@ import "@openzeppelin/utils/math/SafeCast.sol";
 import "src/libraries/Math.sol";
 import "src/libraries/UQ112x112.sol";
 import "src/interfaces/IAssetManager.sol";
-import "src/interfaces/IUniswapV2Pair.sol";
+import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
 import "src/UniswapV2ERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 
-contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
+contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     using UQ112x112 for uint224;
     using SafeCast for uint256;
 
@@ -69,8 +69,8 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         token0 = aToken0;
         token1 = aToken1;
 
-        swapFee = uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
-        platformFee = uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
+        swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
+        platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
     }
 
     function platformFeeOn() external view returns (bool _platformFeeOn) {
@@ -95,7 +95,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function updateSwapFee() public {
         uint256 _swapFee = customSwapFee != type(uint).max
             ? customSwapFee
-            : uint256(factory.get(keccak256("UniswapV2Pair::swapFee")));
+            : uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
         if (_swapFee == swapFee) { return; }
 
         require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
@@ -107,7 +107,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
-            : uint256(factory.get(keccak256("UniswapV2Pair::platformFee")));
+            : uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "CP: INVALID_PLATFORM_FEE");
@@ -190,7 +190,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::platformFeeTo")))));
+                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::platformFeeTo")))));
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
@@ -292,7 +292,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = address(uint160(uint256(factory.get(keccak256("UniswapV2Pair::defaultRecoverer")))));
+        address _recoverer = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::defaultRecoverer")))));
         require(token != token0, "CP: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "CP: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "CP: RECOVERER_ZERO_ADDRESS");

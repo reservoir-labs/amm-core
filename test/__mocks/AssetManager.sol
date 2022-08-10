@@ -3,14 +3,14 @@ pragma solidity 0.8.13;
 
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
-import { IUniswapV2Pair } from "src/interfaces/IUniswapV2Pair.sol";
+import { IConstantProductPair } from "src/interfaces/IConstantProductPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 
 contract AssetManager is IAssetManager
 {
     mapping(address => mapping(address => uint112)) public getBalance;
 
-    function adjustManagement(IUniswapV2Pair aPair, int224 aToken0Amount, int224 aToken1Amount) external
+    function adjustManagement(IConstantProductPair aPair, int224 aToken0Amount, int224 aToken1Amount) external
     {
         require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "AM: OVERFLOW");
 

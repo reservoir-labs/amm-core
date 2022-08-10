@@ -10,9 +10,9 @@ import { AssetManager } from "test/__mocks/AssetManager.sol";
 import { Math } from "src/libraries/Math.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
-import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
+import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 
-contract UniswapV2PairTest is BaseTest
+contract ConstantProductPairTest is BaseTest
 {
     AssetManager private _manager = new AssetManager();
 
@@ -38,43 +38,43 @@ contract UniswapV2PairTest is BaseTest
     function testCustomSwapFee_OffByDefault() public
     {
         // assert
-        assertEq(_uniswapV2Pair.customSwapFee(), type(uint).max);
-        assertEq(_uniswapV2Pair.swapFee(), 30);
+        assertEq(_constantProductPair.customSwapFee(), type(uint).max);
+        assertEq(_constantProductPair.swapFee(), 30);
     }
 
     function testSetSwapFeeForPair() public
     {
         // act
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
             0
         );
 
         // assert
-        assertEq(_uniswapV2Pair.customSwapFee(), 100);
-        assertEq(_uniswapV2Pair.swapFee(), 100);
+        assertEq(_constantProductPair.customSwapFee(), 100);
+        assertEq(_constantProductPair.swapFee(), 100);
     }
 
     function testSetSwapFeeForPair_Reset() public
     {
         // arrange
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
             0
         );
 
         // act
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", type(uint).max),
             0
         );
 
         // assert
-        assertEq(_uniswapV2Pair.customSwapFee(), type(uint).max);
-        assertEq(_uniswapV2Pair.swapFee(), 30);
+        assertEq(_constantProductPair.customSwapFee(), type(uint).max);
+        assertEq(_constantProductPair.swapFee(), 30);
     }
 
     function testSetSwapFeeForPair_BreachMaximum() public
@@ -82,7 +82,7 @@ contract UniswapV2PairTest is BaseTest
         // act & assert
         vm.expectRevert("CP: INVALID_SWAP_FEE");
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", 4000),
             0
         );
@@ -91,43 +91,43 @@ contract UniswapV2PairTest is BaseTest
     function testCustomPlatformFee_OffByDefault() public
     {
         // assert
-        assertEq(_uniswapV2Pair.customPlatformFee(), type(uint).max);
-        assertEq(_uniswapV2Pair.platformFee(), 2500);
+        assertEq(_constantProductPair.customPlatformFee(), type(uint).max);
+        assertEq(_constantProductPair.platformFee(), 2500);
     }
 
     function testSetPlatformFeeForPair() public
     {
         // act
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomPlatformFee(uint256)", 100),
             0
         );
 
         // assert
-        assertEq(_uniswapV2Pair.customPlatformFee(), 100);
-        assertEq(_uniswapV2Pair.platformFee(), 100);
+        assertEq(_constantProductPair.customPlatformFee(), 100);
+        assertEq(_constantProductPair.platformFee(), 100);
     }
 
     function testSetPlatformFeeForPair_Reset() public
     {
         // arrange
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomPlatformFee(uint256)", 100),
             0
         );
 
         // act
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomPlatformFee(uint256)", type(uint).max),
             0
         );
 
         // assert
-        assertEq(_uniswapV2Pair.customPlatformFee(), type(uint).max);
-        assertEq(_uniswapV2Pair.platformFee(), 2500);
+        assertEq(_constantProductPair.customPlatformFee(), type(uint).max);
+        assertEq(_constantProductPair.platformFee(), 2500);
     }
 
     function testSetPlatformFeeForPair_BreachMaximum() public
@@ -135,7 +135,7 @@ contract UniswapV2PairTest is BaseTest
         // act & assert
         vm.expectRevert("CP: INVALID_PLATFORM_FEE");
         _factory.rawCall(
-            address(_uniswapV2Pair),
+            address(_constantProductPair),
             abi.encodeWithSignature("setCustomPlatformFee(uint256)", 9000),
             0
         );
@@ -144,47 +144,47 @@ contract UniswapV2PairTest is BaseTest
     function testUpdateDefaultFees() public
     {
         // arrange
-        _factory.set(keccak256("UniswapV2Pair::swapFee"), bytes32(uint256(200)));
-        _factory.set(keccak256("UniswapV2Pair::platformFee"), bytes32(uint256(5000)));
+        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(200)));
+        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(5000)));
 
         // act
-        _uniswapV2Pair.updateSwapFee();
-        _uniswapV2Pair.updatePlatformFee();
+        _constantProductPair.updateSwapFee();
+        _constantProductPair.updatePlatformFee();
 
         // assert
-        assertEq(_uniswapV2Pair.swapFee(), 200);
-        assertEq(_uniswapV2Pair.platformFee(), 5000);
+        assertEq(_constantProductPair.swapFee(), 200);
+        assertEq(_constantProductPair.platformFee(), 5000);
     }
 
     function testMint() public
     {
         // arrange
-        uint256 lTotalSupplyLpToken = _uniswapV2Pair.totalSupply();
+        uint256 lTotalSupplyLpToken = _constantProductPair.totalSupply();
         uint256 lLiquidityToAdd = 5e18;
-        (uint256 reserve0, , ) = _uniswapV2Pair.getReserves();
+        (uint256 reserve0, , ) = _constantProductPair.getReserves();
 
         // act
-        _tokenA.mint(address(_uniswapV2Pair), lLiquidityToAdd);
-        _tokenB.mint(address(_uniswapV2Pair), lLiquidityToAdd);
-        _uniswapV2Pair.mint(address(this));
+        _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
+        _tokenB.mint(address(_constantProductPair), lLiquidityToAdd);
+        _constantProductPair.mint(address(this));
 
         // assert
         uint256 lAdditionalLpTokens = lLiquidityToAdd * lTotalSupplyLpToken / reserve0;
-        assertEq(_uniswapV2Pair.balanceOf(address(this)), lAdditionalLpTokens);
+        assertEq(_constantProductPair.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
     function testMint_InitialMint() public
     {
         // assert
-        uint256 lpTokenBalance = _uniswapV2Pair.balanceOf(_alice);
-        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _uniswapV2Pair.MINIMUM_LIQUIDITY();
+        uint256 lpTokenBalance = _constantProductPair.balanceOf(_alice);
+        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
     }
 
     function testMint_JustAboveMinimumLiquidity() public
     {
         // arrange
-        UniswapV2Pair lPair = UniswapV2Pair(_createPair(address(_tokenA), address(_tokenC), 0));
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenC), 0));
 
         // act
         _tokenA.mint(address(lPair), 1001);
@@ -198,7 +198,7 @@ contract UniswapV2PairTest is BaseTest
     function testMint_MinimumLiquidity() public
     {
         // arrange
-        UniswapV2Pair lPair = UniswapV2Pair(_createPair(address(_tokenA), address(_tokenC), 0));
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenC), 0));
         _tokenA.mint(address(lPair), 1000);
         _tokenC.mint(address(lPair), 1000);
 
@@ -210,7 +210,7 @@ contract UniswapV2PairTest is BaseTest
     function testMint_UnderMinimumLiquidity() public
     {
         // arrange
-        UniswapV2Pair lPair = UniswapV2Pair(_createPair(address(_tokenA), address(_tokenC), 0));
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenC), 0));
         _tokenA.mint(address(lPair), 10);
         _tokenB.mint(address(lPair), 10);
 
@@ -222,7 +222,7 @@ contract UniswapV2PairTest is BaseTest
     function testSwap() public
     {
         // arrange
-        (uint256 reserve0, uint256 reserve1, ) = _uniswapV2Pair.getReserves();
+        (uint256 reserve0, uint256 reserve1, ) = _constantProductPair.getReserves();
         uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, 30);
 
         // act
@@ -230,8 +230,8 @@ contract UniswapV2PairTest is BaseTest
         address token1;
         (token0, token1) = _getToken0Token1(address(_tokenA), address(_tokenB));
 
-        MintableERC20(token0).mint(address(_uniswapV2Pair), 1e18);
-        _uniswapV2Pair.swap(0, expectedOutput, address(this), "");
+        MintableERC20(token0).mint(address(_constantProductPair), 1e18);
+        _constantProductPair.swap(0, expectedOutput, address(this), "");
 
         // assert
         assertEq(MintableERC20(token1).balanceOf(address(this)), expectedOutput);
@@ -242,19 +242,19 @@ contract UniswapV2PairTest is BaseTest
     {
         // arrange
         vm.startPrank(_alice);
-        uint256 lLpTokenBalance = _uniswapV2Pair.balanceOf(_alice);
-        uint256 lLpTokenTotalSupply = _uniswapV2Pair.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1, ) = _uniswapV2Pair.getReserves();
+        uint256 lLpTokenBalance = _constantProductPair.balanceOf(_alice);
+        uint256 lLpTokenTotalSupply = _constantProductPair.totalSupply();
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
 
         // act
-        _uniswapV2Pair.transfer(address(_uniswapV2Pair), _uniswapV2Pair.balanceOf(_alice));
-        _uniswapV2Pair.burn(_alice);
+        _constantProductPair.transfer(address(_constantProductPair), _constantProductPair.balanceOf(_alice));
+        _constantProductPair.burn(_alice);
 
         // assert
-        assertEq(_uniswapV2Pair.balanceOf(_alice), 0);
+        assertEq(_constantProductPair.balanceOf(_alice), 0);
         (address lToken0, address lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
-        assertEq(UniswapV2Pair(lToken0).balanceOf(_alice), lLpTokenBalance * lReserve0 / lLpTokenTotalSupply);
-        assertEq(UniswapV2Pair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
+        assertEq(ConstantProductPair(lToken0).balanceOf(_alice), lLpTokenBalance * lReserve0 / lLpTokenTotalSupply);
+        assertEq(ConstantProductPair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -264,42 +264,42 @@ contract UniswapV2PairTest is BaseTest
     function testSetManager() external
     {
         // sanity
-        assertEq(address(_uniswapV2Pair.assetManager()), address(0));
+        assertEq(address(_constantProductPair.assetManager()), address(0));
 
         // act
         vm.prank(address(_factory));
-        _uniswapV2Pair.setManager(_manager);
+        _constantProductPair.setManager(_manager);
 
         // assert
-        assertEq(address(_uniswapV2Pair.assetManager()), address(_manager));
+        assertEq(address(_constantProductPair.assetManager()), address(_manager));
     }
 
     function testSetManager_CannotMigrateWithManaged() external
     {
         // arrange
         vm.prank(address(_factory));
-        _uniswapV2Pair.setManager(_manager);
+        _constantProductPair.setManager(_manager);
 
-        _manager.adjustManagement(_uniswapV2Pair, 10e18, 10e18);
+        _manager.adjustManagement(_constantProductPair, 10e18, 10e18);
 
         // act & assert
         vm.prank(address(_factory));
         vm.expectRevert("CP: AM_STILL_ACTIVE");
-        _uniswapV2Pair.setManager(IAssetManager(address(0)));
+        _constantProductPair.setManager(IAssetManager(address(0)));
     }
 
     function testManageReserves() external
     {
         // arrange
-        _tokenA.mint(address(_uniswapV2Pair), 50e18);
-        _tokenB.mint(address(_uniswapV2Pair), 50e18);
-        _uniswapV2Pair.mint(address(this));
+        _tokenA.mint(address(_constantProductPair), 50e18);
+        _tokenB.mint(address(_constantProductPair), 50e18);
+        _constantProductPair.mint(address(this));
 
         vm.prank(address(_factory));
-        _uniswapV2Pair.setManager(IAssetManager(address(this)));
+        _constantProductPair.setManager(IAssetManager(address(this)));
 
         // act
-        _uniswapV2Pair.adjustManagement(20e18, 20e18);
+        _constantProductPair.adjustManagement(20e18, 20e18);
 
         // assert
         assertEq(_tokenA.balanceOf(address(this)), 20e18);
@@ -310,19 +310,19 @@ contract UniswapV2PairTest is BaseTest
     {
         // arrange
         vm.prank(address(_factory));
-        _uniswapV2Pair.setManager(_manager);
+        _constantProductPair.setManager(_manager);
 
         // liquidity prior to adjustManagement
-        _tokenA.mint(address(_uniswapV2Pair), 50e18);
-        _tokenB.mint(address(_uniswapV2Pair), 50e18);
-        uint256 lLiq1 = _uniswapV2Pair.mint(address(this));
+        _tokenA.mint(address(_constantProductPair), 50e18);
+        _tokenB.mint(address(_constantProductPair), 50e18);
+        uint256 lLiq1 = _constantProductPair.mint(address(this));
 
-        _manager.adjustManagement(_uniswapV2Pair, 50e18, 50e18);
+        _manager.adjustManagement(_constantProductPair, 50e18, 50e18);
 
         // act
-        _tokenA.mint(address(_uniswapV2Pair), 50e18);
-        _tokenB.mint(address(_uniswapV2Pair), 50e18);
-        uint256 lLiq2 = _uniswapV2Pair.mint(address(this));
+        _tokenA.mint(address(_constantProductPair), 50e18);
+        _tokenB.mint(address(_constantProductPair), 50e18);
+        uint256 lLiq2 = _constantProductPair.mint(address(this));
 
         // assert
         assertEq(lLiq1, lLiq2);
@@ -332,21 +332,21 @@ contract UniswapV2PairTest is BaseTest
     {
         // arrange
         vm.prank(address(_factory));
-        _uniswapV2Pair.setManager(_manager);
+        _constantProductPair.setManager(_manager);
 
-        address lToken0 = _uniswapV2Pair.token0();
-        address lToken1 = _uniswapV2Pair.token1();
+        address lToken0 = _constantProductPair.token0();
+        address lToken1 = _constantProductPair.token1();
 
         // sanity
-        (uint112 lReserve0, uint112 lReserve1, ) = _uniswapV2Pair.getReserves();
-        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_uniswapV2Pair));
-        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_uniswapV2Pair));
+        (uint112 lReserve0, uint112 lReserve1, ) = _constantProductPair.getReserves();
+        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_constantProductPair));
+        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_constantProductPair));
 
-        _manager.adjustManagement(_uniswapV2Pair, 20e18, 20e18);
+        _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
 
-        (uint112 lReserve0_1, uint112 lReserve1_1, ) = _uniswapV2Pair.getReserves();
-        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_uniswapV2Pair));
-        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_uniswapV2Pair));
+        (uint112 lReserve0_1, uint112 lReserve1_1, ) = _constantProductPair.getReserves();
+        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_constantProductPair));
+        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_constantProductPair));
 
         assertEq(uint256(lReserve0_1), lReserve0);
         assertEq(uint256(lReserve1_1), lReserve1);
@@ -355,52 +355,52 @@ contract UniswapV2PairTest is BaseTest
 
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), address(lToken0)), 20e18);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), address(lToken1)), 20e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken0)), 20e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken1)), 20e18);
 
         // act
-        _manager.adjustManagement(_uniswapV2Pair, -10e18, -10e18);
+        _manager.adjustManagement(_constantProductPair, -10e18, -10e18);
 
-        (uint112 lReserve0_2, uint112 lReserve1_2, ) = _uniswapV2Pair.getReserves();
+        (uint112 lReserve0_2, uint112 lReserve1_2, ) = _constantProductPair.getReserves();
 
         // assert
         assertEq(uint256(lReserve0_2), lReserve0);
         assertEq(uint256(lReserve1_2), lReserve1);
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), address(lToken0)), 10e18);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), address(lToken1)), 10e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken0)), 10e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken1)), 10e18);
     }
 
     function testSyncManaged() external
     {
         // arrange
         vm.prank(address(_factory));
-        _uniswapV2Pair.setManager(_manager);
+        _constantProductPair.setManager(_manager);
 
-        address lToken0 = _uniswapV2Pair.token0();
-        address lToken1 = _uniswapV2Pair.token1();
+        address lToken0 = _constantProductPair.token0();
+        address lToken1 = _constantProductPair.token1();
 
-        _manager.adjustManagement(_uniswapV2Pair, 20e18, 20e18);
-        _tokenA.mint(address(_uniswapV2Pair), 10e18);
-        _tokenB.mint(address(_uniswapV2Pair), 10e18);
-        uint256 lLiq = _uniswapV2Pair.mint(address(this));
+        _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
+        _tokenA.mint(address(_constantProductPair), 10e18);
+        _tokenB.mint(address(_constantProductPair), 10e18);
+        uint256 lLiq = _constantProductPair.mint(address(this));
 
         // sanity
         assertEq(lLiq, 10e18); // sqrt(10e18, 10e18)
         assertEq(_tokenA.balanceOf(address(this)), 0);
         assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), lToken0), 20e18);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), lToken1), 20e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), lToken0), 20e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), lToken1), 20e18);
 
         // act
-        _manager.adjustBalance(address(_uniswapV2Pair), lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(address(_uniswapV2Pair), lToken1, 19e18); // 1e18 lost
-        _uniswapV2Pair.transfer(address(_uniswapV2Pair), 10e18);
-        _uniswapV2Pair.burn(address(this));
+        _manager.adjustBalance(address(_constantProductPair), lToken0, 19e18); // 1e18 lost
+        _manager.adjustBalance(address(_constantProductPair), lToken1, 19e18); // 1e18 lost
+        _constantProductPair.transfer(address(_constantProductPair), 10e18);
+        _constantProductPair.burn(address(this));
 
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), lToken0), 19e18);
-        assertEq(_manager.getBalance(address(_uniswapV2Pair), lToken1), 19e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), lToken0), 19e18);
+        assertEq(_manager.getBalance(address(_constantProductPair), lToken1), 19e18);
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }

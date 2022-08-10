@@ -4,8 +4,8 @@ import "test/__fixtures/BaseTest.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import { UniswapV2Pair } from "src/curve/constant-product/UniswapV2Pair.sol";
-import { HybridPool } from "src/curve/stable/HybridPool.sol";
+import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
+import { StablePair } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract GenericFactoryTest is BaseTest
@@ -19,5 +19,5 @@ contract GenericFactoryTest is BaseTest
         assertEq(_factory.getPair(address(_tokenA), address(_tokenC), 0), address(lPair));
     }
 
-    // todo: test creating the HybridPool
+    // todo: test creating the StablePair
 }
