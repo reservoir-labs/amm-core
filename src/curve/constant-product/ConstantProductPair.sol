@@ -223,6 +223,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
+
+        _managerMintCallback();
     }
 
     // this low-level function should be called from a contract which performs important safety checks
@@ -250,6 +252,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
+
+        _managerBurnCallback();
     }
 
     // this low-level function should be called from a contract which performs important safety checks
@@ -386,6 +390,20 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
         token0Managed = lToken0Managed;
         token1Managed = lToken1Managed;
+    }
+
+    function _managerMintCallback() private {
+        if (address(assetManager) == address(0)) {
+            return;
+        }
+        assetManager.mintCallback();
+    }
+
+    function _managerBurnCallback() private {
+        if (address(assetManager) == address(0)) {
+            return;
+        }
+        assetManager.burnCallback();
     }
 
     function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {

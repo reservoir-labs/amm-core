@@ -110,6 +110,35 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     /*//////////////////////////////////////////////////////////////////////////
+                                CALLBACKS FROM PAIR
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function mintCallback() external {
+        IConstantProductPair lPair = IConstantProductPair(msg.sender);
+        address lToken0 = lPair.token0();
+        address lToken1 = lPair.token1();
+
+        // if after minting there is too many unmanaged tokens, invest some
+        uint112 lToken0Managed = _getBalance(address(lPair), lToken0);
+        uint112 lToken1Managed = _getBalance(address(lPair), lToken1);
+
+        (uint112 lReserve0, uint112 lReserve1, ) = lPair.getReserves();
+
+        // if less than 50% (or some threshold) is managed
+        if (lReserve0 > (lToken0Managed * 2)) {
+            // put some into management, target 50%
+        }
+
+        if (lReserve1 > (lToken1Managed * 2)) {
+            // put some into management, target 50%
+        }
+    }
+
+    function burnCallback() external {
+        // if after burning there is too many managed tokens, divest some
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
                                 HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
 
