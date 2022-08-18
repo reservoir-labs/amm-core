@@ -388,7 +388,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         token1Managed = lToken1Managed;
     }
 
-    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
+    function adjustManagement(int256 token0Change, int256 token1Change) external lock onlyManager {
         require(
             token0Change != type(int256).min && token1Change != type(int256).min,
             "CP: CAST_WOULD_OVERFLOW"
@@ -404,6 +404,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         else if (token0Change < 0) {
             uint112 lDelta = uint112(uint256(int256(-token0Change)));
 
+            // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
             IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
@@ -412,6 +413,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         if (token1Change > 0) {
             uint112 lDelta = uint112(uint256(int256(token1Change)));
 
+            // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
             IERC20(token1).transfer(address(assetManager), lDelta);
@@ -419,6 +421,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         else if (token1Change < 0) {
             uint112 lDelta = uint112(uint256(int256(-token1Change)));
 
+            // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);

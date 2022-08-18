@@ -344,6 +344,7 @@ contract ConstantProductPairTest is BaseTest
 
         _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
 
+        //solhint-disable-next-line var-name-mixedcase
         (uint112 lReserve0_1, uint112 lReserve1_1, ) = _constantProductPair.getReserves();
         uint256 lBal0After = IERC20(lToken0).balanceOf(address(_constantProductPair));
         uint256 lBal1After = IERC20(lToken1).balanceOf(address(_constantProductPair));
@@ -361,6 +362,7 @@ contract ConstantProductPairTest is BaseTest
         // act
         _manager.adjustManagement(_constantProductPair, -10e18, -10e18);
 
+        //solhint-disable-next-line var-name-mixedcase
         (uint112 lReserve0_2, uint112 lReserve1_2, ) = _constantProductPair.getReserves();
 
         // assert
