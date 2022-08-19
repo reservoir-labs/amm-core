@@ -58,6 +58,43 @@ contract StablePairTest is BaseTest
         lPair.mint(address(this));
     }
 
+    function testMintFee_WhenRampingA(uint256 reserve0, uint256 reserve1, uint64 aFutureA, uint64 aDuration) public
+    {
+        // arrange
+        vm.prank(address(_stablePair));
+        vm.assume(reserve0 > 0 && reserve0 < 100000000);
+        vm.assume(reserve1 > 0 && reserve1 < 100000000);
+
+        uint64 lFutureAToSet = uint64(bound(aFutureA, _stablePair.getCurrentA(), StableMath.MAX_A));
+        uint256 lMinRampDuration = lFutureAToSet / _stablePair.getCurrentA() * 1 days;
+        uint256 lMaxRampDuration = 30 days; // 1 month
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
+
+        // act
+        (uint256 preTotalSupply, uint256 preD) = _stablePair.mintFee(reserve0, reserve1);
+
+        // assert
+        assertEq(preTotalSupply, _stablePair.totalSupply());
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // act
+        (uint256 postTotalSupply, uint256 postD) = _stablePair.mintFee(reserve0, reserve1);
+
+        // assert
+        assertEq(postTotalSupply, _stablePair.totalSupply());
+        assertEq(preTotalSupply, postTotalSupply);
+        assertEq(preD, postD);
+    }
+
     function testMintFee_CallableBySelf() public
     {
         // arrange
