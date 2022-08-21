@@ -179,11 +179,11 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
         // if less than the threshold
         if (lToken0Managed * 100 / lReserve0 > upperThreshold) {
-            lAmount0Decrease = int256(lReserve0 * lowerThreshold / 100 - lToken0Managed);
+            lAmount0Decrease = int256(lReserve0 * upperThreshold / 100) - int256(uint256(lToken0Managed));
         }
 
         if (lToken1Managed * 100 / lReserve1 > upperThreshold) {
-            lAmount1Decrease = int256(lReserve1 * lowerThreshold / 100 - lToken1Managed);
+            lAmount1Decrease = int256(lReserve1 * upperThreshold / 100) - int256(uint256(lToken1Managed));
         }
 
         _adjustManagement(address(lPair), lAmount0Decrease, lAmount1Decrease);
@@ -204,9 +204,6 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
     function _updateShares(address aPair, address aToken, uint256 aAmount, bool increase) private returns (uint256 rShares) {
         address lAaveToken = _getATokenAddress(aToken);
-        if (lAaveToken == address(0)) {
-            return 0;
-        }
         rShares = aAmount * 1e18 / _getExchangeRate(lAaveToken);
         if (increase) {
             shares[aPair][aToken] += rShares;
@@ -218,7 +215,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
     }
 
-    /// @return address of the AAVE token.
+    /// @notice returns the address of the AAVE token.
     /// If an AAVE token doesn't exist for the asset, returns address 0
     function _getATokenAddress(address aToken) private view returns (address rATokenAddress) {
         (rATokenAddress , ,) = dataProvider.getReserveTokensAddresses(aToken);
