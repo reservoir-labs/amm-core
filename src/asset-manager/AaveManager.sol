@@ -121,7 +121,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         emit FundsInvested(aPair, address(aToken), lShares);
     }
 
-    function setUpperThreshold(uint256 aUpperThreshold) onlyOwner external {
+    function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
         require(aUpperThreshold <= 100
             && aUpperThreshold > lowerThreshold,
             "AM: INVALID_THRESHOLD"
@@ -129,7 +129,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         upperThreshold = aUpperThreshold;
     }
 
-    function setLowerThreshold(uint256 aLowerThreshold) onlyOwner external {
+    function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
         require(aLowerThreshold <= 100
             && aLowerThreshold < upperThreshold,
             "AM: INVALID_THRESHOLD"
