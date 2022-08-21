@@ -257,6 +257,25 @@ contract ConstantProductPairTest is BaseTest
         assertEq(ConstantProductPair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
     }
 
+    function testSync() public
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setManager(_manager);
+        _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
+        _manager.adjustBalance(address(_constantProductPair), _constantProductPair.token0(), 25e18);
+        _manager.adjustBalance(address(_constantProductPair), _constantProductPair.token1(), 26e18);
+
+        // act
+        _constantProductPair.sync();
+
+        // assert
+        (uint112 lReserve0, uint112 lReserve1, ) = _constantProductPair.getReserves();
+        assertEq(_constantProductPair.token0Managed(), 25e18);
+        assertEq(lReserve0, 105e18);
+        assertEq(lReserve1, 106e18);
+    }
+
     /*//////////////////////////////////////////////////////////////////////////
                                     ASSET MANAGEMENT
     //////////////////////////////////////////////////////////////////////////*/
@@ -401,6 +420,7 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.transfer(address(_constantProductPair), 10e18);
         _constantProductPair.burn(address(this));
 
+        // assert
         assertEq(_manager.getBalance(address(_constantProductPair), lToken0), 19e18);
         assertEq(_manager.getBalance(address(_constantProductPair), lToken1), 19e18);
         assertLt(_tokenA.balanceOf(address(this)), 10e18);

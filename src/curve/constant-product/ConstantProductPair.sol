@@ -304,6 +304,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     // force reserves to match balances
     function sync() external lock {
+        _syncManaged();
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
     }
 
