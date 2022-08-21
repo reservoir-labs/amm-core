@@ -13,6 +13,10 @@ import { AaveManager } from "src/asset-manager/AaveManager.sol";
 
 contract AaveIntegrationTest is BaseTest
 {
+    // this amount is tailored to USDC as it only has 6 decimal places
+    // using the usual 100e18 would be too large and would break AAVE
+    uint256 public constant MINT_AMOUNT = 1_000_000e6;
+
     address public constant FTM_USDC = address(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);
     address public constant FTM_AAVE_POOL_ADDRESS_PROVIDER = address(0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb);
 
@@ -21,11 +25,11 @@ contract AaveIntegrationTest is BaseTest
     function setUp() public
     {
         // mint some USDC to this address
-        deal(FTM_USDC, address(this), INITIAL_MINT_AMOUNT, true);
+        deal(FTM_USDC, address(this), MINT_AMOUNT, true);
 
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), FTM_USDC, 0));
-        IERC20(FTM_USDC).transfer(address(_constantProductPair), INITIAL_MINT_AMOUNT);
-        _tokenA.mint((address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        IERC20(FTM_USDC).transfer(address(_constantProductPair), MINT_AMOUNT);
+        _tokenA.mint((address(_constantProductPair)), MINT_AMOUNT);
         _constantProductPair.mint(_alice);
 
         vm.prank(address(_factory));
@@ -35,8 +39,8 @@ contract AaveIntegrationTest is BaseTest
     function _createOtherPair() private returns (ConstantProductPair rOtherPair)
     {
         rOtherPair = ConstantProductPair(_createPair(address(_tokenB), FTM_USDC, 0));
-        _tokenB.mint(address(rOtherPair), INITIAL_MINT_AMOUNT);
-        deal(FTM_USDC, address(rOtherPair), INITIAL_MINT_AMOUNT, true);
+        _tokenB.mint(address(rOtherPair), MINT_AMOUNT);
+        deal(FTM_USDC, address(rOtherPair), MINT_AMOUNT, true);
         rOtherPair.mint(_alice);
         vm.prank(address(_factory));
         rOtherPair.setManager(_manager);
@@ -55,7 +59,7 @@ contract AaveIntegrationTest is BaseTest
         (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(_constantProductPair.token0());
 
         assertEq(_constantProductPair.token0Managed(), uint256(lAmountToManage));
-        assertEq(IERC20(FTM_USDC).balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT - uint256(lAmountToManage));
+        assertEq(IERC20(FTM_USDC).balanceOf(address(_constantProductPair)), MINT_AMOUNT - uint256(lAmountToManage));
         assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), uint256(lAmountToManage));
         assertEq(_manager.shares(address(_constantProductPair), _constantProductPair.token0()), uint256(lAmountToManage));
         assertEq(_manager.totalShares(lAaveToken), uint256(lAmountToManage));
@@ -75,7 +79,7 @@ contract AaveIntegrationTest is BaseTest
         (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(_constantProductPair.token0());
 
         assertEq(_constantProductPair.token0Managed(), 0);
-        assertEq(IERC20(FTM_USDC).balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertEq(IERC20(FTM_USDC).balanceOf(address(_constantProductPair)), MINT_AMOUNT);
         assertEq(IERC20(lAaveToken).balanceOf(address(this)), 0);
         assertEq(_manager.shares(address(_constantProductPair), address(FTM_USDC)), 0);
         assertEq(_manager.totalShares(lAaveToken), 0);
@@ -99,10 +103,8 @@ contract AaveIntegrationTest is BaseTest
     function testGetBalance(uint256 aAmountToManage) public
     {
         // arrange
-        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
-        (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(_constantProductPair.token0());
-        uint256 lTotalSupply = IERC20(lAaveToken).totalSupply();
-        int256 lAmountToManage = int256(bound(aAmountToManage, 0, lTotalSupply));
+        (uint256 lReserve0, , ) = _constantProductPair.getReserves();
+        int256 lAmountToManage = int256(bound(aAmountToManage, 0, lReserve0));
         _manager.adjustManagement(address(_constantProductPair), lAmountToManage, 0);
 
         // act
@@ -130,10 +132,9 @@ contract AaveIntegrationTest is BaseTest
     {
         // arrange
         ConstantProductPair lOtherPair = _createOtherPair();
-        (address lAaveToken, , ) = _manager.dataProvider().getReserveTokensAddresses(_constantProductPair.token0());
-        uint256 lTotalSupply = IERC20(lAaveToken).totalSupply();
-        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lTotalSupply));
-        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lTotalSupply));
+        (uint256 lReserve0, , ) = _constantProductPair.getReserves();
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lReserve0));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lReserve0));
 
         // act
         _manager.adjustManagement(address(_constantProductPair), lAmountToManage1, 0);
@@ -153,14 +154,14 @@ contract AaveIntegrationTest is BaseTest
         // arrange
         ConstantProductPair lOtherPair = _createOtherPair();
         (address lAaveToken, , ) = _manager.dataProvider().getReserveTokensAddresses(_constantProductPair.token0());
-        uint256 lTotalSupply = IERC20(lAaveToken).totalSupply();
-        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lTotalSupply));
+        (uint256 lReserve0, , ) = _constantProductPair.getReserves();
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1, lReserve0));
         _manager.adjustManagement(address(_constantProductPair), lAmountToManage1, 0);
 
         // act
         skip(bound(aTime, 1, 52 weeks));
         uint256 lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
-        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lTotalSupply));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1, lReserve0));
         _manager.adjustManagement(address(lOtherPair), lAmountToManage2, 0);
 
         // assert
@@ -179,8 +180,8 @@ contract AaveIntegrationTest is BaseTest
         // arrange
         IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
         (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(_constantProductPair.token0());
-        uint256 lTotalSupply = IERC20(lAaveToken).totalSupply();
-        int256 lAmountToManage = int256(bound(aAmountToManage, 0, lTotalSupply));
+        (uint256 lReserve0, , ) = _constantProductPair.getReserves();
+        int256 lAmountToManage = int256(bound(aAmountToManage, 0, lReserve0));
         _manager.adjustManagement(address(_constantProductPair), lAmountToManage, 0);
 
         // act
@@ -200,23 +201,61 @@ contract AaveIntegrationTest is BaseTest
         assertEq(lAmountManaged, 0);
 
         // act
-        _tokenA.mint(address(_constantProductPair), 1e18);
-        deal(FTM_USDC, address(_constantProductPair), 1e18, true);
+        _tokenA.mint(address(_constantProductPair), 500e6);
+        deal(FTM_USDC, address(this), 500e6, true);
+        IERC20(FTM_USDC).transfer(address(_constantProductPair), 500e6);
         _constantProductPair.mint(address(this));
 
         // assert
-        uint256 lNewAmountManaged = _manager.getBalance(address(_constantProductPair), FTM_USDC);
+        uint256 lNewAmount = _manager.getBalance(address(_constantProductPair), FTM_USDC);
         (uint256 lReserve0, , ) = _constantProductPair.getReserves();
-        assertEq(lNewAmountManaged, lReserve0 * _manager.lowerThreshold() / 100);
+        assertEq(lNewAmount, lReserve0 * _manager.lowerThreshold() / 100);
     }
 
-    function testCallback_DecreaseInvestmentAfterBurn() public
+    function testCallback_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public
     {
+        // arrange
+        (uint256 lReserve0, , ) = _constantProductPair.getReserves();
+        uint256 lInitialAmount = bound(aInitialAmount, lReserve0 * (_manager.upperThreshold() + 2) / 100, lReserve0);
+        _manager.adjustManagement(address(_constantProductPair), int256(lInitialAmount), 0);
 
+        console2.log(_manager.getBalance(address(_constantProductPair), FTM_USDC));
+
+        // act
+        vm.prank(_alice);
+        IERC20(address(_constantProductPair)).transfer(address(_constantProductPair), 100e6);
+        _constantProductPair.burn(address(this));
+
+        // assert
+        uint256 lNewAmount = _manager.getBalance(address(_constantProductPair), FTM_USDC);
+        (uint256 lReserve0After, , ) = _constantProductPair.getReserves();
+        assertTrue(MathUtils.within1(lNewAmount, lReserve0After * _manager.upperThreshold() / 100));
     }
 
     function testSetUpperThreshold_BreachMaximum() public
     {
+        // act & assert
+        vm.expectRevert("AM: INVALID_THRESHOLD");
+        _manager.setUpperThreshold(101);
+    }
 
+    function testSetUpperThreshold_LessThanEqualLowerThreshold(uint256 aThreshold) public
+    {
+        // arrange
+        uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold());
+
+        // act & assert
+        vm.expectRevert("AM: INVALID_THRESHOLD");
+        _manager.setUpperThreshold(lThreshold);
+    }
+
+    function testSetLowerThreshold_MoreThanEqualUpperThreshold(uint256 aThreshold) public
+    {
+        // arrange
+        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold(), type(uint256).max);
+
+        // act & assert
+        vm.expectRevert("AM: INVALID_THRESHOLD");
+        _manager.setLowerThreshold(lThreshold);
     }
 }
