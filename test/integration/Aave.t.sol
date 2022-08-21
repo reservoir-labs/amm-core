@@ -192,4 +192,31 @@ contract AaveIntegrationTest is BaseTest
         assertEq(lShares, uint256(lAmountToManage));
         assertEq(lTotalShares, uint256(lAmountToManage));
     }
+
+    function testCallback_IncreaseInvestmentAfterMint() public
+    {
+        // sanity
+        uint256 lAmountManaged = _manager.getBalance(address(_constantProductPair), FTM_USDC);
+        assertEq(lAmountManaged, 0);
+
+        // act
+        _tokenA.mint(address(_constantProductPair), 1e18);
+        deal(FTM_USDC, address(_constantProductPair), 1e18, true);
+        _constantProductPair.mint(address(this));
+
+        // assert
+        uint256 lNewAmountManaged = _manager.getBalance(address(_constantProductPair), FTM_USDC);
+        (uint256 lReserve0, , ) = _constantProductPair.getReserves();
+        assertEq(lNewAmountManaged, lReserve0 * _manager.lowerThreshold() / 100);
+    }
+
+    function testCallback_DecreaseInvestmentAfterBurn() public
+    {
+
+    }
+
+    function testSetUpperThreshold_BreachMaximum() public
+    {
+
+    }
 }
