@@ -219,8 +219,6 @@ contract AaveIntegrationTest is BaseTest
         uint256 lInitialAmount = bound(aInitialAmount, lReserve0 * (_manager.upperThreshold() + 2) / 100, lReserve0);
         _manager.adjustManagement(address(_constantProductPair), int256(lInitialAmount), 0);
 
-        console2.log(_manager.getBalance(address(_constantProductPair), FTM_USDC));
-
         // act
         vm.prank(_alice);
         IERC20(address(_constantProductPair)).transfer(address(_constantProductPair), 100e6);

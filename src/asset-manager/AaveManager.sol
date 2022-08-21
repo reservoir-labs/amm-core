@@ -153,7 +153,6 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         int256 lAmount0Increase;
         int256 lAmount1Increase;
 
-        // if less than the threshold
         if (lToken0Managed * 100 / lReserve0 < lowerThreshold) {
             lAmount0Increase = int256(lReserve0 * lowerThreshold / 100 - lToken0Managed);
         }
@@ -177,7 +176,6 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         int256 lAmount0Decrease;
         int256 lAmount1Decrease;
 
-        // if less than the threshold
         if (lToken0Managed * 100 / lReserve0 > upperThreshold) {
             lAmount0Decrease = int256(lReserve0 * upperThreshold / 100) - int256(uint256(lToken0Managed));
         }
