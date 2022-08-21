@@ -81,11 +81,14 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IERC20 lToken0 = IERC20(IConstantProductPair(aPair).token0());
         IERC20 lToken1 = IERC20(IConstantProductPair(aPair).token1());
 
+        address lToken0AToken = _getATokenAddress(address(lToken0));
+        address lToken1AToken = _getATokenAddress(address(lToken1));
+
         // withdraw from the market
-        if (aAmount0Change < 0) {
+        if (aAmount0Change < 0 && lToken0AToken != address(0)) {
             _doDivest(aPair, lToken0, uint256(-aAmount0Change));
         }
-        if (aAmount1Change < 0) {
+        if (aAmount1Change < 0 && lToken1AToken != address(0)) {
             _doDivest(aPair, lToken1, uint256(-aAmount1Change));
         }
 
@@ -93,10 +96,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IConstantProductPair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
         // transfer the managed tokens to the destination
-        if (aAmount0Change > 0) {
+        if (aAmount0Change > 0 && lToken0AToken != address(0)) {
             _doInvest(aPair, lToken0, uint256(aAmount0Change));
         }
-        if (aAmount1Change > 0) {
+        if (aAmount1Change > 0 && lToken1AToken != address(0)) {
             _doInvest(aPair, lToken1, uint256(aAmount1Change));
         }
     }
