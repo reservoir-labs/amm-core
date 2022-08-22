@@ -12,11 +12,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.8.13;
 
-import "@balancer-labs/v2-interfaces/contracts/pool-utils/IPriceOracle.sol";
+import "src/interfaces/IPriceOracle.sol";
 
-import "@balancer-labs/v2-solidity-utils/contracts/helpers/WordCodec.sol";
+import "src/libraries/WordCodec.sol";
 
 /**
  * @dev This library provides functions to help manipulating samples for Pool Price Oracles. It handles updates,
