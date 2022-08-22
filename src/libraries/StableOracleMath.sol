@@ -61,10 +61,10 @@ library StableOracleMath {
         // S = sum of balances but x,y = 0 since x  and y are the only tokens                                        //
         **************************************************************************************************************/
 
-        uint256 invariant = StableMath._calculateInvariant(amplificationParameter, _balances(balanceX, balanceY), true);
+        uint256 invariant = StableMath._computeLiquidityFromAdjustedBalances(balanceX, balanceY, 2 * amplificationParameter);
 
-        uint256 a = (amplificationParameter * 2) / StableMath._AMP_PRECISION;
-        uint256 b = Math.mul(invariant, a).sub(invariant);
+        uint256 a = (amplificationParameter * 2) / StableMath.A_PRECISION;
+        uint256 b = (invariant * a).sub(invariant);
 
         uint256 axy2 = Math.mul(a * 2, balanceX).mulDown(balanceY); // n = 2
 
