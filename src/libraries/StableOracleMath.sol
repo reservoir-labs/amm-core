@@ -66,13 +66,13 @@ library StableOracleMath {
         uint256 a = (amplificationParameter * 2) / StableMath.A_PRECISION;
         uint256 b = (invariant * a).sub(invariant);
 
-        uint256 axy2 = Math.mul(a * 2, balanceX).mulDown(balanceY); // n = 2
+        uint256 axy2 = (a * 2 * balanceX).mulDown(balanceY); // n = 2
 
         // dx = a.x.y.2 + a.y^2 - b.y
-        uint256 derivativeX = axy2.add(Math.mul(a, balanceY).mulDown(balanceY)).sub(b.mulDown(balanceY));
+        uint256 derivativeX = axy2.add((a * balanceY).mulDown(balanceY)).sub(b.mulDown(balanceY));
 
         // dy = a.x.y.2 + a.x^2 - b.x
-        uint256 derivativeY = axy2.add(Math.mul(a, balanceX).mulDown(balanceX)).sub(b.mulDown(balanceX));
+        uint256 derivativeY = axy2.add((a * balanceX).mulDown(balanceX)).sub(b.mulDown(balanceX));
 
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
