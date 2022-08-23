@@ -122,7 +122,8 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
-        require(aUpperThreshold <= 100
+        require(
+            aUpperThreshold <= 100
             && aUpperThreshold > lowerThreshold,
             "AM: INVALID_THRESHOLD"
         );
@@ -130,7 +131,8 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
-        require(aLowerThreshold <= 100
+        require(
+            aLowerThreshold <= 100
             && aLowerThreshold < upperThreshold,
             "AM: INVALID_THRESHOLD"
         );
@@ -142,29 +144,14 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     //////////////////////////////////////////////////////////////////////////*/
 
     function mintCallback() external {
-        IConstantProductPair lPair = IConstantProductPair(msg.sender);
-        address lToken0 = lPair.token0();
-        address lToken1 = lPair.token1();
-        (uint112 lReserve0, uint112 lReserve1, ) = lPair.getReserves();
-
-        uint112 lToken0Managed = _getBalance(address(lPair), lToken0);
-        uint112 lToken1Managed = _getBalance(address(lPair), lToken1);
-
-        int256 lAmount0Increase;
-        int256 lAmount1Increase;
-
-        if (lToken0Managed * 100 / lReserve0 < lowerThreshold) {
-            lAmount0Increase = int256(lReserve0 * lowerThreshold / 100 - lToken0Managed);
-        }
-
-        if (lToken1Managed * 100 / lReserve1 < lowerThreshold) {
-            lAmount1Increase = int256(lReserve1 * lowerThreshold / 100 - lToken1Managed);
-        }
-
-        _adjustManagement(address(lPair), lAmount0Increase, lAmount1Increase);
+        _manageCallback(true);
     }
 
     function burnCallback() external {
+        _manageCallback(false);
+    }
+
+    function _manageCallback(bool aIsMint) private {
         IConstantProductPair lPair = IConstantProductPair(msg.sender);
         address lToken0 = lPair.token0();
         address lToken1 = lPair.token1();
@@ -173,18 +160,29 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         uint112 lToken0Managed = _getBalance(address(lPair), lToken0);
         uint112 lToken1Managed = _getBalance(address(lPair), lToken1);
 
-        int256 lAmount0Decrease;
-        int256 lAmount1Decrease;
+        int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed, aIsMint);
+        int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed, aIsMint);
 
-        if (lToken0Managed * 100 / lReserve0 > upperThreshold) {
-            lAmount0Decrease = int256(lReserve0 * upperThreshold / 100) - int256(uint256(lToken0Managed));
+        _adjustManagement(address(lPair), lAmount0Change, lAmount1Change);
+    }
+
+    function _calculateChangeAmount(
+        uint256 aReserve,
+        uint256 aManaged,
+        bool aIsMint
+    ) internal view returns (int256 rAmountChange) {
+        if (aIsMint) {
+            if (aManaged * 100 / aReserve < lowerThreshold) {
+                rAmountChange = int256(aReserve * lowerThreshold / 100 - aManaged);
+                require(rAmountChange > 0, "AM: EXPECTED_POSITIVE_AMOUNT");
+            }
         }
-
-        if (lToken1Managed * 100 / lReserve1 > upperThreshold) {
-            lAmount1Decrease = int256(lReserve1 * upperThreshold / 100) - int256(uint256(lToken1Managed));
+        else {
+            if (aManaged * 100 / aReserve > upperThreshold) {
+                rAmountChange = int256(aReserve * upperThreshold / 100) - int256(aManaged);
+                require(rAmountChange < 0, "AM: EXPECTED_NEGATIVE_AMOUNT");
+            }
         }
-
-        _adjustManagement(address(lPair), lAmount0Decrease, lAmount1Decrease);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
