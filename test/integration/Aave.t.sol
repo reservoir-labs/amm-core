@@ -230,6 +230,18 @@ contract AaveIntegrationTest is BaseTest
         assertTrue(MathUtils.within1(lNewAmount, lReserve0After * _manager.upperThreshold() / 100));
     }
 
+    function testCallback_ShouldFailIfNotPair() public
+    {
+        // act & assert
+        vm.expectRevert();
+        _manager.mintCallback();
+
+        // act & assert
+        vm.prank(_alice);
+        vm.expectRevert();
+        _manager.mintCallback();
+    }
+
     function testSetUpperThreshold_BreachMaximum() public
     {
         // act & assert
