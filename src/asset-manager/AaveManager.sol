@@ -143,15 +143,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
                                 CALLBACKS FROM PAIR
     //////////////////////////////////////////////////////////////////////////*/
 
-    function mintCallback() external {
-        _manageCallback(true);
-    }
-
-    function burnCallback() external {
-        _manageCallback(false);
-    }
-
-    function _manageCallback(bool aIsMint) private {
+    function afterLiquidityEvent() external {
         IConstantProductPair lPair = IConstantProductPair(msg.sender);
         address lToken0 = lPair.token0();
         address lToken1 = lPair.token1();
@@ -160,28 +152,24 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         uint112 lToken0Managed = _getBalance(address(lPair), lToken0);
         uint112 lToken1Managed = _getBalance(address(lPair), lToken1);
 
-        int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed, aIsMint);
-        int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed, aIsMint);
+        int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed);
+        int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed);
 
         _adjustManagement(address(lPair), lAmount0Change, lAmount1Change);
     }
 
     function _calculateChangeAmount(
         uint256 aReserve,
-        uint256 aManaged,
-        bool aIsMint
+        uint256 aManaged
     ) internal view returns (int256 rAmountChange) {
-        if (aIsMint) {
-            if (aManaged * 100 / aReserve < lowerThreshold) {
-                rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100 - aManaged);
-                require(rAmountChange > 0, "AM: EXPECTED_POSITIVE_AMOUNT");
-            }
+        uint256 lRatio = aManaged * 100 / aReserve;
+        if (lRatio < lowerThreshold) {
+            rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100 - aManaged);
+            assert(rAmountChange > 0);
         }
-        else {
-            if (aManaged * 100 / aReserve > upperThreshold) {
-                rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
-                require(rAmountChange < 0, "AM: EXPECTED_NEGATIVE_AMOUNT");
-            }
+        else if (lRatio > upperThreshold) {
+            rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
+            assert(rAmountChange < 0);
         }
     }
 

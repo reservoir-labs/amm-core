@@ -45,6 +45,5 @@ contract AssetManager is IAssetManager
         getBalance[aOwner][aToken] = aNewAmount;
     }
 
-    function mintCallback() external {}
-    function burnCallback() external {}
+    function afterLiquidityEvent() external {}
 }

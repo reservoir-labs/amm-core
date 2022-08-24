@@ -234,12 +234,12 @@ contract AaveIntegrationTest is BaseTest
     {
         // act & assert
         vm.expectRevert();
-        _manager.mintCallback();
+        _manager.afterLiquidityEvent();
 
         // act & assert
         vm.prank(_alice);
         vm.expectRevert();
-        _manager.mintCallback();
+        _manager.afterLiquidityEvent();
     }
 
     function testSetUpperThreshold_BreachMaximum() public
