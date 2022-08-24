@@ -173,13 +173,13 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     ) internal view returns (int256 rAmountChange) {
         if (aIsMint) {
             if (aManaged * 100 / aReserve < lowerThreshold) {
-                rAmountChange = int256(aReserve * lowerThreshold / 100 - aManaged);
+                rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100 - aManaged);
                 require(rAmountChange > 0, "AM: EXPECTED_POSITIVE_AMOUNT");
             }
         }
         else {
             if (aManaged * 100 / aReserve > upperThreshold) {
-                rAmountChange = int256(aReserve * upperThreshold / 100) - int256(aManaged);
+                rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
                 require(rAmountChange < 0, "AM: EXPECTED_NEGATIVE_AMOUNT");
             }
         }

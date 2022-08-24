@@ -209,7 +209,7 @@ contract AaveIntegrationTest is BaseTest
         // assert
         uint256 lNewAmount = _manager.getBalance(address(_constantProductPair), FTM_USDC);
         (uint256 lReserve0, , ) = _constantProductPair.getReserves();
-        assertEq(lNewAmount, lReserve0 * _manager.lowerThreshold() / 100);
+        assertEq(lNewAmount, lReserve0 * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100);
     }
 
     function testCallback_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public
@@ -227,7 +227,7 @@ contract AaveIntegrationTest is BaseTest
         // assert
         uint256 lNewAmount = _manager.getBalance(address(_constantProductPair), FTM_USDC);
         (uint256 lReserve0After, , ) = _constantProductPair.getReserves();
-        assertTrue(MathUtils.within1(lNewAmount, lReserve0After * _manager.upperThreshold() / 100));
+        assertTrue(MathUtils.within1(lNewAmount, lReserve0After * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100));
     }
 
     function testCallback_ShouldFailIfNotPair() public
