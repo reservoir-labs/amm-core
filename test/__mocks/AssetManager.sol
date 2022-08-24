@@ -45,5 +45,6 @@ contract AssetManager is IAssetManager
         getBalance[aOwner][aToken] = aNewAmount;
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function afterLiquidityEvent() external {}
 }
