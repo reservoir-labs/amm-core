@@ -4,7 +4,7 @@ import "@openzeppelin/token/ERC20/IERC20.sol";
 import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
-import "src/libraries/UQ112x112.sol";
+import "src/StableOracleMath.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
@@ -13,7 +13,6 @@ import "src/UniswapV2ERC20.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
-    using UQ112x112 for uint224;
     using SafeCast for uint256;
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
@@ -42,9 +41,17 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
     uint32  private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
-    uint public price0CumulativeLast;
-    uint public price1CumulativeLast;
     uint public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+
+    // todo: move struct def to a lib or a base class
+    struct Observation {
+        // overflows in year 2554
+        uint32 timestamp;
+        uint112 logAccPrice;
+        uint112 logAccLiquidity;
+    }
+
+    Observation[65535] observations;
 
     uint private unlocked = 1;
     modifier lock() {
@@ -135,14 +142,24 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            // * never overflows, and + overflow is desired
-            price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
-            price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
+            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestamp);
+//            price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
+//            price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
         }
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
+    }
+
+    function _updateOracle(uint112 reserve0, uint112 reserve1, uint32 timeElapsed, uint32 timestamp) private {
+
+        uint112 currLogPrice = StableOracleMath._calcLogPrice(0, reserve0, reserve1);
+
+        uint112 logAccPrice = + currLogPrice * timeElapsed;
+        uint112 logAccLiq = + currLogLiq * timeElapsed;
+
+        observations.push(Observation(logAccPrice, logAccLiq, timestamp));
     }
 
     /**

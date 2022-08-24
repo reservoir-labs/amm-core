@@ -27,23 +27,32 @@ library StableOracleMath {
     using FixedPoint for uint256;
 
     /**
-     * @dev Calculates the spot price of token Y and BPT in token X.
+     * @dev Calculates the spot price of token1/token0
      */
-    function _calcLogPrices(
+    function _calcLogPrice(
         uint256 amplificationParameter,
-        uint256 balanceX,
-        uint256 balanceY,
-        int256 logBptTotalSupply
-    ) internal pure returns (int256 logSpotPrice, int256 logBptPrice) {
-        uint256 spotPrice = _calcSpotPrice(amplificationParameter, balanceX, balanceY);
-        logBptPrice = _calcLogBptPrice(spotPrice, balanceX, balanceY, logBptTotalSupply);
+        uint256 reserve0,
+        uint256 reserve1,
+    ) internal pure returns (int256 logSpotPrice) {
+
+        // scaled by 1e18
+        uint256 spotPrice;
+
+        // amplification parameter only applies for stableswap
+        if (amplificationParameter == 0) {
+            spotPrice = reserve1 * 1e18 / reserve0;
+        }
+        // stableswap
+        else {
+            spotPrice = _calcStableSpotPrice(amplificationParameter, reserve0, reserve1);
+        }
         logSpotPrice = LogCompression.toLowResLog(spotPrice);
     }
 
     /**
      * @dev Calculates the spot price of token Y in token X.
      */
-    function _calcSpotPrice(
+    function _calcStableSpotPrice(
         uint256 amplificationParameter,
         uint256 balanceX,
         uint256 balanceY
@@ -78,45 +87,5 @@ library StableOracleMath {
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
         return derivativeX.divUp(derivativeY);
-    }
-
-    /**
-     * @dev Calculates the price of BPT in token X. `logBptTotalSupply` should be the result of calling
-     * `LogCompression.toLowResLog` with the current BPT supply, and `spotPrice` the price of token
-     * Y in token X (obtainable via `_calcSpotPrice()`.
-     *
-     * The return value is a 4 decimal fixed-point number: use `LogCompression.fromLowResLog`
-     * to recover the original value.
-     */
-    function _calcLogBptPrice(
-        uint256 spotPrice,
-        uint256 balanceX,
-        uint256 balanceY,
-        int256 logBptTotalSupply
-    ) internal pure returns (int256) {
-        /**************************************************************************************************************
-        //                                                                                                           //
-        //              balance X + (spot price Y/X * balance Y)                                                     //
-        // BPT price = ------------------------------------------                                                    //
-        //                          total supply                                                                     //
-        //                                                                                                           //
-        // ln(BPT price) = ln(balance X + (spot price Y/X * balance Y)) - ln(totalSupply)                            //
-        **************************************************************************************************************/
-
-        // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
-        // space. We use `mulUp` as it prevents the result from being zero, which would make the logarithm revert. A
-        // result of zero is therefore only possible with zero balances, which are prevented via other means.
-        uint256 totalBalanceX = balanceX.add(spotPrice.mulUp(balanceY));
-        int256 logTotalBalanceX = LogCompression.toLowResLog(totalBalanceX);
-
-        // Because we're subtracting two values in log space, this value has a larger error (+-0.0001 instead of
-        // +-0.00005), which results in a final larger relative error of around 0.1%.
-        return logTotalBalanceX - logBptTotalSupply;
-    }
-
-    function _balances(uint256 balanceX, uint256 balanceY) private pure returns (uint256[] memory balances) {
-        balances = new uint256[](2);
-        balances[0] = balanceX;
-        balances[1] = balanceY;
     }
 }
