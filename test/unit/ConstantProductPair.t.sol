@@ -8,6 +8,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
+import { LogCompression } from "src/libraries/LogCompression.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
@@ -431,11 +432,12 @@ contract ConstantProductPairTest is BaseTest
                                     ORACLE TESTS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function testOracle_WrapsAroundAfterFull() public {
+    function testOracle_WrapsAroundAfterFull() public
+    {
+        // arrange
         uint256 lAmountToSwap = 1e17;
 
-        (int a, uint b, uint timestamp) = _constantProductPair.observations(0);
-
+        // act
         for (uint i = 0; i < 2 ** 16 - 1 + 5; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
@@ -445,9 +447,54 @@ contract ConstantProductPairTest is BaseTest
             _constantProductPair.swap(0, lOutput, address(this), "");
         }
 
+        // assert
         assertEq(_constantProductPair.index(), 5);
     }
-    function testOracle_CorrectPrice() public {}
+    function testOracle_CorrectPrice() public
+    {
+        // arrange
+        uint256 lAmountToSwap = 1e17;
+        (uint256 lReserve0_0, uint256 lReserve1_0, ) = _constantProductPair.getReserves();
+        uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
+
+        // act
+        _tokenA.mint(address(_constantProductPair), lAmountToSwap);
+        _constantProductPair.swap(0, lOutput1, address(this), "");
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
+        (uint256 lReserve0_1, uint256 lReserve1_1, ) = _constantProductPair.getReserves();
+        uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
+
+        uint lOutput2 = _calculateOutput(lReserve0_1, lReserve1_1, lAmountToSwap, 30);
+        _tokenA.mint(address(_constantProductPair), lAmountToSwap);
+        _constantProductPair.swap(0, lOutput2, address(this), "");
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
+        (uint256 lReserve0_2, uint256 lReserve1_2, ) = _constantProductPair.getReserves();
+        uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
+
+        // assert
+        (int lAccPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(0);
+        (int lAccPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(1);
+
+        console.logInt(lAccPrice1);
+        console.logInt(lAccPrice2);
+        console.log(lTimestamp1);
+        console.log(lTimestamp2);
+        console.log(lPrice1);
+        console.log(lPrice2);
+
+        // how to calculate geometric mean manually?
+        console.log("geometric mean", (lPrice1 * lPrice2) ** (1 / (lTimestamp2 - lTimestamp1)));
+
+        int256 lAveragePrice = (lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1);
+        console.logInt(lAveragePrice);
+
+        uint256 lUncompressedPrice = LogCompression.fromLowResLog(lAveragePrice);
+        console.log("uncompressed", lUncompressedPrice);
+    }
+
     function testOracle_CorrectLiquidity() public {}
+
     function testOracle_QueryBeyondAvailable() public {}
 }

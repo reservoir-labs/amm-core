@@ -45,8 +45,10 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     // todo: move struct def to a lib or a base class
     struct Observation {
+        // natural log (ln) of the price (token1/token0)
         int112 logAccPrice;
-        uint112 logAccLiquidity;
+        // natural log (ln) of the liquidity (sqrt(k))
+        int112 logAccLiquidity;
         // overflows in the year 2554
         uint32 timestamp;
     }
@@ -159,11 +161,11 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         int112 currLogPrice = int112(res);
 
         uint256 sqrtK = Math.sqrt(uint(_reserve0) * _reserve1);
-        uint112 currLogLiq = uint112(sqrtK);
+        int112 currLogLiq = int112(LogCompression.toLowResLog(sqrtK));
 
-        // this int32 casting safe?
+        // these int32 castings safe?
         int112 logAccPrice = previous.logAccPrice + currLogPrice * int32(timeElapsed);
-        uint112 logAccLiq = previous.logAccLiquidity + currLogLiq * timeElapsed;
+        int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int32(timeElapsed);
         uint16 newIndex = (index + 1) % 65535;
         observations[newIndex] = Observation(logAccPrice, logAccLiq, timestamp);
         index = newIndex;
