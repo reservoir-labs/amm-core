@@ -426,4 +426,28 @@ contract ConstantProductPairTest is BaseTest
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    ORACLE TESTS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function testOracle_WrapsAroundAfterFull() public {
+        uint256 lAmountToSwap = 1e17;
+
+        (int a, uint b, uint timestamp) = _constantProductPair.observations(0);
+
+        for (uint i = 0; i < 2 ** 16 - 1 + 5; ++i) {
+            vm.roll(block.number + 1);
+            vm.warp(block.timestamp + 5);
+            (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+            uint lOutput = _calculateOutput(lReserve0, lReserve1, lAmountToSwap, 30);
+            _tokenA.mint(address(_constantProductPair), lAmountToSwap);
+            _constantProductPair.swap(0, lOutput, address(this), "");
+        }
+
+        assertEq(_constantProductPair.index(), 5);
+    }
+    function testOracle_CorrectPrice() public {}
+    function testOracle_CorrectLiquidity() public {}
+    function testOracle_QueryBeyondAvailable() public {}
 }

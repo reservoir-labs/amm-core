@@ -40,6 +40,7 @@ library StableOracleMath {
 
         // amplification parameter only applies for stableswap
         if (amplificationParameter == 0) {
+            // reserve0 should never be 0
             spotPrice = reserve1 * 1e18 / reserve0;
         }
         // stableswap

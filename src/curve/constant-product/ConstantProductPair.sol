@@ -45,14 +45,14 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     // todo: move struct def to a lib or a base class
     struct Observation {
-        uint112 logAccPrice;
+        int112 logAccPrice;
         uint112 logAccLiquidity;
-        // overflows in year 2554
+        // overflows in the year 2554
         uint32 timestamp;
     }
 
-    Observation[65535] observations;
-    uint16 index;
+    Observation[65535] public observations;
+    uint16 public index;
 
     uint private unlocked = 1;
     modifier lock() {
@@ -152,18 +152,21 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     }
 
     function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestamp) private {
-
         Observation storage previous = observations[index];
 
-        // todo: review this casting
-        uint112 currLogPrice = uint112(uint256(StableOracleMath._calcLogPrice(0, _reserve0, _reserve1)));
-        uint112 currLogLiq = _reserve0 * _reserve1;
+        int res = StableOracleMath._calcLogPrice(0, _reserve0, _reserve1);
+        // this casting safe?
+        int112 currLogPrice = int112(res);
 
-        uint112 logAccPrice = previous.logAccPrice + currLogPrice * timeElapsed;
+        uint256 sqrtK = Math.sqrt(uint(_reserve0) * _reserve1);
+        uint112 currLogLiq = uint112(sqrtK);
+
+        // this int32 casting safe?
+        int112 logAccPrice = previous.logAccPrice + currLogPrice * int32(timeElapsed);
         uint112 logAccLiq = previous.logAccLiquidity + currLogLiq * timeElapsed;
-
-        observations[index + 1] = Observation(logAccPrice, logAccLiq, timestamp);
-        index = (index + 1) % 65535;
+        uint16 newIndex = (index + 1) % 65535;
+        observations[newIndex] = Observation(logAccPrice, logAccLiq, timestamp);
+        index = newIndex;
     }
 
     /**
