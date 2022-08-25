@@ -32,7 +32,7 @@ library StableOracleMath {
     function _calcLogPrice(
         uint256 amplificationParameter,
         uint256 reserve0,
-        uint256 reserve1,
+        uint256 reserve1
     ) internal pure returns (int256 logSpotPrice) {
 
         // scaled by 1e18
