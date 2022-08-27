@@ -448,12 +448,12 @@ contract ConstantProductPairTest is BaseTest
         }
 
         // assert
-        assertEq(_constantProductPair.index(), 5);
+        assertEq(_constantProductPair.index(), 4);
     }
     function testOracle_CorrectPrice() public
     {
         // arrange
-        uint256 lAmountToSwap = 1e17;
+        uint256 lAmountToSwap = 1e18;
         (uint256 lReserve0_0, uint256 lReserve1_0, ) = _constantProductPair.getReserves();
         uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
 

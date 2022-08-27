@@ -53,7 +53,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         uint32 timestamp;
     }
 
-    Observation[65535] public observations;
+    Observation[65536] public observations;
     uint16 public index;
 
     uint private unlocked = 1;
@@ -145,30 +145,12 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestamp);
+            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
         }
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
-    }
-
-    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestamp) private {
-        Observation storage previous = observations[index];
-
-        int res = StableOracleMath._calcLogPrice(0, _reserve0, _reserve1);
-        // this casting safe?
-        int112 currLogPrice = int112(res);
-
-        uint256 sqrtK = Math.sqrt(uint(_reserve0) * _reserve1);
-        int112 currLogLiq = int112(LogCompression.toLowResLog(sqrtK));
-
-        // these int32 castings safe?
-        int112 logAccPrice = previous.logAccPrice + currLogPrice * int32(timeElapsed);
-        int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int32(timeElapsed);
-        uint16 newIndex = (index + 1) % 65535;
-        observations[newIndex] = Observation(logAccPrice, logAccLiq, timestamp);
-        index = newIndex;
     }
 
     /**
@@ -332,6 +314,41 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function sync() external lock {
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
+    }
+
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ORACLE METHODS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function observe(uint256 period)
+        external
+        view
+        returns (uint256 rAveragePrice, uint256 rAverageLiquidity, uint256 rPeriod)
+    {
+
+
+        return (0,0,0);
+    }
+
+    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
+        Observation storage previous = observations[index];
+
+        int res = StableOracleMath._calcLogPrice(0, _reserve0, _reserve1);
+        // this casting safe?
+        int112 currLogPrice = int112(res);
+
+        uint256 sqrtK = Math.sqrt(uint(_reserve0) * _reserve1);
+        int112 currLogLiq = int112(LogCompression.toLowResLog(sqrtK));
+
+        // overflow is okay
+        unchecked {
+            // these int32 castings safe?
+            int112 logAccPrice = previous.logAccPrice + currLogPrice * int32(timeElapsed);
+            int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int32(timeElapsed);
+            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
+            index += 1;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////////////////
