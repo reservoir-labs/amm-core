@@ -438,7 +438,7 @@ contract ConstantProductPairTest is BaseTest
         uint256 lAmountToSwap = 1e17;
 
         // act
-        for (uint i = 0; i < 2 ** 16 - 1 + 5; ++i) {
+        for (uint i = 0; i < 2 ** 16 + 4; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
             (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
@@ -458,6 +458,9 @@ contract ConstantProductPairTest is BaseTest
         uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
 
         // act
+        uint256 lPrice0 = lReserve1_0 * 1e18 / lReserve0_0;
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(0, lOutput1, address(this), "");
         vm.roll(block.number + 1);
@@ -470,22 +473,14 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.swap(0, lOutput2, address(this), "");
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 5);
-        (uint256 lReserve0_2, uint256 lReserve1_2, ) = _constantProductPair.getReserves();
-        uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
 
         // assert
         (int lAccPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(0);
         (int lAccPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(1);
 
-        console.logInt(lAccPrice1);
-        console.logInt(lAccPrice2);
-        console.log(lTimestamp1);
-        console.log(lTimestamp2);
-        console.log(lPrice1);
-        console.log(lPrice2);
-
-        // how to calculate geometric mean manually?
-        console.log("geometric mean", (lPrice1 * lPrice2) ** (1 / (lTimestamp2 - lTimestamp1)));
+        // how to calculate fractional exponents?
+        // the math is correct, just need to find an implementation
+        // console.log("geometric mean", (lPrice0 ** 4 * lPrice1) ** (1 / (lTimestamp2 - lTimestamp1)));
 
         int256 lAveragePrice = (lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1);
         console.logInt(lAveragePrice);
