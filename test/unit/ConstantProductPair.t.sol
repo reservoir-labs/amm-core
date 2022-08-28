@@ -428,10 +428,6 @@ contract ConstantProductPairTest is BaseTest
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                                    ORACLE TESTS
-    //////////////////////////////////////////////////////////////////////////*/
-
     function testOracle_WrapsAroundAfterFull() public
     {
         // arrange
@@ -450,6 +446,10 @@ contract ConstantProductPairTest is BaseTest
         // assert
         assertEq(_constantProductPair.index(), 4);
     }
+
+    // todo: testOracle_OverflowLogAccPrice
+    // todo: testOracle_OverflowLogAccLiquidity
+
     function testOracle_CorrectPrice() public
     {
         // arrange
@@ -475,10 +475,11 @@ contract ConstantProductPairTest is BaseTest
         vm.warp(block.timestamp + 5);
 
         // assert
-        (int lAccPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(0);
-        (int lAccPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(1);
+        (int lAccPrice1, int lAccLiq1, uint32 lTimestamp1) = _constantProductPair.observations(1);
+        (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(2);
+        (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(3);
 
-        // how to calculate fractional exponents?
+        // todo: how to calculate fractional exponents in solidity
         // the math is correct, just need to find an implementation
         // console.log("geometric mean", (lPrice0 ** 4 * lPrice1) ** (1 / (lTimestamp2 - lTimestamp1)));
 

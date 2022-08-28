@@ -321,16 +321,6 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function observe(uint256 period)
-        external
-        view
-        returns (uint256 rAveragePrice, uint256 rAverageLiquidity, uint256 rPeriod)
-    {
-
-
-        return (0,0,0);
-    }
-
     function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
         Observation storage previous = observations[index];
 
@@ -346,8 +336,11 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             // these int32 castings safe?
             int112 logAccPrice = previous.logAccPrice + currLogPrice * int32(timeElapsed);
             int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int32(timeElapsed);
-            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
+
+            // on the first write pass, we will skip the array at index 0 and start writing at index 1
+            // if not we need to introduce more logic, such as checking if timestamp == 0
             index += 1;
+            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
         }
     }
 
