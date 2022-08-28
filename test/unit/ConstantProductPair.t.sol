@@ -489,7 +489,32 @@ contract ConstantProductPairTest is BaseTest
         console.log("uncompressed", lUncompressedPrice);
     }
 
-    function testOracle_CorrectLiquidity() public {}
+    function testOracle_CorrectLiquidity() public
+    {
+        // arrange
+        uint256 lAmountToBurn = 1e18;
 
-    function testOracle_QueryBeyondAvailable() public {}
+        // act
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
+        vm.prank(_alice);
+        _constantProductPair.transfer(address(_constantProductPair), lAmountToBurn);
+        _constantProductPair.burn(address(this));
+
+        // assert
+        (, int256 lAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
+        uint256 lAverageLiq = LogCompression.fromLowResLog(lAccLiq / 5);
+        // we check that it is within 0.01% of accuracy
+        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
+
+        // act
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
+        _constantProductPair.sync();
+
+        // assert
+        (, int256 lAccLiq2, ) = _constantProductPair.observations(_constantProductPair.index());
+        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
+        assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
+    }
 }
