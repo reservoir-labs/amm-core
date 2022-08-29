@@ -14,9 +14,9 @@
 
 pragma solidity 0.8.13;
 
-import "src/libraries/LogCompression.sol";
-import "src/libraries/FixedPoint.sol";
+import "solmate/utils/FixedPointMathLib.sol";
 
+import "src/libraries/LogCompression.sol";
 import "src/libraries/StableMath.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
@@ -24,7 +24,7 @@ import "src/libraries/StableMath.sol";
 // solhint-disable private-vars-leading-underscore
 
 library OracleMath {
-    using FixedPoint for uint256;
+    using FixedPointMathLib for uint256;
 
     /**
      * @dev Calculates the spot price of token1/token0
@@ -74,19 +74,19 @@ library OracleMath {
         uint256 invariant = StableMath._computeLiquidityFromAdjustedBalances(balanceX, balanceY, 2 * amplificationParameter);
 
         uint256 a = (amplificationParameter * 2) / StableMath.A_PRECISION;
-        uint256 b = (invariant * a).sub(invariant);
+        uint256 b = (invariant * a) - invariant;
 
-        uint256 axy2 = (a * 2 * balanceX).mulDown(balanceY); // n = 2
+        uint256 axy2 = (a * 2 * balanceX).mulWadDown(balanceY); // n = 2
 
         // dx = a.x.y.2 + a.y^2 - b.y
-        uint256 derivativeX = axy2.add((a * balanceY).mulDown(balanceY)).sub(b.mulDown(balanceY));
+        uint256 derivativeX = axy2 + ((a * balanceY).mulWadDown(balanceY)) - (b.mulWadDown(balanceY));
 
         // dy = a.x.y.2 + a.x^2 - b.x
-        uint256 derivativeY = axy2.add((a * balanceX).mulDown(balanceX)).sub(b.mulDown(balanceX));
+        uint256 derivativeY = axy2 + ((a * balanceX).mulWadDown(balanceX)) - (b.mulWadDown(balanceX));
 
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
-        // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
+        // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
-        return derivativeX.divUp(derivativeY);
+        return derivativeX.divWadUp(derivativeY);
     }
 }
