@@ -33,7 +33,7 @@ library OracleMath {
         uint256 amplificationParameter,
         uint256 reserve0,
         uint256 reserve1
-    ) internal pure returns (int256 logSpotPrice) {
+    ) internal pure returns (int112 logSpotPrice) {
 
         // scaled by 1e18
         uint256 spotPrice;
@@ -47,7 +47,10 @@ library OracleMath {
         else {
             spotPrice = _calcStableSpotPrice(amplificationParameter, reserve0, reserve1);
         }
-        logSpotPrice = LogCompression.toLowResLog(spotPrice);
+
+        int256 rawResult = LogCompression.toLowResLog(spotPrice);
+        require(rawResult <= type(int112).max, "OM: EXPONENT_GREATER_THAN_INT112");
+        logSpotPrice = int112(rawResult);
     }
 
     /**
