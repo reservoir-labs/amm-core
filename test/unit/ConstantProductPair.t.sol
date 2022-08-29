@@ -444,7 +444,7 @@ contract ConstantProductPairTest is BaseTest
         }
 
         // assert
-        assertEq(_constantProductPair.index(), 4);
+        assertEq(_constantProductPair.index(), 3);
     }
 
     // todo: testOracle_OverflowLogAccPrice
@@ -475,9 +475,9 @@ contract ConstantProductPairTest is BaseTest
         vm.warp(block.timestamp + 5);
 
         // assert
-        (int lAccPrice1, int lAccLiq1, uint32 lTimestamp1) = _constantProductPair.observations(1);
-        (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(2);
-        (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(3);
+        (int lAccPrice1, int lAccLiq1, uint32 lTimestamp1) = _constantProductPair.observations(0);
+        (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(1);
+        (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(2);
 
         // todo: how to calculate fractional exponents in solidity
         // the math is correct, just need to find an implementation

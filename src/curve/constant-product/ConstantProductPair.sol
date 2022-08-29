@@ -54,7 +54,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     }
 
     Observation[65536] public observations;
-    uint16 public index;
+    uint16 public index = type(uint16).max;
 
     uint private unlocked = 1;
     modifier lock() {
@@ -336,9 +336,6 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             // these int32 castings safe?
             int112 logAccPrice = previous.logAccPrice + currLogPrice * int32(timeElapsed);
             int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int32(timeElapsed);
-
-            // on the first write pass, we will skip the array at index 0 and start writing at index 1
-            // if not we need to introduce more logic, such as checking if timestamp == 0
             index += 1;
             observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
         }
