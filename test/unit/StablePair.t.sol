@@ -69,7 +69,7 @@ contract StablePairTest is BaseTest
 
         // act
         vm.prank(address(_stablePair));
-        (uint256 preTotalSupply, uint256 preD) = _stablePair.mintFee(lReserve0, lReserve1);
+        (, uint256 preD) = _stablePair.mintFee(lReserve0, lReserve1);
         _factory.rawCall(
             address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -91,7 +91,7 @@ contract StablePairTest is BaseTest
         // act
         emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
         vm.prank(address(_stablePair));
-        (uint256 postTotalSupply, uint256 postD) = _stablePair.mintFee(lReserve0, lReserve1);
+        (, uint256 postD) = _stablePair.mintFee(lReserve0, lReserve1);
 
         // arrange
         uint64 postA = _stablePair.getCurrentA();
