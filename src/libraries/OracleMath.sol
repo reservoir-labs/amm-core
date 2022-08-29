@@ -23,7 +23,7 @@ import "src/libraries/StableMath.sol";
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
-library StableOracleMath {
+library OracleMath {
     using FixedPoint for uint256;
 
     /**

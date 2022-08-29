@@ -4,7 +4,7 @@ import "@openzeppelin/token/ERC20/IERC20.sol";
 import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
-import "src/libraries/StableOracleMath.sol";
+import "src/libraries/OracleMath.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
@@ -49,7 +49,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         int112 logAccPrice;
         // natural log (ln) of the liquidity (sqrt(k))
         int112 logAccLiquidity;
-        // overflows in the year 2554
+        // overflows every 136 years, in the year 2106
         uint32 timestamp;
     }
 
@@ -324,11 +324,11 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
         Observation storage previous = observations[index];
 
-        int res = StableOracleMath._calcLogPrice(0, _reserve0, _reserve1);
+        int256 rawLogPrice = OracleMath._calcLogPrice(0, _reserve0, _reserve1);
         // this casting safe?
-        int112 currLogPrice = int112(res);
+        int112 currLogPrice = int112(rawLogPrice);
 
-        uint256 sqrtK = Math.sqrt(uint(_reserve0) * _reserve1);
+        uint256 sqrtK = Math.sqrt(uint256(_reserve0) * _reserve1);
         int112 currLogLiq = int112(LogCompression.toLowResLog(sqrtK));
 
         // overflow is okay
