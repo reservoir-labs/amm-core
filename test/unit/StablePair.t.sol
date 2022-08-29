@@ -65,6 +65,7 @@ contract StablePairTest is BaseTest
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
         uint64 lFutureAToSet = 5000;
+        uint64 preA = _stablePair.getCurrentA();
 
         // act
         vm.prank(address(_stablePair));
@@ -78,6 +79,7 @@ contract StablePairTest is BaseTest
         // assert
         assertEq(_stablePair.getCurrentA(), 1000);
 
+        // arrange
         // warp to the midpoint between the initialATime and futureATime
         vm.warp((lFutureATimestamp + block.timestamp) / 2);
         assertEq(_stablePair.getCurrentA(), (1000 + lFutureAToSet) / 2);
@@ -86,17 +88,16 @@ contract StablePairTest is BaseTest
         vm.warp(lFutureATimestamp);
         assertEq(_stablePair.getCurrentA(), lFutureAToSet);
 
-        // assert
-        assertEq(preTotalSupply, _stablePair.totalSupply());
-
         // act
         emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
         vm.prank(address(_stablePair));
         (uint256 postTotalSupply, uint256 postD) = _stablePair.mintFee(lReserve0, lReserve1);
 
+        // arrange
+        uint64 postA = _stablePair.getCurrentA();
+
         // assert
-        assertEq(postTotalSupply, _stablePair.totalSupply());
-        assertEq(preTotalSupply, postTotalSupply);
+        assertFalse(preA == postA);
         assertEq(preD, postD);
     }
 
