@@ -432,9 +432,10 @@ contract ConstantProductPairTest is BaseTest
     {
         // arrange
         uint256 lAmountToSwap = 1e17;
+        uint256 MAX_OBSERVATIONS = 2 ** 16;
 
         // act
-        for (uint i = 0; i < 2 ** 16 + 4; ++i) {
+        for (uint i = 0; i < MAX_OBSERVATIONS + 4; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
             (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
