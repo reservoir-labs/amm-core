@@ -41,7 +41,10 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
     uint32  private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
-    uint public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    uint16 public index = type(uint16).max;
+
+    Observation[65536] public observations;
 
     // todo: move struct def to a lib or a base class
     struct Observation {
@@ -52,9 +55,6 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         // overflows every 136 years, in the year 2106
         uint32 timestamp;
     }
-
-    Observation[65536] public observations;
-    uint16 public index = type(uint16).max;
 
     uint private unlocked = 1;
     modifier lock() {
@@ -229,7 +229,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
     }
 
@@ -256,7 +256,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         balance1 = _totalToken1();
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserv ge1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
