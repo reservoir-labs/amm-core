@@ -49,7 +49,7 @@ library OracleMath {
         }
 
         int256 rawResult = LogCompression.toLowResLog(spotPrice);
-        require(rawResult >= type(int112).min && rawResult <= type(int112).max, "OM: EXPONENT_GREATER_THAN_INT112");
+        assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
         logSpotPrice = int112(rawResult);
     }
 
