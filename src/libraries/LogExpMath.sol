@@ -89,6 +89,7 @@ library LogExpMath {
      * Reverts if ln(x) * y is smaller than `MIN_NATURAL_EXPONENT`, or larger than `MAX_NATURAL_EXPONENT`.
      */
     function pow(uint256 x, uint256 y) internal pure returns (uint256) {
+        unchecked{
         if (y == 0) {
             // We solve the 0^0 indetermination by making it equal one.
             return uint256(ONE_18);
@@ -134,6 +135,7 @@ library LogExpMath {
         );
 
         return uint256(exp(logx_times_y));
+        }
     }
 
     /**
@@ -142,8 +144,8 @@ library LogExpMath {
      * Reverts if `x` is smaller than MIN_NATURAL_EXPONENT, or larger than `MAX_NATURAL_EXPONENT`.
      */
     function exp(int256 x) internal pure returns (int256) {
+        unchecked {
         require(x >= MIN_NATURAL_EXPONENT && x <= MAX_NATURAL_EXPONENT, "EM: INVALID_EXPONENT");
-
         if (x < 0) {
             // We only handle positive exponents: e^(-x) is computed as 1 / e^x. We can safely make x positive since it
             // fits in the signed 256 bit range (as it is larger than MIN_NATURAL_EXPONENT).
@@ -276,12 +278,14 @@ library LogExpMath {
         // and then drop two digits to return an 18 decimal value.
 
         return (((product * seriesSum) / ONE_20) * firstAN) / 100;
+        }
     }
 
     /**
      * @dev Logarithm (log(arg, base), with signed 18 decimal fixed point base and argument.
      */
     function log(int256 arg, int256 base) internal pure returns (int256) {
+        unchecked {
         // This performs a simple base change: log(arg, base) = ln(arg) / ln(base).
 
         // Both logBase and logArg are computed as 36 decimal fixed point numbers, either by using ln_36, or by
@@ -303,18 +307,22 @@ library LogExpMath {
 
         // When dividing, we multiply by ONE_18 to arrive at a result with 18 decimal places
         return (logArg * ONE_18) / logBase;
+        }
     }
 
     /**
      * @dev Natural logarithm (ln(a)) with signed 18 decimal fixed point argument.
      */
     function ln(int256 a) internal pure returns (int256) {
+        unchecked {
         // The real natural logarithm is not defined for negative numbers or zero.
         require(a > 0, "EM: OUT_OF_BOUNDS");
+
         if (LN_36_LOWER_BOUND < a && a < LN_36_UPPER_BOUND) {
             return _ln_36(a) / ONE_18;
         } else {
             return _ln(a);
+        }
         }
     }
 
@@ -322,6 +330,7 @@ library LogExpMath {
      * @dev Internal natural logarithm (ln(a)) with signed 18 decimal fixed point argument.
      */
     function _ln(int256 a) private pure returns (int256) {
+        unchecked {
         if (a < ONE_18) {
             // Since ln(a^k) = k * ln(a), we can compute ln(a) as ln(a) = ln((1/a)^(-1)) = - ln((1/a)). If a is less
             // than one, 1/a will be greater than one, and this if statement will not be entered in the recursive call.
@@ -453,6 +462,7 @@ library LogExpMath {
         // value.
 
         return (sum + seriesSum) / 100;
+        }
     }
 
     /**
@@ -462,6 +472,7 @@ library LogExpMath {
      * Should only be used if x is between LN_36_LOWER_BOUND and LN_36_UPPER_BOUND.
      */
     function _ln_36(int256 x) private pure returns (int256) {
+        unchecked {
         // Since ln(1) = 0, a value of x close to one will yield a very small result, which makes using 36 digits
         // worthwhile.
 
@@ -508,5 +519,6 @@ library LogExpMath {
 
         // All that remains is multiplying by 2 (non fixed point).
         return seriesSum * 2;
+    }
     }
 }
