@@ -58,8 +58,8 @@ interface IPriceOracle {
      */
     struct OracleAverageQuery {
         Variable variable;
-        uint256 secs;
-        uint256 ago;
+        uint32 secs;
+        uint32 ago;
     }
 
     /**
@@ -86,6 +86,6 @@ interface IPriceOracle {
      */
     struct OracleAccumulatorQuery {
         Variable variable;
-        uint256 ago;
+        uint32 ago;
     }
 }
