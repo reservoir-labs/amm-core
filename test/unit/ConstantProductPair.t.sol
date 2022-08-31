@@ -519,4 +519,33 @@ contract ConstantProductPairTest is BaseTest
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
         assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
     }
+
+    function testOracle_LiquidityAtMaximum() public
+    {
+        // arrange
+        uint256 lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
+        _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
+        _tokenB.mint(address(_constantProductPair), lLiquidityToAdd);
+        _constantProductPair.mint(address(this));
+
+        // sanity
+        (uint112 lReserve0, uint112 lReserve1, ) = _constantProductPair.getReserves();
+        assertEq(lReserve0, type(uint112).max);
+        assertEq(lReserve1, type(uint112).max);
+
+        // act
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 5);
+        _constantProductPair.sync();
+
+        // assert
+        uint256 lTotalSupply = _constantProductPair.totalSupply();
+        assertEq(lTotalSupply, type(uint112).max);
+
+        (, int112 lAccLiq1, ) = _constantProductPair.observations(0);
+        (, int112 lAccLiq2, ) = _constantProductPair.observations(_constantProductPair.index());
+        assertApproxEqRel(type(uint112).max, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
+    }
 }
