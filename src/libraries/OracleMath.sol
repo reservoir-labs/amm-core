@@ -16,6 +16,7 @@ pragma solidity 0.8.13;
 
 import "solmate/utils/FixedPointMathLib.sol";
 
+import "src/libraries/Math.sol";
 import "src/libraries/LogCompression.sol";
 import "src/libraries/StableMath.sol";
 
@@ -29,7 +30,7 @@ library OracleMath {
     /**
      * @dev Calculates the spot price of token1/token0
      */
-    function _calcLogPrice(
+    function calcLogPrice(
         uint256 amplificationParameter,
         uint256 reserve0,
         uint256 reserve1
@@ -45,7 +46,7 @@ library OracleMath {
         }
         // stableswap
         else {
-            spotPrice = _calcStableSpotPrice(amplificationParameter, reserve0, reserve1);
+            spotPrice = calcStableSpotPrice(amplificationParameter, reserve0, reserve1);
         }
 
         int256 rawResult = LogCompression.toLowResLog(spotPrice);
@@ -53,10 +54,24 @@ library OracleMath {
         logSpotPrice = int112(rawResult);
     }
 
+    /*
+     * @param sqrtK square root of the product of the reserves multiplied
+     */
+    function calcLogLiq(
+        uint256 reserve0,
+        uint256 reserve1
+    ) internal pure returns (int112 logLiq) {
+        uint256 sqrtK = Math.sqrt(reserve0 * reserve1);
+
+        int256 rawResult = LogCompression.toLowResLog(sqrtK);
+        assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
+        logLiq = int112(rawResult);
+    }
+
     /**
      * @dev Calculates the spot price of token Y in token X.
      */
-    function _calcStableSpotPrice(
+    function calcStableSpotPrice(
         uint256 amplificationParameter,
         uint256 balanceX,
         uint256 balanceY

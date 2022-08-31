@@ -324,9 +324,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
         Observation storage previous = observations[index];
 
-        int112 currLogPrice = OracleMath._calcLogPrice(0, _reserve0, _reserve1);
-        uint256 sqrtK = Math.sqrt(uint256(_reserve0) * _reserve1);
-        int112 currLogLiq = int112(LogCompression.toLowResLog(sqrtK));
+        int112 currLogPrice = OracleMath.calcLogPrice(0, _reserve0, _reserve1);
+        int112 currLogLiq = OracleMath.calcLogLiq(_reserve0, _reserve1);
 
         // overflow is okay
         unchecked {
