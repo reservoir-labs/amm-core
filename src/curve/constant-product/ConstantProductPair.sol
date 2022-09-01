@@ -256,7 +256,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         balance1 = _totalToken1();
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserv ge1 are up-to-date
+        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
