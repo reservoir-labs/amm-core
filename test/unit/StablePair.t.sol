@@ -61,44 +61,78 @@ contract StablePairTest is BaseTest
     function testMintFee_WhenRampingA() public
     {
         // arrange
+
+        // create new pair
+        StablePair _stablePairB = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
+        _tokenA.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
+        _stablePairB.mint(_alice);
+
+        // get reserves for both pairs
         (uint256 lReserve0, uint256 lReserve1) = _stablePair.getReserves();
+        (uint256 lReserveB0, uint256 lReserveB1) = _stablePairB.getReserves();
+
+        // set times
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
         uint64 lFutureAToSet = 5000;
+
+        // initial A
         uint64 preA = _stablePair.getCurrentA();
 
         // act
         vm.prank(address(_stablePair));
-        (, uint256 preD) = _stablePair.mintFee(lReserve0, lReserve1);
+        _stablePair.mintFee(lReserve0, lReserve1);
+
+        vm.prank(address(_stablePairB));
+        _stablePairB.mintFee(lReserveB0, lReserveB1);
+
         _factory.rawCall(
             address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
             0
         );
 
-        // assert
+        // sanity
         assertEq(_stablePair.getCurrentA(), 1000);
 
         // arrange
         // warp to the midpoint between the initialATime and futureATime
         vm.warp((lFutureATimestamp + block.timestamp) / 2);
+
+        // sanity
         assertEq(_stablePair.getCurrentA(), (1000 + lFutureAToSet) / 2);
 
         // warp to the end
         vm.warp(lFutureATimestamp);
+
+        // sanity
         assertEq(_stablePair.getCurrentA(), lFutureAToSet);
 
         // act
-        emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
+        for (uint256 i = 0; i < 20; i++) {
+            _tokenA.mint(address(_stablePair), 5e18);
+            _stablePair.swap(address(_tokenA), address(this));
+
+            _tokenC.mint(address(_stablePairB), 5e18);
+            _stablePairB.swap(address(_tokenC), address(this));
+        }
+
+        // act
+        (lReserve0, lReserve1) = _stablePair.getReserves();
         vm.prank(address(_stablePair));
-        (, uint256 postD) = _stablePair.mintFee(lReserve0, lReserve1);
+        _stablePair.mintFee(lReserve0, lReserve1);
+
+        (lReserveB0, lReserveB1) = _stablePairB.getReserves();
+        vm.prank(address(_stablePairB));
+        _stablePairB.mintFee(lReserveB0, lReserveB1);
 
         // arrange
         uint64 postA = _stablePair.getCurrentA();
 
         // assert
         assertFalse(preA == postA);
-        assertEq(preD, postD);
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), _stablePairB.balanceOf(address(_platformFeeTo)));
     }
 
     function testMintFee_CallableBySelf() public
@@ -123,7 +157,7 @@ contract StablePairTest is BaseTest
     function testSwap() public
     {
         // act
-        _tokenA.mint(address(address(_stablePair)), 5e18);
+        _tokenA.mint(address(_stablePair), 5e18);
         uint256 lAmountOut = _stablePair.swap(address(_tokenA), address(this));
 
         // assert
