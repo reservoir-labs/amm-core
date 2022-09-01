@@ -428,6 +428,29 @@ contract ConstantProductPairTest is BaseTest
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
+    function testOracle_NoWriteInSameTimestamp() public
+    {
+        // arrange
+        uint16 lInitialIndex = _constantProductPair.index();
+        uint256 lAmountToSwap = 1e17;
+
+        // act
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+        _tokenA.mint(address(_constantProductPair), lAmountToSwap);
+        uint lOutput = _calculateOutput(lReserve0, lReserve1, lAmountToSwap, 30);
+        _constantProductPair.swap(lOutput, 0, address(this), "");
+
+        vm.prank(_alice);
+        _constantProductPair.transfer(address(_constantProductPair), 1e18);
+        _constantProductPair.burn(address(this));
+
+        _constantProductPair.sync();
+
+        // assert
+        uint16 lFinalIndex = _constantProductPair.index();
+        assertEq(lFinalIndex, lInitialIndex);
+    }
+
     function testOracle_WrapsAroundAfterFull() public
     {
         // arrange
