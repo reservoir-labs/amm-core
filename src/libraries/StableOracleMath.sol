@@ -1,17 +1,3 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 pragma solidity 0.8.13;
 
 import "solmate/utils/FixedPointMathLib.sol";
@@ -20,61 +6,31 @@ import "src/libraries/Math.sol";
 import "src/libraries/LogCompression.sol";
 import "src/libraries/StableMath.sol";
 
-// These functions start with an underscore, as if they were part of a contract and not a library. At some point this
-// should be fixed.
-// solhint-disable private-vars-leading-underscore
-
-library OracleMath {
+// todo: to make calculating price and liquidity one function as liquidity is just the invariant for StablePair
+library StableOracleMath {
     using FixedPointMathLib for uint256;
 
     /**
-     * @dev Calculates the spot price of token1/token0
+     * @dev Calculates the spot price of token1/token0 for the stable pair
      */
     function calcLogPrice(
         uint256 amplificationParameter,
         uint256 reserve0,
         uint256 reserve1
     ) internal pure returns (int112 logSpotPrice) {
-
-        // scaled by 1e18
-        uint256 spotPrice;
-
-        // amplification parameter only applies for stableswap
-        if (amplificationParameter == 0) {
-            // reserve0 should never be 0
-            spotPrice = reserve1 * 1e18 / reserve0;
-        }
-        // stableswap
-        else {
-            spotPrice = calcStableSpotPrice(amplificationParameter, reserve0, reserve1);
-        }
-
+        uint256 spotPrice = calcStableSpotPrice(amplificationParameter, reserve0, reserve1);
         int256 rawResult = LogCompression.toLowResLog(spotPrice);
         assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
         logSpotPrice = int112(rawResult);
     }
 
-    /*
-     * @param sqrtK square root of the product of the reserves multiplied
-     */
-    function calcLogLiq(
-        uint256 reserve0,
-        uint256 reserve1
-    ) internal pure returns (int112 logLiq) {
-        uint256 sqrtK = Math.sqrt(reserve0 * reserve1);
-
-        int256 rawResult = LogCompression.toLowResLog(sqrtK);
-        assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
-        logLiq = int112(rawResult);
-    }
-
     /**
-     * @dev Calculates the spot price of token Y in token X.
+     * @dev Calculates the spot price of token1 in token0
      */
     function calcStableSpotPrice(
         uint256 amplificationParameter,
-        uint256 balanceX,
-        uint256 balanceY
+        uint256 reserve0,
+        uint256 reserve1
     ) internal pure returns (uint256) {
         /**************************************************************************************************************
         //                                                                                                           //
@@ -89,18 +45,18 @@ library OracleMath {
         // S = sum of balances but x,y = 0 since x  and y are the only tokens                                        //
         **************************************************************************************************************/
 
-        uint256 invariant = StableMath._computeLiquidityFromAdjustedBalances(balanceX, balanceY, 2 * amplificationParameter);
+        uint256 invariant = StableMath._computeLiquidityFromAdjustedBalances(reserve0, reserve1, 2 * amplificationParameter);
 
         uint256 a = (amplificationParameter * 2) / StableMath.A_PRECISION;
         uint256 b = (invariant * a) - invariant;
 
-        uint256 axy2 = (a * 2 * balanceX).mulWadDown(balanceY); // n = 2
+        uint256 axy2 = (a * 2 * reserve0).mulWadDown(reserve1); // n = 2
 
         // dx = a.x.y.2 + a.y^2 - b.y
-        uint256 derivativeX = axy2 + ((a * balanceY).mulWadDown(balanceY)) - (b.mulWadDown(balanceY));
+        uint256 derivativeX = axy2 + ((a * reserve1).mulWadDown(reserve1)) - (b.mulWadDown(reserve1));
 
         // dy = a.x.y.2 + a.x^2 - b.x
-        uint256 derivativeY = axy2 + ((a * balanceX).mulWadDown(balanceX)) - (b.mulWadDown(balanceX));
+        uint256 derivativeY = axy2 + ((a * reserve0).mulWadDown(reserve0)) - (b.mulWadDown(reserve0));
 
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A

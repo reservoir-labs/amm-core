@@ -4,7 +4,7 @@ import "@openzeppelin/token/ERC20/IERC20.sol";
 import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
-import "src/libraries/OracleMath.sol";
+import "src/libraries/ConstantProductOracleMath.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
@@ -324,8 +324,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
         Observation storage previous = observations[index];
 
-        int112 currLogPrice = OracleMath.calcLogPrice(0, _reserve0, _reserve1);
-        int112 currLogLiq = OracleMath.calcLogLiq(_reserve0, _reserve1);
+        int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(_reserve0, _reserve1);
+        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(_reserve0, _reserve1);
 
         // overflow is okay
         unchecked {
