@@ -143,7 +143,11 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
         // solhint-disable-next-line not-rely-on-time
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        uint32 timeElapsed;
+        unchecked {
+             timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        }
+
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
             _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
         }
@@ -315,7 +319,6 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
     }
-
 
     /*//////////////////////////////////////////////////////////////////////////
                                 ORACLE METHODS
