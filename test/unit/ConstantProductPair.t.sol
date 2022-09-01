@@ -448,8 +448,53 @@ contract ConstantProductPairTest is BaseTest
         assertEq(_constantProductPair.index(), 3);
     }
 
-    // todo: testOracle_OverflowLogAccPrice
-    // todo: testOracle_OverflowLogAccLiquidity
+    // not running cuz it goes beyond the gas limit
+    //    function testOracle_OverflowAccPrice() public
+    //    {
+    //        // arrange
+    //        int112 lPrevAccPrice;
+    //        int112 lCurrAccPrice;
+    //
+    //        // act
+    //        while (lCurrAccPrice >= lPrevAccPrice) {
+    //            (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+    //            uint256 lAmountToSwap = 100e30;
+    //            uint256 lOutput = _calculateOutput(lReserve1, lReserve0, lAmountToSwap, 30);
+    //            _tokenB.mint(address(_constantProductPair), lAmountToSwap);
+    //            _constantProductPair.swap(lOutput, 0, address(this), "");
+    //
+    //            vm.roll(block.number + 1);
+    //            vm.warp(block.timestamp + 1e10);
+    //            lPrevAccPrice = lCurrAccPrice;
+    //            (lCurrAccPrice, , ) = _constantProductPair.observations(_constantProductPair.index());
+    //        }
+    //
+    //        // assert
+    //        assertLt(lCurrAccPrice, lPrevAccPrice);
+    //    }
+    //
+    //    function testOracle_OverflowAccLiquidity() public
+    //    {
+    //        // arrange
+    //        uint256 lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
+    //        _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
+    //        _tokenB.mint(address(_constantProductPair), lLiquidityToAdd);
+    //        _constantProductPair.mint(address(this));
+    //        int112 lPrevAccLiq;
+    //        int112 lCurrAccLiq;
+    //
+    //        // act
+    //        while (lCurrAccLiq >= lPrevAccLiq) {
+    //            vm.roll(block.number + 1);
+    //            vm.warp(block.timestamp + 1e10);
+    //            _constantProductPair.sync();
+    //            lPrevAccLiq = lCurrAccLiq;
+    //            (, lCurrAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
+    //        }
+    //
+    //        // assert
+    //        assertLt(lCurrAccLiq, lPrevAccLiq);
+    //    }
 
     function testOracle_CorrectPrice() public
     {
