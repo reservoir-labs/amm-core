@@ -63,9 +63,9 @@ contract StablePairTest is BaseTest
         // arrange
 
         // create new pair
-        StablePair _stablePairB = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
-        _tokenA.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
+        StablePair _stablePairB = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
         _tokenC.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
+        _tokenD.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
         _stablePairB.mint(_alice);
 
         // get reserves for both pairs
@@ -86,6 +86,15 @@ contract StablePairTest is BaseTest
 
         vm.prank(address(_stablePairB));
         _stablePairB.mintFee(lReserveB0, lReserveB1);
+
+        // act
+        for (uint256 i = 0; i < 2; i++) {
+            _tokenA.mint(address(_stablePair), 5e18);
+            _stablePair.swap(address(_tokenA), address(this));
+
+            _tokenC.mint(address(_stablePairB), 5e18);
+            _stablePairB.swap(address(_tokenC), address(this));
+        }
 
         _factory.rawCall(
             address(_stablePair),
@@ -109,14 +118,8 @@ contract StablePairTest is BaseTest
         // sanity
         assertEq(_stablePair.getCurrentA(), lFutureAToSet);
 
-        // act
-        for (uint256 i = 0; i < 20; i++) {
-            _tokenA.mint(address(_stablePair), 5e18);
-            _stablePair.swap(address(_tokenA), address(this));
-
-            _tokenC.mint(address(_stablePairB), 5e18);
-            _stablePairB.swap(address(_tokenC), address(this));
-        }
+        console.log(_tokenC.balanceOf(address(this)));
+        console.log(_tokenD .balanceOf(address(this)));
 
         // act
         (lReserve0, lReserve1) = _stablePair.getReserves();
