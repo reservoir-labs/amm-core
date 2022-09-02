@@ -10,6 +10,7 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 import "src/UniswapV2ERC20.sol";
+import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/ITridentCallee.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
@@ -214,13 +215,15 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        _updateReserves();
+        _update();
 
         lastLiquidityEventReserve0 = reserve0;
         lastLiquidityEventReserve1 = reserve1;
 
         uint256 liquidityForEvent = liquidity;
         emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
+
+        _managerCallback();
     }
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
@@ -248,7 +251,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         _safeTransfer(token0, to, amount0);
         _safeTransfer(token1, to, amount1);
 
-        _updateReserves();
+        _update();
 
         withdrawnAmounts = new uint256[](2);
         withdrawnAmounts[0] = amount0;
@@ -258,6 +261,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         lastLiquidityEventReserve1 = reserve1;
 
         emit Burn(msg.sender, amount0, amount1, to, liquidity);
+
+        _managerCallback();
     }
 
     /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
@@ -281,7 +286,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
         _safeTransfer(tokenOut, to, amountOut);
-        _updateReserves();
+        _update();
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
@@ -294,17 +299,17 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
             tokenOut = token1;
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
             _processSwap(token1, to, amountOut, context);
-            uint256 balance0 = ERC20(token0).balanceOf(address(this));
+            uint256 balance0 = _totalToken0();
             require(balance0 - _reserve0 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
             tokenOut = token0;
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
             _processSwap(token0, to, amountOut, context);
-            uint256 balance1 = ERC20(token1).balanceOf(address(this));
+            uint256 balance1 = _totalToken1();
             require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
         }
-        _updateReserves();
+        _update();
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
@@ -338,8 +343,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     )
     {
         (_reserve0, _reserve1) = (reserve0, reserve1);
-        balance0 = ERC20(token0).balanceOf(address(this));
-        balance1 = ERC20(token1).balanceOf(address(this));
+        (balance0, balance1) = _balance();
 
         // TODO: take into account calculation of rebase tokens
         // Rebase memory total0 = bento.totals(token0);
@@ -351,7 +355,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         // balance1 = total1.toElastic(balance1);
     }
 
-    function _updateReserves() internal {
+    function _update() internal {
         (uint256 _reserve0, uint256 _reserve1) = _balance();
         require(_reserve0 <= type(uint128).max && _reserve1 <= type(uint128).max, "SP: OVERFLOW");
         reserve0 = uint128(_reserve0);
@@ -360,8 +364,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = ERC20(token0).balanceOf(address(this));
-        balance1 = ERC20(token1).balanceOf(address(this));
+        balance0 = _totalToken0();
+        balance1 = _totalToken1();
     }
 
     function _getAmountOut(
@@ -622,11 +626,6 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
 
-        _update(
-            _totalToken0(),
-            _totalToken1(),
-            reserve0,
-            reserve1
-        );
+        _update();
     }
 }
