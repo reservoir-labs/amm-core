@@ -145,7 +145,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed;
         unchecked {
-             timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         }
 
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {

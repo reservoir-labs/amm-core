@@ -1,6 +1,7 @@
 pragma solidity 0.8.13;
 
 import "test/__fixtures/BaseTest.sol";
+import { stdStorage } from "forge-std/Test.sol";
 
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
@@ -15,7 +16,33 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 
 contract ConstantProductPairTest is BaseTest
 {
+    using stdStorage for StdStorage;
+
     AssetManager private _manager = new AssetManager();
+
+    function _writeObservation(
+        ConstantProductPair aPair,
+        uint256 aIndex,
+        int112 aPrice,
+        int112 aLiq,
+        uint32 aTime
+    ) internal
+    {
+        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aPrice));
+
+        vm.record();
+        aPair.observations(0);
+        (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
+        require(lAccesses.length == 1, "invalid number of accesses");
+
+        vm.store(address(aPair), lAccesses[0], lEncoded);
+    }
+
+    function _stepTime() internal
+    {
+        vm.roll(block.number + 1);
+        skip(5);
+    }
 
     function _calculateOutput(
         uint256 aReserveIn,
@@ -469,6 +496,51 @@ contract ConstantProductPairTest is BaseTest
 
         // assert
         assertEq(_constantProductPair.index(), 3);
+    }
+
+    function testWriteObservations() external
+    {
+        // arrange
+        // swap 1
+        _stepTime();
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+        uint lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
+        _tokenA.mint(address(_constantProductPair), 1e17);
+        _constantProductPair.swap(0, lOutput, address(this), "");
+
+        // swap 2
+        _stepTime();
+        (lReserve0, lReserve1, ) = _constantProductPair.getReserves();
+        lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
+        _tokenA.mint(address(_constantProductPair), 1e17);
+        _constantProductPair.swap(0, lOutput, address(this), "");
+
+        // sanity
+        assertEq(_constantProductPair.index(), 1);
+
+        (int112 lLogPriceAcc, int112 lLogLiqAcc, uint32 lTimestamp) = _constantProductPair.observations(0);
+        assertTrue(lLogPriceAcc == 0);
+        assertTrue(lLogLiqAcc != 0);
+        assertTrue(lTimestamp != 0);
+
+        (lLogPriceAcc, lLogLiqAcc, lTimestamp) = _constantProductPair.observations(1);
+        assertTrue(lLogPriceAcc != 0);
+        assertTrue(lLogLiqAcc != 0);
+        assertTrue(lTimestamp != 0);
+
+        // act
+        _writeObservation(_constantProductPair, 0, int112(1337), int112(-1337), uint32(666));
+
+        // assert
+        (lLogPriceAcc, lLogLiqAcc, lTimestamp) = _constantProductPair.observations(0);
+        assertEq(lLogPriceAcc, int112(1337));
+        assertEq(lLogLiqAcc, int112(-1337));
+        assertEq(lTimestamp, uint32(666));
+
+        (lLogPriceAcc, lLogLiqAcc, lTimestamp) = _constantProductPair.observations(1);
+        assertTrue(lLogPriceAcc != 0);
+        assertTrue(lLogLiqAcc != 0);
+        assertTrue(lTimestamp != 0);
     }
 
     // not running cuz it goes beyond the gas limit
