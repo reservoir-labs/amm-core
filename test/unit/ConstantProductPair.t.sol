@@ -40,10 +40,10 @@ contract ConstantProductPairTest is BaseTest
         vm.store(address(aPair), lAccesses[0], lEncoded);
     }
 
-    function _stepTime() internal
+    function _stepTime(uint256 aTime) internal
     {
         vm.roll(block.number + 1);
-        skip(1);
+        skip(aTime);
     }
 
     function _calculateOutput(
@@ -504,14 +504,14 @@ contract ConstantProductPairTest is BaseTest
     {
         // arrange
         // swap 1
-        _stepTime();
+        _stepTime(1);
         (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
         _constantProductPair.swap(0, lOutput, address(this), "");
 
         // swap 2
-        _stepTime();
+        _stepTime(1);
         (lReserve0, lReserve1, ) = _constantProductPair.getReserves();
         lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
@@ -643,21 +643,19 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.setCustomSwapFee(0);
 
         // price = 1
-        // time starts at 1 in test environment, so we can just immediately
-        // sync without stepping
-        _constantProductPair.sync();
-        _stepTime();
+        _stepTime(10);
+        // _constantProductPair.sync();
 
         // act
         // price = 4
         _tokenA.mint(address(_constantProductPair), 100e18);
         _constantProductPair.swap(0, 50e18, _bob, bytes(""));
-        _stepTime();
+        _stepTime(10);
 
         // price = 16
         _tokenA.mint(address(_constantProductPair), 200e18);
         _constantProductPair.swap(0, 25e18, _bob, bytes(""));
-        _stepTime();
+        _stepTime(10);
         _constantProductPair.sync();
 
         // assert
@@ -665,19 +663,28 @@ contract ConstantProductPairTest is BaseTest
         (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(1);
         (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(2);
 
-        assertEq(lAccPrice1, LogCompression.toLowResLog(1e18));
-        assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * LogCompression.toLowResLog(0.25e18));
+        assertEq(lAccPrice1, LogCompression.toLowResLog(1e18) * 10, "1");
+        assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10, "2");
         assertEq(
             lAccPrice3,
-            LogCompression.toLowResLog(1e18)
-            + LogCompression.toLowResLog(0.25e18)
-            + LogCompression.toLowResLog(0.0625e18)
+            LogCompression.toLowResLog(1e18) * 10
+            + LogCompression.toLowResLog(0.25e18) * 10
+            + LogCompression.toLowResLog(0.0625e18) * 10,
+            "3"
         );
 
-        // TWAP 0 - 2
-        // I don't get how this is a geometric mean, isn't this an arithmetic
-        // mean?
-        // uint256 lAccumulator = LogCompression.fromLowResLog(lAccPrice3);
+        // Price for observation window 1-2
+        assertApproxEqRel(
+            LogCompression.fromLowResLog((lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1)),
+            0.25e18,
+            0.0001e18
+        );
+        // Price for observation window 2-3
+        assertApproxEqRel(
+            LogCompression.fromLowResLog((lAccPrice3 - lAccPrice2) / int32(lTimestamp3 - lTimestamp2)),
+            0.0625e18,
+            0.0001e18
+        );
     }
 
     function testOracle_CorrectLiquidity() public
