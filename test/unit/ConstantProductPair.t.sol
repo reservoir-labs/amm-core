@@ -685,6 +685,12 @@ contract ConstantProductPairTest is BaseTest
             0.0625e18,
             0.0001e18
         );
+        // Price for observation window 1-3
+        assertApproxEqRel(
+            LogCompression.fromLowResLog((lAccPrice3 - lAccPrice1) / int32(lTimestamp3 - lTimestamp1)),
+            0.125e18,
+            0.0001e18
+        );
     }
 
     function testOracle_CorrectLiquidity() public
