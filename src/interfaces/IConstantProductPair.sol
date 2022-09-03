@@ -41,6 +41,4 @@ interface IConstantProductPair {
 
     function assetManager() external returns (IAssetManager);
     function setManager(IAssetManager manager) external;
-
-    function adjustManagement(int256 token0Change, int256 token1Change) external;
 }

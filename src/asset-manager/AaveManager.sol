@@ -5,10 +5,10 @@ import { Ownable } from "@openzeppelin/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetsManagedPair } from "src/interfaces/IAssetsManagedPair.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
-import { IConstantProductPair } from "src/interfaces/IConstantProductPair.sol";
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
@@ -78,8 +78,8 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
             "AM: CAST_WOULD_OVERFLOW"
         );
 
-        IERC20 lToken0 = IERC20(IConstantProductPair(aPair).token0());
-        IERC20 lToken1 = IERC20(IConstantProductPair(aPair).token1());
+        IERC20 lToken0 = IERC20(IAssetsManagedPair(aPair).token0());
+        IERC20 lToken1 = IERC20(IAssetsManagedPair(aPair).token1());
 
         address lToken0AToken = _getATokenAddress(address(lToken0));
         address lToken1AToken = _getATokenAddress(address(lToken1));
@@ -93,7 +93,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
 
         // transfer tokens to/from the pair
-        IConstantProductPair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
+        IAssetsManagedPair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0 && lToken0AToken != address(0)) {
@@ -144,7 +144,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     //////////////////////////////////////////////////////////////////////////*/
 
     function afterLiquidityEvent() external {
-        IConstantProductPair lPair = IConstantProductPair(msg.sender);
+        IAssetsManagedPair lPair = IAssetsManagedPair(msg.sender);
         address lToken0 = lPair.token0();
         address lToken1 = lPair.token1();
         (uint112 lReserve0, uint112 lReserve1, ) = lPair.getReserves();

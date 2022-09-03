@@ -5,12 +5,13 @@ import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
 import { IConstantProductPair } from "src/interfaces/IConstantProductPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetsManagedPair } from "src/interfaces/IAssetsManagedPair.sol";
 
 contract AssetManager is IAssetManager
 {
     mapping(address => mapping(address => uint112)) public getBalance;
 
-    function adjustManagement(IConstantProductPair aPair, int224 aToken0Amount, int224 aToken1Amount) external
+    function adjustManagement(IAssetsManagedPair aPair, int224 aToken0Amount, int224 aToken1Amount) external
     {
         require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "AM: OVERFLOW");
 

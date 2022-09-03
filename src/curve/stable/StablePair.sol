@@ -12,6 +12,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import "src/UniswapV2ERC20.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/ITridentCallee.sol";
+import "src/interfaces/IAssetsManagedPair.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
@@ -28,7 +29,7 @@ struct AmplificationData {
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-contract StablePair is UniswapV2ERC20, ReentrancyGuard {
+contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetsManagedPair {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
@@ -73,13 +74,15 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     uint256 public immutable token0PrecisionMultiplier;
     uint256 public immutable token1PrecisionMultiplier;
 
-    uint128 internal reserve0;
-    uint128 internal reserve1;
+    uint112 internal reserve0;
+    uint112 internal reserve1;
+    uint32  internal blockTimestampLast;
+
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
     // We no longer store dLast as dLast is dependent on the amp coefficient, which is dynamic
-    uint128 internal lastLiquidityEventReserve0;
-    uint128 internal lastLiquidityEventReserve1;
+    uint112 internal lastLiquidityEventReserve0;
+    uint112 internal lastLiquidityEventReserve1;
 
     modifier onlyFactory() {
         require(msg.sender == address(factory), "SP: FORBIDDEN");
@@ -197,7 +200,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -292,7 +295,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
 
     /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
     function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         address tokenOut;
 
         if (tokenIn == token0) {
@@ -328,8 +331,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         if (data.length != 0) ITridentCallee(msg.sender).tridentSwapCallback(data);
     }
 
-    function _getReserves() internal view returns (uint256 _reserve0, uint256 _reserve1) {
-        (_reserve0, _reserve1) = (reserve0, reserve1);
+    function _getReserves() internal view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+        (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
     }
 
     function _getReservesAndBalances()
@@ -357,9 +360,9 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
 
     function _update() internal {
         (uint256 _reserve0, uint256 _reserve1) = _balance();
-        require(_reserve0 <= type(uint128).max && _reserve1 <= type(uint128).max, "SP: OVERFLOW");
-        reserve0 = uint128(_reserve0);
-        reserve1 = uint128(_reserve1);
+        require(_reserve0 <= type(uint112).max && _reserve1 <= type(uint112).max, "SP: OVERFLOW");
+        reserve0 = uint112(_reserve0);
+        reserve1 = uint112(_reserve1);
         emit Sync(_reserve0, _reserve1);
     }
 
@@ -471,7 +474,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
 
         if (tokenIn == token0) {
             finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
@@ -481,12 +484,12 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    function getReserves() public view returns (uint256 _reserve0, uint256 _reserve1) {
-        (_reserve0, _reserve1) = _getReserves();
+    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+        (_reserve0, _reserve1, _blockTimestampLast) = _getReserves();
     }
 
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
     }

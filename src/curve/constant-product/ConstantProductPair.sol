@@ -8,11 +8,12 @@ import "src/libraries/UQ112x112.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
+import "src/interfaces/IAssetsManagedPair.sol";
 import "src/UniswapV2ERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 
-contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
+contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, IAssetsManagedPair {
     using UQ112x112 for uint224;
     using SafeCast for uint256;
 
@@ -35,8 +36,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     uint public customPlatformFee = type(uint).max;
 
     GenericFactory immutable public factory;
-    address immutable public token0;
-    address immutable public token1;
+    address immutable public override(IConstantProductPair, IAssetsManagedPair) token0;
+    address immutable public override(IConstantProductPair, IAssetsManagedPair) token1;
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -116,7 +117,9 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         platformFee = _platformFee;
     }
 
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+    function getReserves() public view
+    override(IConstantProductPair, IAssetsManagedPair)
+    returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
         _reserve0 = reserve0;
         _reserve1 = reserve1;
         _blockTimestampLast = blockTimestampLast;
