@@ -24,7 +24,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     uint256 public constant FEE_ACCURACY     = 10_000;
 
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
+    uint public constant MIN_SWAP_FEE     = 0;      //  0.01%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     uint public swapFee;
@@ -459,6 +459,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
 
+        // Why does this pattern look different to the sync() and _update()
+        // methods. That feels off?
         _update(
             _totalToken0(),
             _totalToken1(),

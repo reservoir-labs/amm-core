@@ -9,6 +9,8 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
+import { LogExpMath } from "src/libraries/LogExpMath.sol";
+import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -41,7 +43,7 @@ contract ConstantProductPairTest is BaseTest
     function _stepTime() internal
     {
         vm.roll(block.number + 1);
-        skip(5);
+        skip(1);
     }
 
     function _calculateOutput(
@@ -629,6 +631,53 @@ contract ConstantProductPairTest is BaseTest
 
         uint256 lUncompressedPrice = LogCompression.fromLowResLog(lAveragePrice);
         console.log("uncompressed", lUncompressedPrice);
+    }
+
+    function testOracle_SimplePrices() external
+    {
+        // prices = [1, 4, 16]
+        // geo_mean = sqrt3(1 * 4 * 16) = 4
+
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomSwapFee(0);
+
+        // price = 1
+        // time starts at 1 in test environment, so we can just immediately
+        // sync without stepping
+        _constantProductPair.sync();
+        _stepTime();
+
+        // act
+        // price = 4
+        _tokenA.mint(address(_constantProductPair), 100e18);
+        _constantProductPair.swap(0, 50e18, _bob, bytes(""));
+        _stepTime();
+
+        // price = 16
+        _tokenA.mint(address(_constantProductPair), 200e18);
+        _constantProductPair.swap(0, 25e18, _bob, bytes(""));
+        _stepTime();
+        _constantProductPair.sync();
+
+        // assert
+        (int lAccPrice1, int lAccLiq1, uint32 lTimestamp1) = _constantProductPair.observations(0);
+        (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(1);
+        (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(2);
+
+        assertEq(lAccPrice1, LogCompression.toLowResLog(1e18));
+        assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * LogCompression.toLowResLog(0.25e18));
+        assertEq(
+            lAccPrice3,
+            LogCompression.toLowResLog(1e18)
+            + LogCompression.toLowResLog(0.25e18)
+            + LogCompression.toLowResLog(0.0625e18)
+        );
+
+        // TWAP 0 - 2
+        // I don't get how this is a geometric mean, isn't this an arithmetic
+        // mean?
+        // uint256 lAccumulator = LogCompression.fromLowResLog(lAccPrice3);
     }
 
     function testOracle_CorrectLiquidity() public
