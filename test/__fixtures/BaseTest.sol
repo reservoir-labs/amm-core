@@ -16,6 +16,8 @@ abstract contract BaseTest is Test {
     address         internal _recoverer     = _makeAddress("recoverer");
     address         internal _platformFeeTo = _makeAddress("platformFeeTo");
     address         internal _alice         = _makeAddress("alice");
+    address         internal _bob           = _makeAddress("bob");
+    address         internal _cal           = _makeAddress("cal");
 
     MintableERC20   internal _tokenA        = new MintableERC20("TokenA", "TA");
     MintableERC20   internal _tokenB        = new MintableERC20("TokenB", "TB");
