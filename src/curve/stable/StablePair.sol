@@ -554,8 +554,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetManagedPair {
             emit ProfitReported(token, lProfit);
 
             token == token0
-            ? reserve0 += lProfit
-            : reserve1 += lProfit;
+                ? reserve0 += lProfit
+                : reserve1 += lProfit;
         }
         else if (newBalance < prevBalance) {
             // report loss
@@ -564,8 +564,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetManagedPair {
             emit LossReported(token, lLoss);
 
             token == token0
-            ? reserve0 -= lLoss
-            : reserve1 -= lLoss;
+                ? reserve0 -= lLoss
+                : reserve1 -= lLoss;
         }
         // else do nothing balance is equal
     }
