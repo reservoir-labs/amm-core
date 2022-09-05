@@ -18,8 +18,13 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     /// @dev tracks how many aToken each pair+token owns
     mapping(address => mapping(address => uint256)) public shares;
 
-    // @dev for each aToken, tracks the total number of shares issued
+    /// @dev for each aToken, tracks the total number of shares issued
     mapping(address => uint256) public totalShares;
+
+    /// @dev percentage of the pool's assets, above and below which
+    /// the manager will invest the excess and divest the shortfall
+    uint256 public upperThreshold = 70;
+    uint256 public lowerThreshold = 30;
 
     /// @dev this contract itself is immutable and is the source of truth for all relevant addresses for aave
     IPoolAddressesProvider public immutable addressesProvider;
@@ -64,6 +69,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         int256 aAmount0Change,
         int256 aAmount1Change
     ) external nonReentrant onlyOwner {
+        _adjustManagement(aPair, aAmount0Change, aAmount1Change);
+    }
+
+    function _adjustManagement(address aPair, int256 aAmount0Change, int256 aAmount1Change) private {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
             "AM: CAST_WOULD_OVERFLOW"
@@ -72,11 +81,14 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IERC20 lToken0 = IERC20(IConstantProductPair(aPair).token0());
         IERC20 lToken1 = IERC20(IConstantProductPair(aPair).token1());
 
+        address lToken0AToken = _getATokenAddress(address(lToken0));
+        address lToken1AToken = _getATokenAddress(address(lToken1));
+
         // withdraw from the market
-        if (aAmount0Change < 0) {
+        if (aAmount0Change < 0 && lToken0AToken != address(0)) {
             _doDivest(aPair, lToken0, uint256(-aAmount0Change));
         }
-        if (aAmount1Change < 0) {
+        if (aAmount1Change < 0 && lToken1AToken != address(0)) {
             _doDivest(aPair, lToken1, uint256(-aAmount1Change));
         }
 
@@ -84,10 +96,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IConstantProductPair(aPair).adjustManagement(aAmount0Change, aAmount1Change);
 
         // transfer the managed tokens to the destination
-        if (aAmount0Change > 0) {
+        if (aAmount0Change > 0 && lToken0AToken != address(0)) {
             _doInvest(aPair, lToken0, uint256(aAmount0Change));
         }
-        if (aAmount1Change > 0) {
+        if (aAmount1Change > 0 && lToken1AToken != address(0)) {
             _doInvest(aPair, lToken1, uint256(aAmount1Change));
         }
     }
@@ -107,6 +119,58 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         aToken.approve(address(pool), aAmount);
         pool.supply(address(aToken), aAmount, address(this), 0);
         emit FundsInvested(aPair, address(aToken), lShares);
+    }
+
+    function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
+        require(
+            aUpperThreshold <= 100
+            && aUpperThreshold > lowerThreshold,
+            "AM: INVALID_THRESHOLD"
+        );
+        upperThreshold = aUpperThreshold;
+    }
+
+    function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
+        require(
+            aLowerThreshold <= 100
+            && aLowerThreshold < upperThreshold,
+            "AM: INVALID_THRESHOLD"
+        );
+        lowerThreshold = aLowerThreshold;
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                CALLBACKS FROM PAIR
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function afterLiquidityEvent() external {
+        IConstantProductPair lPair = IConstantProductPair(msg.sender);
+        address lToken0 = lPair.token0();
+        address lToken1 = lPair.token1();
+        (uint112 lReserve0, uint112 lReserve1, ) = lPair.getReserves();
+
+        uint112 lToken0Managed = _getBalance(address(lPair), lToken0);
+        uint112 lToken1Managed = _getBalance(address(lPair), lToken1);
+
+        int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed);
+        int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed);
+
+        _adjustManagement(address(lPair), lAmount0Change, lAmount1Change);
+    }
+
+    function _calculateChangeAmount(
+        uint256 aReserve,
+        uint256 aManaged
+    ) internal view returns (int256 rAmountChange) {
+        uint256 lRatio = aManaged * 100 / aReserve;
+        if (lRatio < lowerThreshold) {
+            rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100 - aManaged);
+            assert(rAmountChange > 0);
+        }
+        else if (lRatio > upperThreshold) {
+            rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
+            assert(rAmountChange < 0);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -135,6 +199,8 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
     }
 
+    /// @notice returns the address of the AAVE token.
+    /// If an AAVE token doesn't exist for the asset, returns address 0
     function _getATokenAddress(address aToken) private view returns (address rATokenAddress) {
         (rATokenAddress , ,) = dataProvider.getReserveTokensAddresses(aToken);
     }

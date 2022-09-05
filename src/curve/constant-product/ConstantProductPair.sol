@@ -235,6 +235,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
+
+        _managerCallback();
     }
 
     // this low-level function should be called from a contract which performs important safety checks
@@ -262,6 +264,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
+
+        _managerCallback();
     }
 
     // this low-level function should be called from a contract which performs important safety checks
@@ -420,7 +424,14 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         token1Managed = lToken1Managed;
     }
 
-    function adjustManagement(int256 token0Change, int256 token1Change) external lock onlyManager {
+    function _managerCallback() private {
+        if (address(assetManager) == address(0)) {
+            return;
+        }
+        assetManager.afterLiquidityEvent();
+    }
+
+    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
         require(
             token0Change != type(int256).min && token1Change != type(int256).min,
             "CP: CAST_WOULD_OVERFLOW"
