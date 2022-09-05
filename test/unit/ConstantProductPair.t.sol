@@ -393,7 +393,7 @@ contract ConstantProductPairTest is BaseTest
 
         _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
 
-        //solhint-disable-next-line var-name-mixedcase
+        // solhint-disable-next-line var-name-mixedcase
         (uint112 lReserve0_1, uint112 lReserve1_1, ) = _constantProductPair.getReserves();
         uint256 lBal0After = IERC20(lToken0).balanceOf(address(_constantProductPair));
         uint256 lBal1After = IERC20(lToken1).balanceOf(address(_constantProductPair));
@@ -411,7 +411,7 @@ contract ConstantProductPairTest is BaseTest
         // act
         _manager.adjustManagement(_constantProductPair, -10e18, -10e18);
 
-        //solhint-disable-next-line var-name-mixedcase
+        // solhint-disable-next-line var-name-mixedcase
         (uint112 lReserve0_2, uint112 lReserve1_2, ) = _constantProductPair.getReserves();
 
         // assert
@@ -484,10 +484,10 @@ contract ConstantProductPairTest is BaseTest
     {
         // arrange
         uint256 lAmountToSwap = 1e17;
-        uint256 MAX_OBSERVATIONS = 2 ** 16;
+        uint256 lMaxObservations = 2 ** 16;
 
         // act
-        for (uint i = 0; i < MAX_OBSERVATIONS + 4; ++i) {
+        for (uint i = 0; i < lMaxObservations + 4; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
             (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
@@ -598,14 +598,15 @@ contract ConstantProductPairTest is BaseTest
     {
         // arrange
         uint256 lAmountToSwap = 1e18;
+        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_0, uint256 lReserve1_0, ) = _constantProductPair.getReserves();
-        uint256 lPrice0 = lReserve1_0 * 1e18 / lReserve0_0;
         uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
         _stepTime(5);
 
         // act
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(0, lOutput1, address(this), "");
+        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _constantProductPair.getReserves();
         uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
         _stepTime(5);
@@ -613,6 +614,7 @@ contract ConstantProductPairTest is BaseTest
         uint lOutput2 = _calculateOutput(lReserve0_1, lReserve1_1, lAmountToSwap, 30);
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(0, lOutput2, address(this), "");
+        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _constantProductPair.getReserves();
         uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
 
@@ -661,9 +663,9 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (int lAccPrice1, int lAccLiq1, uint32 lTimestamp1) = _constantProductPair.observations(0);
-        (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(1);
-        (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(2);
+        (int lAccPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(0);
+        (int lAccPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(1);
+        (int lAccPrice3, , uint32 lTimestamp3) = _constantProductPair.observations(2);
 
         assertEq(lAccPrice1, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10, "2");
