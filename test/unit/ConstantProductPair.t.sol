@@ -552,28 +552,24 @@ contract ConstantProductPairTest is BaseTest
         _writeObservation(
             _constantProductPair,
             _constantProductPair.index(),
-            type(int112).max - 10,
+            type(int112).max,
             0,
             uint32(block.timestamp)
         );
-
-        int112 lPrevAccPrice;
-        int112 lCurrAccPrice;
+        (int112 lPrevAccPrice, , ) = _constantProductPair.observations(_constantProductPair.index());
 
         // act
-        while (lCurrAccPrice >= lPrevAccPrice) {
-            (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
-            uint256 lAmountToSwap = 100e30;
-            uint256 lOutput = _calculateOutput(lReserve1, lReserve0, lAmountToSwap, 30);
-            _tokenB.mint(address(_constantProductPair), lAmountToSwap);
-            _constantProductPair.swap(lOutput, 0, address(this), "");
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+        uint256 lAmountToSwap = 1e18;
+        uint256 lOutput = _calculateOutput(lReserve1, lReserve0, lAmountToSwap, 30);
+        _tokenB.mint(address(_constantProductPair), lAmountToSwap);
+        _constantProductPair.swap(lOutput, 0, address(this), "");
 
-            _stepTime(5);
-            lPrevAccPrice = lCurrAccPrice;
-            (lCurrAccPrice, , ) = _constantProductPair.observations(_constantProductPair.index());
-        }
+        _stepTime(5);
+        _constantProductPair.sync();
 
         // assert - when it overflows it goes from a very positive number to a very negative number
+        (int112 lCurrAccPrice, , ) = _constantProductPair.observations(_constantProductPair.index());
         assertLt(lCurrAccPrice, lPrevAccPrice);
     }
 
@@ -584,22 +580,17 @@ contract ConstantProductPairTest is BaseTest
             _constantProductPair,
             _constantProductPair.index(),
             0,
-            type(int112).max - 10,
+            type(int112).max,
             uint32(block.timestamp)
         );
-
-        int112 lPrevAccLiq;
-        int112 lCurrAccLiq;
+        (, int112 lPrevAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
 
         // act
-        while (lCurrAccLiq >= lPrevAccLiq) {
-            _stepTime(5);
-            _constantProductPair.sync();
-            lPrevAccLiq = lCurrAccLiq;
-            (, lCurrAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
-        }
+        _stepTime(5);
+        _constantProductPair.sync();
 
         // assert
+        (, int112 lCurrAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
         assertLt(lCurrAccLiq, lPrevAccLiq);
     }
 
