@@ -656,7 +656,6 @@ contract ConstantProductPairTest is BaseTest
 
         // price = 1
         _stepTime(10);
-        // _constantProductPair.sync();
 
         // act
         // price = 4
