@@ -263,8 +263,8 @@ contract ConstantProductPairTest is BaseTest
         vm.prank(address(_factory));
         _constantProductPair.setManager(_manager);
         _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
-        _manager.adjustBalance(address(_constantProductPair), _constantProductPair.token0(), 25e18);
-        _manager.adjustBalance(address(_constantProductPair), _constantProductPair.token1(), 26e18);
+        _manager.adjustBalance(_constantProductPair, _constantProductPair.token0(), 25e18);
+        _manager.adjustBalance(_constantProductPair, _constantProductPair.token1(), 26e18);
 
         // act
         _constantProductPair.sync();
@@ -375,8 +375,8 @@ contract ConstantProductPairTest is BaseTest
 
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18);
-        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken0)), 20e18);
-        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken1)), 20e18);
+        assertEq(_manager.getBalance(_constantProductPair, address(lToken0)), 20e18);
+        assertEq(_manager.getBalance(_constantProductPair, address(lToken1)), 20e18);
 
         // act
         _manager.adjustManagement(_constantProductPair, -10e18, -10e18);
@@ -389,8 +389,8 @@ contract ConstantProductPairTest is BaseTest
         assertEq(uint256(lReserve1_2), lReserve1);
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
-        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken0)), 10e18);
-        assertEq(_manager.getBalance(address(_constantProductPair), address(lToken1)), 10e18);
+        assertEq(_manager.getBalance(_constantProductPair, address(lToken0)), 10e18);
+        assertEq(_manager.getBalance(_constantProductPair, address(lToken1)), 10e18);
     }
 
     function testSyncManaged() external
@@ -411,18 +411,18 @@ contract ConstantProductPairTest is BaseTest
         assertEq(lLiq, 10e18); // sqrt(10e18, 10e18)
         assertEq(_tokenA.balanceOf(address(this)), 0);
         assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_manager.getBalance(address(_constantProductPair), lToken0), 20e18);
-        assertEq(_manager.getBalance(address(_constantProductPair), lToken1), 20e18);
+        assertEq(_manager.getBalance(_constantProductPair, lToken0), 20e18);
+        assertEq(_manager.getBalance(_constantProductPair, lToken1), 20e18);
 
         // act
-        _manager.adjustBalance(address(_constantProductPair), lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(address(_constantProductPair), lToken1, 19e18); // 1e18 lost
+        _manager.adjustBalance(_constantProductPair, lToken0, 19e18); // 1e18 lost
+        _manager.adjustBalance(_constantProductPair, lToken1, 19e18); // 1e18 lost
         _constantProductPair.transfer(address(_constantProductPair), 10e18);
         _constantProductPair.burn(address(this));
 
         // assert
-        assertEq(_manager.getBalance(address(_constantProductPair), lToken0), 19e18);
-        assertEq(_manager.getBalance(address(_constantProductPair), lToken1), 19e18);
+        assertEq(_manager.getBalance(_constantProductPair, lToken0), 19e18);
+        assertEq(_manager.getBalance(_constantProductPair, lToken1), 19e18);
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }

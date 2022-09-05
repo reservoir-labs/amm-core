@@ -8,12 +8,12 @@ import "src/libraries/UQ112x112.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
-import "src/interfaces/IAssetsManagedPair.sol";
+import "src/interfaces/IAssetManagedPair.sol";
 import "src/UniswapV2ERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 
-contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, IAssetsManagedPair {
+contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     using UQ112x112 for uint224;
     using SafeCast for uint256;
 
@@ -36,8 +36,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, IAssetsMan
     uint public customPlatformFee = type(uint).max;
 
     GenericFactory immutable public factory;
-    address immutable public override(IConstantProductPair, IAssetsManagedPair) token0;
-    address immutable public override(IConstantProductPair, IAssetsManagedPair) token1;
+    address immutable public token0;
+    address immutable public token1;
 
     uint112 private reserve0;           // uses single storage slot, accessible via getReserves
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
@@ -117,9 +117,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, IAssetsMan
         platformFee = _platformFee;
     }
 
-    function getReserves() public view
-    override(IConstantProductPair, IAssetsManagedPair)
-    returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
         _reserve0 = reserve0;
         _reserve1 = reserve1;
         _blockTimestampLast = blockTimestampLast;
@@ -386,8 +384,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, IAssetsMan
             return;
         }
 
-        uint112 lToken0Managed = assetManager.getBalance(address(this), token0);
-        uint112 lToken1Managed = assetManager.getBalance(address(this), token1);
+        uint112 lToken0Managed = assetManager.getBalance(this, token0);
+        uint112 lToken1Managed = assetManager.getBalance(this, token1);
 
         _handleReport(token0, token0Managed, lToken0Managed);
         _handleReport(token1, token1Managed, lToken1Managed);

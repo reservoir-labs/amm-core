@@ -1,9 +1,10 @@
 pragma solidity 0.8.13;
 
-import "src/interfaces/IAssetManager.sol";
+import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-interface IConstantProductPair {
+interface IConstantProductPair is IAssetManagedPair {
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
     event Swap(

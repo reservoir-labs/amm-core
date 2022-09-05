@@ -12,7 +12,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import "src/UniswapV2ERC20.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/ITridentCallee.sol";
-import "src/interfaces/IAssetsManagedPair.sol";
+import "src/interfaces/IAssetManagedPair.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
@@ -29,7 +29,7 @@ struct AmplificationData {
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetsManagedPair {
+contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetManagedPair {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
@@ -575,8 +575,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetsManagedPair {
             return;
         }
 
-        uint112 lToken0Managed = assetManager.getBalance(address(this), token0);
-        uint112 lToken1Managed = assetManager.getBalance(address(this), token1);
+        uint112 lToken0Managed = assetManager.getBalance(this, token0);
+        uint112 lToken1Managed = assetManager.getBalance(this, token1);
 
         _handleReport(token0, token0Managed, lToken0Managed);
         _handleReport(token1, token1Managed, lToken1Managed);

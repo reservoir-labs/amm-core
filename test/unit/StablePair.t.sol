@@ -517,8 +517,8 @@ contract StablePairTest is BaseTest
 
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18);
-        assertEq(_manager.getBalance(address(_stablePair), address(lToken0)), 20e18);
-        assertEq(_manager.getBalance(address(_stablePair), address(lToken1)), 20e18);
+        assertEq(_manager.getBalance(_stablePair, address(lToken0)), 20e18);
+        assertEq(_manager.getBalance(_stablePair, address(lToken1)), 20e18);
 
         // act
         _manager.adjustManagement(_stablePair, -10e18, -10e18);
@@ -531,8 +531,8 @@ contract StablePairTest is BaseTest
         assertEq(uint256(lReserve1_2), lReserve1);
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
-        assertEq(_manager.getBalance(address(_stablePair), address(lToken0)), 10e18);
-        assertEq(_manager.getBalance(address(_stablePair), address(lToken1)), 10e18);
+        assertEq(_manager.getBalance(_stablePair, address(lToken0)), 10e18);
+        assertEq(_manager.getBalance(_stablePair, address(lToken1)), 10e18);
     }
 
     function testSyncManaged() external
@@ -553,18 +553,18 @@ contract StablePairTest is BaseTest
         assertEq(lLiq, 20e18); // 10e18 + 10e18
         assertEq(_tokenA.balanceOf(address(this)), 0);
         assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_manager.getBalance(address(_stablePair), lToken0), 20e18);
-        assertEq(_manager.getBalance(address(_stablePair), lToken1), 20e18);
+        assertEq(_manager.getBalance(_stablePair, lToken0), 20e18);
+        assertEq(_manager.getBalance(_stablePair, lToken1), 20e18);
 
         // act
-        _manager.adjustBalance(address(_stablePair), lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(address(_stablePair), lToken1, 19e18); // 1e18 lost
+        _manager.adjustBalance(_stablePair, lToken0, 19e18); // 1e18 lost
+        _manager.adjustBalance(_stablePair, lToken1, 19e18); // 1e18 lost
         _stablePair.transfer(address(_stablePair), 10e18);
         _stablePair.burn(address(this));
 
         // assert
-        assertEq(_manager.getBalance(address(_stablePair), lToken0), 19e18);
-        assertEq(_manager.getBalance(address(_stablePair), lToken1), 19e18);
+        assertEq(_manager.getBalance(_stablePair, lToken0), 19e18);
+        assertEq(_manager.getBalance(_stablePair, lToken1), 19e18);
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }

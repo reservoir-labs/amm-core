@@ -1,6 +1,6 @@
 pragma solidity 0.8.13;
 
-interface IAssetsManagedPair {
+interface IAssetManagedPair {
     function adjustManagement(int256 token0Change, int256 token1Change) external;
     function token0() external view returns (address);
     function token1() external view returns (address);
