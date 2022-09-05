@@ -608,39 +608,41 @@ contract ConstantProductPairTest is BaseTest
         // arrange
         uint256 lAmountToSwap = 1e18;
         (uint256 lReserve0_0, uint256 lReserve1_0, ) = _constantProductPair.getReserves();
+        uint256 lPrice0 = lReserve1_0 * 1e18 / lReserve0_0;
         uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
+        _stepTime(5);
 
         // act
-        uint256 lPrice0 = lReserve1_0 * 1e18 / lReserve0_0;
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(0, lOutput1, address(this), "");
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _constantProductPair.getReserves();
         uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
+        _stepTime(5);
 
         uint lOutput2 = _calculateOutput(lReserve0_1, lReserve1_1, lAmountToSwap, 30);
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(0, lOutput2, address(this), "");
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
+        (uint256 lReserve0_2, uint256 lReserve1_2, ) = _constantProductPair.getReserves();
+        uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
+
+        _stepTime(5);
+        _constantProductPair.sync();
 
         // assert
-        (int lAccPrice1, int lAccLiq1, uint32 lTimestamp1) = _constantProductPair.observations(0);
-        (int lAccPrice2, int lAccLiq2, uint32 lTimestamp2) = _constantProductPair.observations(1);
-        (int lAccPrice3, int lAccLiq3, uint32 lTimestamp3) = _constantProductPair.observations(2);
+        (int lAccPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(0);
+        (int lAccPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(1);
+        (int lAccPrice3, , uint32 lTimestamp3) = _constantProductPair.observations(2);
 
-        // todo: how to calculate fractional exponents in solidity
-        // the math is correct, just need to find an implementation
-        // console.log("geometric mean", (lPrice0 ** 4 * lPrice1) ** (1 / (lTimestamp2 - lTimestamp1)));
-
-        int256 lAveragePrice = (lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1);
-        console.logInt(lAveragePrice);
-
-        uint256 lUncompressedPrice = LogCompression.fromLowResLog(lAveragePrice);
-        console.log("uncompressed", lUncompressedPrice);
+        assertApproxEqRel(
+            LogCompression.fromLowResLog((lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1)),
+            lPrice1,
+            0.0001e18
+        );
+        assertApproxEqRel(
+            LogCompression.fromLowResLog((lAccPrice3 - lAccPrice1) / int32(lTimestamp3 - lTimestamp1)),
+            Math.sqrt(lPrice1 * lPrice2),
+            0.0001e18
+        );
     }
 
     function testOracle_SimplePrices() external
