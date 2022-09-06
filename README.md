@@ -8,15 +8,15 @@ This repo uses [foundry](https://github.com/foundry-rs/foundry)
 as the main tool for compiling and testing smart contracts. You can install
 foundry via:
 
-\`\`\`bash
+```shell
 curl -L https://foundry.paradigm.xyz | bash
-\`\`\`
+```
 
 For alternative installation options & more details [see the foundry repo](https://github.com/foundry-rs/foundry).
 
-### Install proejct dependencies
+### Install project dependencies
 
-```shell
+```bash
 git submodule update --init --recursive
 nvm use
 npm install
@@ -25,29 +25,27 @@ npm run install
 
 ## Building
 
-```shell
-
+```bash
 forge build
-
 ```
 
 ## Testing
 
 To run unit tests:
 
-```shell
+```bash
 forge test
 ```
 
 To run integration tests:
 
-```shell
+```bash
 npm run test:integration
 ```
 
 To run legacy tests:
 
-```shell
+```bash
 npm run test:uniswap
 ```
 
