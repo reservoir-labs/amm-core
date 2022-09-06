@@ -2,8 +2,17 @@
 
 ## Setup
 
+## Install global dependencies
+
 This repo uses [foundry](https://github.com/foundry-rs/foundry)
-as the main tool for compiling and testing smart contracts.
+as the main tool for compiling and testing smart contracts. You can install
+foundry via:
+
+\`\`\`bash
+curl -L https://foundry.paradigm.xyz | bash
+\`\`\`
+
+For alternative installation options & more details [see the foundry repo](https://github.com/foundry-rs/foundry).
 
 ### Install proejct dependencies
 
