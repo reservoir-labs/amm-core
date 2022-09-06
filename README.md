@@ -5,7 +5,16 @@
 This repo uses [foundry](https://github.com/foundry-rs/foundry)
 as the main tool for compiling and testing smart contracts.
 
-## Compiling
+To install dependencies: 
+
+```shell
+git submodule update --init --recursive
+nvm use
+npm install
+npm run install 
+```
+
+## Building
 
 ```shell
 forge build
@@ -13,8 +22,19 @@ forge build
 
 ## Testing
 
+To run unit tests: 
 ```shell
 forge test
+```
+
+To run integration tests: 
+```shell
+npm run test:integration
+```
+
+To run legacy tests: 
+```shell
+npm run test:uniswap
 ```
 
 ## Contributing
