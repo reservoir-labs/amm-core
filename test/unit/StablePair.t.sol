@@ -61,40 +61,26 @@ contract StablePairTest is BaseTest
     function testMintFee_WhenRampingA() public
     {
         // arrange
+        StablePair lOtherPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        _tokenC.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        _tokenD.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        lOtherPair.mint(_alice);
 
-        // create new pair
-        StablePair _stablePairB = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
-        _tokenC.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
-        _tokenD.mint(address(_stablePairB), INITIAL_MINT_AMOUNT);
-        _stablePairB.mint(_alice);
+        // act
+        for (uint256 i = 0; i < 10; ++i) {
+            uint256 lAmountToSwap = 5e18;
 
-        // get reserves for both pairs
-        (uint256 lReserve0, uint256 lReserve1) = _stablePair.getReserves();
-        (uint256 lReserveB0, uint256 lReserveB1) = _stablePairB.getReserves();
+            _tokenA.mint(address(_stablePair), lAmountToSwap);
+            _stablePair.swap(address(_tokenA), address(this));
 
-        // set times
+            _tokenD.mint(address(lOtherPair), lAmountToSwap);
+            lOtherPair.swap(address(_tokenD), address(this));
+        }
+
+        // we change A for _stablePair but not for lOtherPair
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
         uint64 lFutureAToSet = 5000;
-
-        // initial A
-        uint64 preA = _stablePair.getCurrentA();
-
-        // act
-        vm.prank(address(_stablePair));
-        _stablePair.mintFee(lReserve0, lReserve1);
-
-        vm.prank(address(_stablePairB));
-        _stablePairB.mintFee(lReserveB0, lReserveB1);
-
-        // act
-        for (uint256 i = 0; i < 2; i++) {
-            _tokenA.mint(address(_stablePair), 5e18);
-            _stablePair.swap(address(_tokenA), address(this));
-
-            _tokenC.mint(address(_stablePairB), 5e18);
-            _stablePairB.swap(address(_tokenC), address(this));
-        }
 
         _factory.rawCall(
             address(_stablePair),
@@ -103,39 +89,27 @@ contract StablePairTest is BaseTest
         );
 
         // sanity
-        assertEq(_stablePair.getCurrentA(), 1000);
-
-        // arrange
-        // warp to the midpoint between the initialATime and futureATime
-        vm.warp((lFutureATimestamp + block.timestamp) / 2);
-
-        // sanity
-        assertEq(_stablePair.getCurrentA(), (1000 + lFutureAToSet) / 2);
+        assertEq(_stablePair.getCurrentA(), lOtherPair.getCurrentA());
 
         // warp to the end
         vm.warp(lFutureATimestamp);
+        assertEq(_stablePair.getCurrentA(), lFutureAToSet);
+        assertGt(_stablePair.getCurrentA(), lOtherPair.getCurrentA());
 
         // sanity
-        assertEq(_stablePair.getCurrentA(), lFutureAToSet);
+        (uint256 lReserve0, uint256 lReserve1) = _stablePair.getReserves();
+        (uint256 lReserveB0, uint256 lReserveB1) = lOtherPair.getReserves();
+        assertEq(lReserve0, lReserveB0);
+        assertEq(lReserve1, lReserveB1);
 
-        console.log(_tokenC.balanceOf(address(this)));
-        console.log(_tokenD .balanceOf(address(this)));
-
-        // act
-        (lReserve0, lReserve1) = _stablePair.getReserves();
         vm.prank(address(_stablePair));
         _stablePair.mintFee(lReserve0, lReserve1);
+        vm.prank(address(lOtherPair));
+        lOtherPair.mintFee(lReserveB0, lReserveB1);
 
-        (lReserveB0, lReserveB1) = _stablePairB.getReserves();
-        vm.prank(address(_stablePairB));
-        _stablePairB.mintFee(lReserveB0, lReserveB1);
-
-        // arrange
-        uint64 postA = _stablePair.getCurrentA();
-
-        // assert
-        assertFalse(preA == postA);
-        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), _stablePairB.balanceOf(address(_platformFeeTo)));
+        // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
+        console.log("% diff", stdMath.percentDelta(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo))));
     }
 
     function testMintFee_CallableBySelf() public
