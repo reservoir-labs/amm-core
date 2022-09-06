@@ -61,9 +61,9 @@ contract StablePairTest is BaseTest
     function testMintFee_WhenRampingA() public
     {
         // arrange
-        StablePair lOtherPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
+        _tokenA.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
         _tokenC.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
-        _tokenD.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
         lOtherPair.mint(_alice);
 
         // act
@@ -73,8 +73,8 @@ contract StablePairTest is BaseTest
             _tokenA.mint(address(_stablePair), lAmountToSwap);
             _stablePair.swap(address(_tokenA), address(this));
 
-            _tokenD.mint(address(lOtherPair), lAmountToSwap);
-            lOtherPair.swap(address(_tokenD), address(this));
+            _tokenA.mint(address(lOtherPair), lAmountToSwap);
+            lOtherPair.swap(address(_tokenA), address(this));
         }
 
         // we change A for _stablePair but not for lOtherPair
