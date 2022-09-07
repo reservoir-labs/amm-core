@@ -47,10 +47,10 @@ abstract contract AssetManagedPair is IAssetManagedPair {
     /*//////////////////////////////////////////////////////////////////////////
                                 ASSET MANAGEMENT
 
-    Asset management is supported via a two -way interface. The pool is able to
+    Asset management is supported via a two-way interface. The pool is able to
     ask the current asset manager for the latest view of the balances. In turn
-    the asset manager can move assets in/ out of the pool. This section
-    implements the pool - side of the equation. The manager's side is abstracted
+    the asset manager can move assets in/out of the pool. This section
+    implements the pool side of the equation. The manager's side is abstracted
     behind the IAssetManager interface.
 
     //////////////////////////////////////////////////////////////////////////*/

@@ -11,7 +11,6 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 import "src/UniswapV2ERC20.sol";
 import "src/asset-management/AssetManagedPair.sol";
-import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/ITridentCallee.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";

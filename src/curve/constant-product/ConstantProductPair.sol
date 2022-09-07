@@ -15,7 +15,6 @@ import "src/asset-management/AssetManagedPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManagedPair {
-    using UQ112x112 for uint224;
     using SafeCast for uint256;
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;

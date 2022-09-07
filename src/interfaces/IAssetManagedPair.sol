@@ -1,6 +1,6 @@
 pragma solidity 0.8.13;
 
-import "src/interfaces/IAssetManager.sol";
+import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 
 interface IAssetManagedPair {
     function adjustManagement(int256 token0Change, int256 token1Change) external;
