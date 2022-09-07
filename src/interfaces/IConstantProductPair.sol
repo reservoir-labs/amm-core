@@ -4,7 +4,7 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-interface IConstantProductPair is IAssetManagedPair {
+interface IConstantProductPair {
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
     event Swap(
@@ -19,6 +19,7 @@ interface IConstantProductPair is IAssetManagedPair {
 
     // solhint-disable-next-line func-name-mixedcase
     function MINIMUM_LIQUIDITY() external pure returns (uint);
+
     function factory() external view returns (GenericFactory);
     function token0() external view returns (address);
     function token1() external view returns (address);
@@ -37,7 +38,4 @@ interface IConstantProductPair is IAssetManagedPair {
 
     function setCustomSwapFee(uint _customSwapFee) external;
     function setCustomPlatformFee(uint _customPlatformFee) external;
-
-    function assetManager() external returns (IAssetManager);
-    function setManager(IAssetManager manager) external;
 }

@@ -186,7 +186,9 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        _syncManaged();
+
+        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -204,10 +206,10 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        _update();
+        _update(balance0, balance1, _reserve0, _reserve1);
 
-        lastLiquidityEventReserve0 = reserve0;
-        lastLiquidityEventReserve1 = reserve1;
+        lastLiquidityEventReserve0 = reserve0; // reserves are up to date
+        lastLiquidityEventReserve1 = reserve1; // reserves are up to date
 
         uint256 liquidityForEvent = liquidity;
         emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
@@ -217,6 +219,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
     function burn(address to) public nonReentrant returns (uint256[] memory withdrawnAmounts) {
+        _syncManaged();
+
         (uint256 balance0, uint256 balance1) = _balance();
         uint256 liquidity = balanceOf[address(this)];
 
@@ -240,7 +244,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         _safeTransfer(token0, to, amount0);
         _safeTransfer(token1, to, amount1);
 
-        _update();
+        _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
         withdrawnAmounts = new uint256[](2);
         withdrawnAmounts[0] = amount0;
@@ -256,7 +260,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
 
     /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
     function swap(address tokenIn, address to) public nonReentrant returns (uint256 amountOut) {
-        (uint256 _reserve0, uint256 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
+        (uint112 _reserve0, uint112 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
         uint256 amountIn;
         address tokenOut;
 
@@ -275,13 +279,13 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
         _safeTransfer(tokenOut, to, amountOut);
-        _update();
+        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
     function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
         address tokenOut;
 
         if (tokenIn == token0) {
@@ -298,7 +302,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
             uint256 balance1 = _totalToken1();
             require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
         }
-        _update();
+        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
@@ -325,8 +329,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
     internal
     view
     returns (
-        uint256 _reserve0,
-        uint256 _reserve1,
+        uint112 _reserve0,
+        uint112 _reserve1,
         uint256 balance0,
         uint256 balance1
     )
@@ -344,12 +348,12 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         // balance1 = total1.toElastic(balance1);
     }
 
-    function _update() internal override {
-        (uint256 _reserve0, uint256 _reserve1) = _balance();
-        require(_reserve0 <= type(uint112).max && _reserve1 <= type(uint112).max, "SP: OVERFLOW");
-        reserve0 = uint112(_reserve0);
-        reserve1 = uint112(_reserve1);
-        emit Sync(_reserve0, _reserve1);
+    // todo: currently the reserve arguments are not used but will be used once we implement the oracle
+    function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
+        require(totalToken0 <= type(uint112).max && totalToken1 <= type(uint112).max, "SP: OVERFLOW");
+        reserve0 = uint112(totalToken0);
+        reserve1 = uint112(totalToken1);
+        emit Sync(reserve0, reserve1);
     }
 
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
