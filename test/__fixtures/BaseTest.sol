@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
+import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
@@ -24,7 +25,7 @@ abstract contract BaseTest is Test {
     MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC");
 
     ConstantProductPair   internal _constantProductPair;
-    StablePair      internal _stablePair;
+    StablePair            internal _stablePair;
 
     constructor()
     {

@@ -6,7 +6,6 @@ import { stdStorage } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
-import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
 import { LogExpMath } from "src/libraries/LogExpMath.sol";
