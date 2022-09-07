@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
