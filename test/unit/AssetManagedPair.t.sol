@@ -12,6 +12,7 @@ contract AssetManagedPairTest is BaseTest
     AssetManager private _manager = new AssetManager();
 
     IAssetManagedPair[] internal _pairs;
+    IAssetManagedPair   internal _pair;
 
     function setUp() public
     {
@@ -19,27 +20,29 @@ contract AssetManagedPairTest is BaseTest
         _pairs.push(_stablePair);
     }
 
-    function _setManager(IAssetManagedPair aPair) internal
-    {
-        // sanity
-        assertEq(address(aPair.assetManager()), address(0));
-
-        // act
-        vm.prank(address(_factory));
-        aPair.setManager(_manager);
-
-        // assert
-        assertEq(address(aPair.assetManager()), address(_manager));
-    }
-
-    function testSetManager() external
-    {
-        for (uint i = 0; i < _pairs.length; ++i) {
-            _setManager(_pairs[i]);
+    modifier parameterizedTest() {
+        for (uint256 i = 0; i < _pairs.length; ++i) {
+            _pair = _pairs[i];
+            uint256 lBefore = vm.snapshot();
+            _;
+            vm.revertTo(lBefore);
         }
     }
 
-    function testSetManager_CannotMigrateWithManaged() external
+    function testSetManager() external parameterizedTest
+    {
+        // sanity
+        assertEq(address(_pair.assetManager()), address(0));
+
+        // act
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // assert
+        assertEq(address(_pair.assetManager()), address(_manager));
+    }
+
+    function testSetManager_CannotMigrateWithManaged() external parameterizedTest
     {
         // arrange
         vm.prank(address(_factory));
