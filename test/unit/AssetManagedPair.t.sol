@@ -4,6 +4,7 @@ import "test/__fixtures/BaseTest.sol";
 
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
+import { MathUtils } from "src/libraries/MathUtils.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
@@ -172,6 +173,9 @@ contract AssetManagedPairTest is BaseTest
         // assert
         assertEq(_manager.getBalance(_stablePair, lToken0), 19e18);
         assertEq(_manager.getBalance(_stablePair, lToken1), 19e18);
+        (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
+        assertTrue(MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT + 10e18 - 1e18) * 210e18 / 220e18));
+        assertTrue(MathUtils.within1(lReserve1, (INITIAL_MINT_AMOUNT + 10e18 - 1e18) * 210e18 / 220e18));
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
