@@ -10,7 +10,9 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 import "src/UniswapV2ERC20.sol";
+import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/ITridentCallee.sol";
+import "src/interfaces/IAssetManagedPair.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
@@ -27,7 +29,7 @@ struct AmplificationData {
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-contract StablePair is UniswapV2ERC20, ReentrancyGuard {
+contract StablePair is UniswapV2ERC20, ReentrancyGuard, IAssetManagedPair {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
@@ -72,13 +74,15 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     uint256 public immutable token0PrecisionMultiplier;
     uint256 public immutable token1PrecisionMultiplier;
 
-    uint128 internal reserve0;
-    uint128 internal reserve1;
+    uint112 internal reserve0;
+    uint112 internal reserve1;
+    uint32  internal blockTimestampLast;
+
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
     // We no longer store dLast as dLast is dependent on the amp coefficient, which is dynamic
-    uint128 internal lastLiquidityEventReserve0;
-    uint128 internal lastLiquidityEventReserve1;
+    uint112 internal lastLiquidityEventReserve0;
+    uint112 internal lastLiquidityEventReserve1;
 
     modifier onlyFactory() {
         require(msg.sender == address(factory), "SP: FORBIDDEN");
@@ -196,7 +200,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -214,13 +218,15 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        _updateReserves();
+        _update();
 
         lastLiquidityEventReserve0 = reserve0;
         lastLiquidityEventReserve1 = reserve1;
 
         uint256 liquidityForEvent = liquidity;
         emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
+
+        _managerCallback();
     }
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
@@ -248,7 +254,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         _safeTransfer(token0, to, amount0);
         _safeTransfer(token1, to, amount1);
 
-        _updateReserves();
+        _update();
 
         withdrawnAmounts = new uint256[](2);
         withdrawnAmounts[0] = amount0;
@@ -258,6 +264,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         lastLiquidityEventReserve1 = reserve1;
 
         emit Burn(msg.sender, amount0, amount1, to, liquidity);
+
+        _managerCallback();
     }
 
     /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
@@ -281,30 +289,30 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
         }
         _safeTransfer(tokenOut, to, amountOut);
-        _updateReserves();
+        _update();
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
     /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
     function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         address tokenOut;
 
         if (tokenIn == token0) {
             tokenOut = token1;
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
             _processSwap(token1, to, amountOut, context);
-            uint256 balance0 = ERC20(token0).balanceOf(address(this));
+            uint256 balance0 = _totalToken0();
             require(balance0 - _reserve0 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
         } else {
             require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
             tokenOut = token0;
             amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
             _processSwap(token0, to, amountOut, context);
-            uint256 balance1 = ERC20(token1).balanceOf(address(this));
+            uint256 balance1 = _totalToken1();
             require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
         }
-        _updateReserves();
+        _update();
         emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
     }
 
@@ -323,8 +331,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         if (data.length != 0) ITridentCallee(msg.sender).tridentSwapCallback(data);
     }
 
-    function _getReserves() internal view returns (uint256 _reserve0, uint256 _reserve1) {
-        (_reserve0, _reserve1) = (reserve0, reserve1);
+    function _getReserves() internal view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+        (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
     }
 
     function _getReservesAndBalances()
@@ -338,8 +346,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     )
     {
         (_reserve0, _reserve1) = (reserve0, reserve1);
-        balance0 = ERC20(token0).balanceOf(address(this));
-        balance1 = ERC20(token1).balanceOf(address(this));
+        (balance0, balance1) = _balance();
 
         // TODO: take into account calculation of rebase tokens
         // Rebase memory total0 = bento.totals(token0);
@@ -351,17 +358,17 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         // balance1 = total1.toElastic(balance1);
     }
 
-    function _updateReserves() internal {
+    function _update() internal {
         (uint256 _reserve0, uint256 _reserve1) = _balance();
-        require(_reserve0 <= type(uint128).max && _reserve1 <= type(uint128).max, "SP: OVERFLOW");
-        reserve0 = uint128(_reserve0);
-        reserve1 = uint128(_reserve1);
+        require(_reserve0 <= type(uint112).max && _reserve1 <= type(uint112).max, "SP: OVERFLOW");
+        reserve0 = uint112(_reserve0);
+        reserve1 = uint112(_reserve1);
         emit Sync(_reserve0, _reserve1);
     }
 
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = ERC20(token0).balanceOf(address(this));
-        balance1 = ERC20(token1).balanceOf(address(this));
+        balance0 = _totalToken0();
+        balance1 = _totalToken1();
     }
 
     function _getAmountOut(
@@ -467,7 +474,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
     }
 
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
 
         if (tokenIn == token0) {
             finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
@@ -477,12 +484,12 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         }
     }
 
-    function getReserves() public view returns (uint256 _reserve0, uint256 _reserve1) {
-        (_reserve0, _reserve1) = _getReserves();
+    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+        (_reserve0, _reserve1, _blockTimestampLast) = _getReserves();
     }
 
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 _reserve0, uint256 _reserve1) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
     }
@@ -496,5 +503,132 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard {
         uint _amountToRecover = ERC20(token).balanceOf(address(this));
 
         _safeTransfer(token, _recoverer, _amountToRecover);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ASSET MANAGER
+    //////////////////////////////////////////////////////////////////////////*/
+
+    IAssetManager public assetManager;
+
+    function setManager(IAssetManager manager) external onlyFactory {
+        require(token0Managed == 0 && token1Managed == 0, "CP: AM_STILL_ACTIVE");
+        assetManager = manager;
+    }
+
+    modifier onlyManager() {
+        require(msg.sender == address(assetManager), "CP: AUTH_NOT_ASSET_MANAGER");
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ASSET MANAGEMENT
+
+    Asset management is supported via a two -way interface. The pool is able to
+    ask the current asset manager for the latest view of the balances. In turn
+    the asset manager can move assets in/ out of the pool. This section
+    implements the pool - side of the equation. The manager's side is abstracted
+    behind the IAssetManager interface.
+
+    //////////////////////////////////////////////////////////////////////////*/
+
+    uint112 public token0Managed;
+    uint112 public token1Managed;
+
+    function _totalToken0() private view returns (uint256) {
+        return IERC20(token0).balanceOf(address(this)) + uint256(token0Managed);
+    }
+
+    function _totalToken1() private view returns (uint256) {
+        return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
+    }
+
+    event ProfitReported(address token, uint112 amount);
+    event LossReported(address token, uint112 amount);
+
+    function _handleReport(address token, uint112 prevBalance, uint112 newBalance) private {
+        if (newBalance > prevBalance) {
+            // report profit
+            uint112 lProfit = newBalance - prevBalance;
+
+            emit ProfitReported(token, lProfit);
+
+            token == token0
+                ? reserve0 += lProfit
+                : reserve1 += lProfit;
+        }
+        else if (newBalance < prevBalance) {
+            // report loss
+            uint112 lLoss = prevBalance - newBalance;
+
+            emit LossReported(token, lLoss);
+
+            token == token0
+                ? reserve0 -= lLoss
+                : reserve1 -= lLoss;
+        }
+        // else do nothing balance is equal
+    }
+
+    function _syncManaged() private {
+        if (address(assetManager) == address(0)) {
+            return;
+        }
+
+        uint112 lToken0Managed = assetManager.getBalance(this, token0);
+        uint112 lToken1Managed = assetManager.getBalance(this, token1);
+
+        _handleReport(token0, token0Managed, lToken0Managed);
+        _handleReport(token1, token1Managed, lToken1Managed);
+
+        token0Managed = lToken0Managed;
+        token1Managed = lToken1Managed;
+    }
+
+    function _managerCallback() private {
+        if (address(assetManager) == address(0)) {
+            return;
+        }
+        assetManager.afterLiquidityEvent();
+    }
+
+    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
+        require(
+            token0Change != type(int256).min && token1Change != type(int256).min,
+            "CP: CAST_WOULD_OVERFLOW"
+        );
+
+        if (token0Change > 0) {
+            uint112 lDelta = uint112(uint256(int256(token0Change)));
+            token0Managed += lDelta;
+            IERC20(token0).transfer(address(assetManager), lDelta);
+        }
+        else if (token0Change < 0) {
+            uint112 lDelta = uint112(uint256(int256(-token0Change)));
+
+            // solhint-disable-next-line reentrancy
+            token0Managed -= lDelta;
+
+            IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
+        }
+
+        if (token1Change > 0) {
+            uint112 lDelta = uint112(uint256(int256(token1Change)));
+
+            // solhint-disable-next-line reentrancy
+            token1Managed += lDelta;
+
+            IERC20(token1).transfer(address(assetManager), lDelta);
+        }
+        else if (token1Change < 0) {
+            uint112 lDelta = uint112(uint256(int256(-token1Change)));
+
+            // solhint-disable-next-line reentrancy
+            token1Managed -= lDelta;
+
+            IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
+        }
+
+        _update();
     }
 }

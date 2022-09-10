@@ -8,6 +8,7 @@ import "src/libraries/ConstantProductOracleMath.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
+import "src/interfaces/IAssetManagedPair.sol";
 import "src/UniswapV2ERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -414,8 +415,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             return;
         }
 
-        uint112 lToken0Managed = assetManager.getBalance(address(this), token0);
-        uint112 lToken1Managed = assetManager.getBalance(address(this), token1);
+        uint112 lToken0Managed = assetManager.getBalance(this, token0);
+        uint112 lToken1Managed = assetManager.getBalance(this, token1);
 
         _handleReport(token0, token0Managed, lToken0Managed);
         _handleReport(token1, token1Managed, lToken1Managed);
