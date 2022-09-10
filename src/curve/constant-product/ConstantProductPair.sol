@@ -4,7 +4,7 @@ import "@openzeppelin/token/ERC20/IERC20.sol";
 import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
-import "src/libraries/UQ112x112.sol";
+import "src/libraries/ConstantProductOracleMath.sol";
 import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
@@ -14,7 +14,6 @@ import "src/UniswapV2ERC20.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
-    using UQ112x112 for uint224;
     using SafeCast for uint256;
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
@@ -26,7 +25,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     uint256 public constant FEE_ACCURACY     = 10_000;
 
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint public constant MIN_SWAP_FEE     = 1;      //  0.01%
+    uint public constant MIN_SWAP_FEE     = 0;      //  0.01%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     uint public swapFee;
@@ -43,9 +42,20 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     uint112 private reserve1;           // uses single storage slot, accessible via getReserves
     uint32  private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
-    uint public price0CumulativeLast;
-    uint public price1CumulativeLast;
-    uint public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    uint16 public index = type(uint16).max;
+
+    Observation[65536] public observations;
+
+    // todo: move struct def to a lib or a base class
+    struct Observation {
+        // natural log (ln) of the price (token1/token0)
+        int112 logAccPrice;
+        // natural log (ln) of the liquidity (sqrt(k))
+        int112 logAccLiquidity;
+        // overflows every 136 years, in the year 2106
+        uint32 timestamp;
+    }
 
     uint private unlocked = 1;
     modifier lock() {
@@ -134,11 +144,13 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
         // solhint-disable-next-line not-rely-on-time
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        uint32 timeElapsed;
+        unchecked {
+            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        }
+
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            // * never overflows, and + overflow is desired
-            price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
-            price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
+            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
         }
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
@@ -222,7 +234,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         _mint(to, liquidity);
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
@@ -251,7 +263,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         balance1 = _totalToken1();
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1, to);
 
         _managerCallback();
@@ -311,6 +323,25 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     function sync() external lock {
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ORACLE METHODS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
+        Observation storage previous = observations[index];
+
+        int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(_reserve0, _reserve1);
+        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(_reserve0, _reserve1);
+
+        // overflow is okay
+        unchecked {
+            int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));
+            int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int112(int256(uint256(timeElapsed)));
+            index += 1;
+            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -440,6 +471,8 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
 
+        // Why does this pattern look different to the sync() and _update()
+        // methods. That feels off?
         _update(
             _totalToken0(),
             _totalToken1(),
