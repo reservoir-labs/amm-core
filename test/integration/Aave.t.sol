@@ -9,7 +9,7 @@ import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { AaveManager } from "src/asset-manager/AaveManager.sol";
+import { AaveManager } from "src/asset-management/AaveManager.sol";
 
 contract AaveIntegrationTest is BaseTest
 {

@@ -11,7 +11,7 @@ contract AssetManager is IAssetManager
 {
     mapping(IAssetManagedPair => mapping(address => uint112)) public getBalance;
 
-    function adjustManagement(IAssetManagedPair aPair, int224 aToken0Amount, int224 aToken1Amount) external
+    function adjustManagement(IAssetManagedPair aPair, int256 aToken0Amount, int256 aToken1Amount) external
     {
         require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "AM: OVERFLOW");
 

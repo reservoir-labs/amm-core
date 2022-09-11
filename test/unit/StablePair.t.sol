@@ -9,13 +9,9 @@ import { StableMath } from "src/libraries/StableMath.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 contract StablePairTest is BaseTest
 {
-    AssetManager private _manager = new AssetManager();
-
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
 
     function _calculateConstantProductOutput(
@@ -438,134 +434,5 @@ contract StablePairTest is BaseTest
         assertTrue(lAmountOutT2 <= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 <= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
         assertTrue(lAmountOutT4 <= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                ASSET MANAGEMENT
-    //////////////////////////////////////////////////////////////////////////*/
-
-    function testSetManager() external
-    {
-        // sanity
-        assertEq(address(_stablePair.assetManager()), address(0));
-
-        // act
-        vm.prank(address(_factory));
-        _stablePair.setManager(_manager);
-
-        // assert
-        assertEq(address(_stablePair.assetManager()), address(_manager));
-    }
-
-    function testSetManager_CannotMigrateWithManaged() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _stablePair.setManager(_manager);
-
-        _manager.adjustManagement(_stablePair, 10e18, 10e18);
-
-        // act & assert
-        vm.prank(address(_factory));
-        vm.expectRevert("CP: AM_STILL_ACTIVE");
-        _stablePair.setManager(IAssetManager(address(0)));
-    }
-
-    function testManageReserves() external
-    {
-        // arrange
-        _tokenA.mint(address(_stablePair), 50e18);
-        _tokenB.mint(address(_stablePair), 50e18);
-        _stablePair.mint(address(this));
-
-        vm.prank(address(_factory));
-        _stablePair.setManager(IAssetManager(address(this)));
-
-        // act
-        _stablePair.adjustManagement(20e18, 20e18);
-
-        // assert
-        assertEq(_tokenA.balanceOf(address(this)), 20e18);
-        assertEq(_tokenB.balanceOf(address(this)), 20e18);
-    }
-
-    function testManageReserves_DecreaseManagement() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _stablePair.setManager(_manager);
-
-        address lToken0 = _stablePair.token0();
-        address lToken1 = _stablePair.token1();
-
-        // sanity
-        (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
-        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_stablePair));
-        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_stablePair));
-
-        _manager.adjustManagement(_stablePair, 20e18, 20e18);
-
-        //solhint-disable-next-line var-name-mixedcase
-        (uint112 lReserve0_1, uint112 lReserve1_1, ) = _stablePair.getReserves();
-        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_stablePair));
-        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_stablePair));
-
-        assertEq(uint256(lReserve0_1), lReserve0);
-        assertEq(uint256(lReserve1_1), lReserve1);
-        assertEq(lBal0Before - lBal0After, 20e18);
-        assertEq(lBal1Before - lBal1After, 20e18);
-
-        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18);
-        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18);
-        assertEq(_manager.getBalance(_stablePair, address(lToken0)), 20e18);
-        assertEq(_manager.getBalance(_stablePair, address(lToken1)), 20e18);
-
-        // act
-        _manager.adjustManagement(_stablePair, -10e18, -10e18);
-
-        //solhint-disable-next-line var-name-mixedcase
-        (uint112 lReserve0_2, uint112 lReserve1_2, ) = _stablePair.getReserves();
-
-        // assert
-        assertEq(uint256(lReserve0_2), lReserve0);
-        assertEq(uint256(lReserve1_2), lReserve1);
-        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
-        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
-        assertEq(_manager.getBalance(_stablePair, address(lToken0)), 10e18);
-        assertEq(_manager.getBalance(_stablePair, address(lToken1)), 10e18);
-    }
-
-    function testSyncManaged() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _stablePair.setManager(_manager);
-
-        address lToken0 = _stablePair.token0();
-        address lToken1 = _stablePair.token1();
-
-        _manager.adjustManagement(_stablePair, 20e18, 20e18);
-        _tokenA.mint(address(_stablePair), 10e18);
-        _tokenB.mint(address(_stablePair), 10e18);
-        uint256 lLiq = _stablePair.mint(address(this));
-
-        // sanity
-        assertEq(lLiq, 20e18); // 10e18 + 10e18
-        assertEq(_tokenA.balanceOf(address(this)), 0);
-        assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_manager.getBalance(_stablePair, lToken0), 20e18);
-        assertEq(_manager.getBalance(_stablePair, lToken1), 20e18);
-
-        // act
-        _manager.adjustBalance(_stablePair, lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(_stablePair, lToken1, 19e18); // 1e18 lost
-        _stablePair.transfer(address(_stablePair), 10e18);
-        _stablePair.burn(address(this));
-
-        // assert
-        assertEq(_manager.getBalance(_stablePair, lToken0), 19e18);
-        assertEq(_manager.getBalance(_stablePair, lToken1), 19e18);
-        assertLt(_tokenA.balanceOf(address(this)), 10e18);
-        assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 }

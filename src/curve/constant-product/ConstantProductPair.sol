@@ -5,15 +5,14 @@ import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
 import "src/libraries/ConstantProductOracleMath.sol";
-import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
-import "src/interfaces/IAssetManagedPair.sol";
 import "src/UniswapV2ERC20.sol";
+import "src/asset-management/AssetManagedPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 
-contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
+contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManagedPair {
     using SafeCast for uint256;
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
@@ -33,14 +32,6 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
 
     uint public platformFee;
     uint public customPlatformFee = type(uint).max;
-
-    GenericFactory immutable public factory;
-    address immutable public token0;
-    address immutable public token1;
-
-    uint112 private reserve0;           // uses single storage slot, accessible via getReserves
-    uint112 private reserve1;           // uses single storage slot, accessible via getReserves
-    uint32  private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
     uint16 public index = type(uint16).max;
@@ -65,21 +56,14 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
         unlocked = 1;
     }
 
-    modifier onlyFactory() {
-        require(msg.sender == address(factory), "CP: FORBIDDEN");
-        _;
-    }
-
     event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
     event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
     event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
     event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
 
-    constructor(address aToken0, address aToken1) {
-        factory = GenericFactory(msg.sender);
-        token0 = aToken0;
-        token1 = aToken1;
-
+    constructor(address aToken0, address aToken1)
+        AssetManagedPair(aToken0, aToken1)
+    {
         swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
         platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
     }
@@ -140,7 +124,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
     }
 
     // update reserves and, on the first call per block, price accumulators
-    function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
+    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
         require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
         // solhint-disable-next-line not-rely-on-time
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
@@ -342,142 +326,5 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20 {
             index += 1;
             observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
         }
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                    ASSET MANAGER
-    //////////////////////////////////////////////////////////////////////////*/
-
-    IAssetManager public assetManager;
-
-    function setManager(IAssetManager manager) external onlyFactory {
-        require(token0Managed == 0 && token1Managed == 0, "CP: AM_STILL_ACTIVE");
-
-        assetManager = manager;
-    }
-
-    modifier onlyManager() {
-        require(msg.sender == address(assetManager), "CP: AUTH_NOT_ASSET_MANAGER");
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                    ASSET MANAGEMENT
-
-     Asset management is supported via a two-way interface. The pool is able to
-     ask the current asset manager for the latest view of the balances. In turn
-     the asset manager can move assets in/out of the pool. This section
-     implements the pool-side of the equation. The manager's side is abstracted
-     behind the IAssetManager interface.
-
-    //////////////////////////////////////////////////////////////////////////*/
-
-    uint112 public token0Managed;
-    uint112 public token1Managed;
-
-    function _totalToken0() private view returns (uint256) {
-        return IERC20(token0).balanceOf(address(this)) + uint256(token0Managed);
-    }
-
-    function _totalToken1() private view returns (uint256) {
-        return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
-    }
-
-    event ProfitReported(address token, uint112 amount);
-    event LossReported(address token, uint112 amount);
-
-    function _handleReport(address token, uint112 prevBalance, uint112 newBalance) private {
-        if (newBalance > prevBalance) {
-            // report profit
-            uint112 lProfit = newBalance - prevBalance;
-
-            emit ProfitReported(token, lProfit);
-
-            token == token0
-                ? reserve0 += lProfit
-                : reserve1 += lProfit;
-        }
-        else if (newBalance < prevBalance) {
-            // report loss
-            uint112 lLoss = prevBalance - newBalance;
-
-            emit LossReported(token, lLoss);
-
-            token == token0
-                ? reserve0 -= lLoss
-                : reserve1 -= lLoss;
-        }
-        // else do nothing balance is equal
-    }
-
-    function _syncManaged() private {
-        if (address(assetManager) == address(0)) {
-            return;
-        }
-
-        uint112 lToken0Managed = assetManager.getBalance(this, token0);
-        uint112 lToken1Managed = assetManager.getBalance(this, token1);
-
-        _handleReport(token0, token0Managed, lToken0Managed);
-        _handleReport(token1, token1Managed, lToken1Managed);
-
-        token0Managed = lToken0Managed;
-        token1Managed = lToken1Managed;
-    }
-
-    function _managerCallback() private {
-        if (address(assetManager) == address(0)) {
-            return;
-        }
-        assetManager.afterLiquidityEvent();
-    }
-
-    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
-        require(
-            token0Change != type(int256).min && token1Change != type(int256).min,
-            "CP: CAST_WOULD_OVERFLOW"
-        );
-
-        if (token0Change > 0) {
-            uint112 lDelta = uint112(uint256(int256(token0Change)));
-
-            token0Managed += lDelta;
-
-            IERC20(token0).transfer(address(assetManager), lDelta);
-        }
-        else if (token0Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token0Change)));
-
-            // solhint-disable-next-line reentrancy
-            token0Managed -= lDelta;
-
-            IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
-        }
-
-        if (token1Change > 0) {
-            uint112 lDelta = uint112(uint256(int256(token1Change)));
-
-            // solhint-disable-next-line reentrancy
-            token1Managed += lDelta;
-
-            IERC20(token1).transfer(address(assetManager), lDelta);
-        }
-        else if (token1Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token1Change)));
-
-            // solhint-disable-next-line reentrancy
-            token1Managed -= lDelta;
-
-            IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
-        }
-
-        // Why does this pattern look different to the sync() and _update()
-        // methods. That feels off?
-        _update(
-            _totalToken0(),
-            _totalToken1(),
-            reserve0,
-            reserve1
-        );
     }
 }

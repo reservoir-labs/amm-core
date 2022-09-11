@@ -1,10 +1,8 @@
 pragma solidity 0.8.13;
 
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-interface IConstantProductPair is IAssetManagedPair {
+interface IConstantProductPair {
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
     event Swap(
@@ -19,10 +17,7 @@ interface IConstantProductPair is IAssetManagedPair {
 
     // solhint-disable-next-line func-name-mixedcase
     function MINIMUM_LIQUIDITY() external pure returns (uint);
-    function factory() external view returns (GenericFactory);
-    function token0() external view returns (address);
-    function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+
     function kLast() external view returns (uint224);
 
     function mint(address to) external returns (uint liquidity);
@@ -37,7 +32,4 @@ interface IConstantProductPair is IAssetManagedPair {
 
     function setCustomSwapFee(uint _customSwapFee) external;
     function setCustomPlatformFee(uint _customPlatformFee) external;
-
-    function assetManager() external returns (IAssetManager);
-    function setManager(IAssetManager manager) external;
 }
