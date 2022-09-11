@@ -5,10 +5,8 @@ import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
 import "src/libraries/ConstantProductOracleMath.sol";
-import "src/interfaces/IAssetManager.sol";
 import "src/interfaces/IConstantProductPair.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
-import "src/interfaces/IAssetManagedPair.sol";
 import "src/UniswapV2ERC20.sol";
 import "src/asset-management/AssetManagedPair.sol";
 

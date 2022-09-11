@@ -6,6 +6,7 @@ import { stdStorage } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
+import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
 import { LogExpMath } from "src/libraries/LogExpMath.sol";
@@ -286,6 +287,7 @@ contract ConstantProductPairTest is BaseTest
         assertEq(ConstantProductPair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
     }
 
+    // TODO: Move to AM tests once interface is stable.
     function testSync() public
     {
         // arrange
@@ -306,155 +308,8 @@ contract ConstantProductPairTest is BaseTest
     }
 
     /*//////////////////////////////////////////////////////////////////////////
-                                    ASSET MANAGEMENT
+                                    ORACLE
     //////////////////////////////////////////////////////////////////////////*/
-
-    function testSetManager() external
-    {
-        // sanity
-        assertEq(address(_constantProductPair.assetManager()), address(0));
-
-        // act
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(_manager);
-
-        // assert
-        assertEq(address(_constantProductPair.assetManager()), address(_manager));
-    }
-
-    function testSetManager_CannotMigrateWithManaged() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(_manager);
-
-        _manager.adjustManagement(_constantProductPair, 10e18, 10e18);
-
-        // act & assert
-        vm.prank(address(_factory));
-        vm.expectRevert("CP: AM_STILL_ACTIVE");
-        _constantProductPair.setManager(IAssetManager(address(0)));
-    }
-
-    function testManageReserves() external
-    {
-        // arrange
-        _tokenA.mint(address(_constantProductPair), 50e18);
-        _tokenB.mint(address(_constantProductPair), 50e18);
-        _constantProductPair.mint(address(this));
-
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(IAssetManager(address(this)));
-
-        // act
-        _constantProductPair.adjustManagement(20e18, 20e18);
-
-        // assert
-        assertEq(_tokenA.balanceOf(address(this)), 20e18);
-        assertEq(_tokenB.balanceOf(address(this)), 20e18);
-    }
-
-    function testManageReserves_KStillHolds() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(_manager);
-
-        // liquidity prior to adjustManagement
-        _tokenA.mint(address(_constantProductPair), 50e18);
-        _tokenB.mint(address(_constantProductPair), 50e18);
-        uint256 lLiq1 = _constantProductPair.mint(address(this));
-
-        _manager.adjustManagement(_constantProductPair, 50e18, 50e18);
-
-        // act
-        _tokenA.mint(address(_constantProductPair), 50e18);
-        _tokenB.mint(address(_constantProductPair), 50e18);
-        uint256 lLiq2 = _constantProductPair.mint(address(this));
-
-        // assert
-        assertEq(lLiq1, lLiq2);
-    }
-
-    function testManageReserves_DecreaseManagement() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(_manager);
-
-        address lToken0 = _constantProductPair.token0();
-        address lToken1 = _constantProductPair.token1();
-
-        // sanity
-        (uint112 lReserve0, uint112 lReserve1, ) = _constantProductPair.getReserves();
-        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_constantProductPair));
-        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_constantProductPair));
-
-        _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
-
-        // solhint-disable-next-line var-name-mixedcase
-        (uint112 lReserve0_1, uint112 lReserve1_1, ) = _constantProductPair.getReserves();
-        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_constantProductPair));
-        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_constantProductPair));
-
-        assertEq(uint256(lReserve0_1), lReserve0);
-        assertEq(uint256(lReserve1_1), lReserve1);
-        assertEq(lBal0Before - lBal0After, 20e18);
-        assertEq(lBal1Before - lBal1After, 20e18);
-
-        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18);
-        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18);
-        assertEq(_manager.getBalance(_constantProductPair, address(lToken0)), 20e18);
-        assertEq(_manager.getBalance(_constantProductPair, address(lToken1)), 20e18);
-
-        // act
-        _manager.adjustManagement(_constantProductPair, -10e18, -10e18);
-
-        // solhint-disable-next-line var-name-mixedcase
-        (uint112 lReserve0_2, uint112 lReserve1_2, ) = _constantProductPair.getReserves();
-
-        // assert
-        assertEq(uint256(lReserve0_2), lReserve0);
-        assertEq(uint256(lReserve1_2), lReserve1);
-        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
-        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
-        assertEq(_manager.getBalance(_constantProductPair, address(lToken0)), 10e18);
-        assertEq(_manager.getBalance(_constantProductPair, address(lToken1)), 10e18);
-    }
-
-    function testSyncManaged() external
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(_manager);
-
-        address lToken0 = _constantProductPair.token0();
-        address lToken1 = _constantProductPair.token1();
-
-        _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
-        _tokenA.mint(address(_constantProductPair), 10e18);
-        _tokenB.mint(address(_constantProductPair), 10e18);
-        uint256 lLiq = _constantProductPair.mint(address(this));
-
-        // sanity
-        assertEq(lLiq, 10e18); // sqrt(10e18, 10e18)
-        assertEq(_tokenA.balanceOf(address(this)), 0);
-        assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_manager.getBalance(_constantProductPair, lToken0), 20e18);
-        assertEq(_manager.getBalance(_constantProductPair, lToken1), 20e18);
-
-        // act
-        _manager.adjustBalance(_constantProductPair, lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(_constantProductPair, lToken1, 19e18); // 1e18 lost
-        _constantProductPair.transfer(address(_constantProductPair), 10e18);
-        _constantProductPair.burn(address(this));
-
-        // assert
-        assertEq(_manager.getBalance(_constantProductPair, lToken0), 19e18);
-        assertEq(_manager.getBalance(_constantProductPair, lToken1), 19e18);
-        assertLt(_tokenA.balanceOf(address(this)), 10e18);
-        assertLt(_tokenB.balanceOf(address(this)), 10e18);
-    }
 
     function testOracle_NoWriteInSameTimestamp() public
     {
