@@ -1,12 +1,17 @@
 pragma solidity 0.8.13;
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IPair } from "src/interfaces/IPair.sol";
 
-interface IAssetManagedPair {
+interface IAssetManagedPair is IPair {
+
+    function token0Managed() external returns (uint112);
+    function token1Managed() external returns (uint112);
+
     function adjustManagement(int256 token0Change, int256 token1Change) external;
-    function token0() external view returns (address);
-    function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function assetManager() external returns (IAssetManager);
     function setManager(IAssetManager manager) external;
+
+    event ProfitReported(address token, uint112 amount);
+    event LossReported(address token, uint112 amount);
 }

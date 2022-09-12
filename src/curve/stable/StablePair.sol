@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 
-import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/token/ERC20/ERC20.sol";
 import "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+
 import { GenericFactory } from "src/GenericFactory.sol";
 
-import "src/UniswapV2ERC20.sol";
-import "src/asset-management/AssetManagedPair.sol";
 import "src/interfaces/ITridentCallee.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
+import "src/ReservoirPair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -28,40 +27,16 @@ struct AmplificationData {
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
+contract StablePair is ReservoirPair {
     using MathUtils for uint256;
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    event Mint(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
-    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
-    event Swap(address indexed to, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
-    event Sync(uint256 reserve0, uint256 reserve1);
     event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
     event StopRampA(uint64 currentAPrecise, uint64 time);
-    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
-    event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
-    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
-    event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
-
-    uint256 internal constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
-
-    uint8 internal constant PRECISION = 112;
-
-    uint256 public constant FEE_ACCURACY     = 10_000;
-    uint256 public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint256 public constant MIN_SWAP_FEE     = 1;      //  0.01%
-    uint256 public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     AmplificationData public ampData;
-
-    uint256 public swapFee;
-    uint256 public customSwapFee = type(uint).max;
-
-    uint256 public platformFee;
-    uint256 public customPlatformFee = type(uint).max;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
@@ -75,11 +50,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
     uint112 internal lastLiquidityEventReserve0;
     uint112 internal lastLiquidityEventReserve1;
 
-    constructor(address aToken0, address aToken1)
-        AssetManagedPair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1)
     {
-        swapFee     = factory.read("ConstantProductPair::swapFee").toUint256();
-        platformFee = factory.read("ConstantProductPair::platformFee").toUint256();
         ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
@@ -99,45 +71,6 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "INVALID_A"
         );
-    }
-
-    function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
-        // we assume the factory won't spam events, so no early check & return
-        emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
-        customSwapFee = _customSwapFee;
-
-        updateSwapFee();
-    }
-
-    function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
-        emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
-        customPlatformFee = _customPlatformFee;
-
-        updatePlatformFee();
-    }
-
-    function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-        ? customSwapFee
-        : factory.read("ConstantProductPair::swapFee").toUint256();
-        if (_swapFee == swapFee) { return; }
-
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
-
-        emit SwapFeeChanged(swapFee, _swapFee);
-        swapFee = _swapFee;
-    }
-
-    function updatePlatformFee() public {
-        uint256 _platformFee = customPlatformFee != type(uint).max
-        ? customPlatformFee
-        : factory.read("ConstantProductPair::platformFee").toUint256();
-        if (_platformFee == platformFee) { return; }
-
-        require(_platformFee <= MAX_PLATFORM_FEE, "SP: INVALID_PLATFORM_FEE");
-
-        emit PlatformFeeChanged(platformFee, _platformFee);
-        platformFee = _platformFee;
     }
 
     function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {
@@ -217,7 +150,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
     }
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public nonReentrant returns (uint256[] memory withdrawnAmounts) {
+    function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
         (uint256 balance0, uint256 balance1) = _balance();
@@ -236,18 +169,14 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
             _totalSupply = totalSupply;
         }
 
-        uint256 amount0 = (liquidity * balance0) / _totalSupply;
-        uint256 amount1 = (liquidity * balance1) / _totalSupply;
+        amount0 = (liquidity * balance0) / _totalSupply;
+        amount1 = (liquidity * balance1) / _totalSupply;
 
         _burn(address(this), liquidity);
         _safeTransfer(token0, to, amount0);
         _safeTransfer(token1, to, amount1);
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
-
-        withdrawnAmounts = new uint256[](2);
-        withdrawnAmounts[0] = amount0;
-        withdrawnAmounts[1] = amount1;
 
         lastLiquidityEventReserve0 = reserve0;
         lastLiquidityEventReserve1 = reserve1;
@@ -378,12 +307,6 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         );
     }
 
-    function _safeTransfer(address token, address to, uint value) private {
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(TRANSFER, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "SP: TRANSFER_FAILED");
-    }
-
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
     /// See the StableSwap paper for details.
     /// @dev Originally https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
@@ -473,24 +396,21 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         }
     }
 
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        (_reserve0, _reserve1, _blockTimestampLast) = _getReserves();
-    }
-
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
         (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
     }
 
-    function recoverToken(address token) external {
-        address _recoverer = factory.read("ConstantProductPair::defaultRecoverer").toAddress();
-        require(token != token0, "SP: INVALID_TOKEN_TO_RECOVER");
-        require(token != token1, "SP: INVALID_TOKEN_TO_RECOVER");
-        require(_recoverer != address(0), "SP: RECOVERER_ZERO_ADDRESS");
+    function skim(address to) external nonReentrant {
+        // todo: implement this
+    }
 
-        uint _amountToRecover = ERC20(token).balanceOf(address(this));
+    /*//////////////////////////////////////////////////////////////////////////
+                                ORACLE METHODS
+    //////////////////////////////////////////////////////////////////////////*/
 
-        _safeTransfer(token, _recoverer, _amountToRecover);
+    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
+        // todo: implement this
     }
 }
