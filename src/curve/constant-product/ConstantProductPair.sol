@@ -8,6 +8,7 @@ import "src/libraries/ConstantProductOracleMath.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
 
 import { ReservoirPair } from "src/ReservoirPair.sol";
+import { Pair } from "src/Pair.sol";
 
 contract ConstantProductPair is ReservoirPair {
     using SafeCast for uint256;
@@ -19,7 +20,7 @@ contract ConstantProductPair is ReservoirPair {
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
-    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {}
 
     // update reserves and, on the first call per block, price accumulators

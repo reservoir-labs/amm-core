@@ -6,8 +6,6 @@ import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 
 abstract contract ReservoirPair is AssetManagedPair, OracleWriter, UniswapV2ERC20, ReentrancyGuard {
-    constructor(address aToken0, address aToken1) AssetManagedPair(aToken0, aToken1) {}
-
     // force reserves to match balances
     function sync() external nonReentrant {
         _syncManaged();

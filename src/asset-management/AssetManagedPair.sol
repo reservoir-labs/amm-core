@@ -7,8 +7,6 @@ import "src/Pair.sol";
 
 abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
-    constructor (address aToken0, address aToken1) Pair(aToken0, aToken1) {}
-
     /*//////////////////////////////////////////////////////////////////////////
                                 ASSET MANAGER
     //////////////////////////////////////////////////////////////////////////*/

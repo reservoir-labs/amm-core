@@ -50,7 +50,7 @@ contract StablePair is ReservoirPair {
     uint112 internal lastLiquidityEventReserve0;
     uint112 internal lastLiquidityEventReserve1;
 
-    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
         ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
