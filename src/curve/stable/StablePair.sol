@@ -14,6 +14,7 @@ import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
 import "src/ReservoirPair.sol";
+import "src/Pair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -143,8 +144,7 @@ contract StablePair is ReservoirPair {
         lastLiquidityEventReserve0 = reserve0; // reserves are up to date
         lastLiquidityEventReserve1 = reserve1; // reserves are up to date
 
-        uint256 liquidityForEvent = liquidity;
-        emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
+        emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
     }
@@ -181,7 +181,7 @@ contract StablePair is ReservoirPair {
         lastLiquidityEventReserve0 = reserve0;
         lastLiquidityEventReserve1 = reserve1;
 
-        emit Burn(msg.sender, amount0, amount1, to, liquidity);
+        emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
     }
@@ -377,12 +377,6 @@ contract StablePair is ReservoirPair {
 
     function getCurrentAPrecise() external view returns (uint64) {
         return _getCurrentAPrecise();
-    }
-
-    function getAssets() public view returns (address[] memory assets) {
-        assets = new address[](2);
-        assets[0] = token0;
-        assets[1] = token1;
     }
 
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {

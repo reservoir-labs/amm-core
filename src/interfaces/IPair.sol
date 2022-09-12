@@ -29,7 +29,7 @@ interface IPair {
     function recoverToken(address token) external;
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
-    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
     event Swap(
         address indexed sender,
         uint256 amount0In,

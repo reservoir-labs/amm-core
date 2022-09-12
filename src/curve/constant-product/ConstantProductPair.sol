@@ -148,7 +148,7 @@ contract ConstantProductPair is ReservoirPair {
 
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
-        emit Burn(msg.sender, amount0, amount1, to);
+        emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
     }
