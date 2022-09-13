@@ -44,15 +44,15 @@ contract ConstantProductMathTest is BaseTest
             // we are chopping off information from the reserves when we scale them by a non power of 2
             0.01e18
         );
-        // assertApproxEqRel(
-        //     ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 1e18),
-        //     LogCompression.toLowResLog(1e18 / 1e18),
-        //     0.1e18
-        // );
-        // assertApproxEqRel(
-        //     ConstantProductOracleMath.calcLogPrice(type(uint112).max / 1e18, type(uint112).max),
-        //     LogCompression.toLowResLog(1e18 * 1e18),
-        //     0.1e18
-        // );
+        assertApproxEqRel(
+            ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 1e18),
+            LogCompression.toLowResLog(1e18 / 1e18),
+            0.1e18
+        );
+        assertApproxEqRel(
+            ConstantProductOracleMath.calcLogPrice(type(uint112).max / 1e18, type(uint112).max),
+            LogCompression.toLowResLog(1e18 * 1e18),
+            0.1e18
+        );
     }
 }

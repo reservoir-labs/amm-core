@@ -14,20 +14,27 @@
 
 pragma solidity 0.8.13;
 
+import "solmate/utils/FixedPointMathLib.sol";
+
 import "src/libraries/Math.sol";
 import "src/libraries/LogCompression.sol";
 
 library ConstantProductOracleMath {
+    using FixedPointMathLib for uint256;
+
     /**
      * @dev Calculates the spot price of token1/token0 for the constant product pair
+     * @param reserve0 should never be 0, as checked by _update()
+     * @param reserve1 should never be 0, as checked by _update()
      */
     function calcLogPrice(
         uint256 reserve0,
         uint256 reserve1
     ) internal pure returns (int112 logSpotPrice) {
         // scaled by 1e18
-        // reserve0 and reserve1 should never be 0, as checked by _update()
-        uint256 spotPrice = reserve1 * 1e18 / reserve0;
+        // spotPrice will never be zero as we do a divWadUp
+        // the minimum price would be 1 wei (1e-18)
+        uint256 spotPrice = reserve1.divWadUp(reserve0);
 
         int256 rawResult = LogCompression.toLowResLog(spotPrice);
         assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
