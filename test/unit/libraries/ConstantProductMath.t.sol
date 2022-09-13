@@ -55,4 +55,17 @@ contract ConstantProductMathTest is BaseTest
             0.1e18
         );
     }
+
+    function testCalcLogPrice_ReturnsOneWeiWhenPriceDiffGreaterThan1e18(uint256 aReserve0, uint256 aReserve1) public
+    {
+        // arrange
+        uint256 lReserve1 = bound(aReserve0, 1, type(uint112).max / 1e18);
+        uint256 lReserve0 = bound(aReserve1, lReserve1 * 1e18, type(uint112).max);
+
+        // act
+        int112 lLogPrice = ConstantProductOracleMath.calcLogPrice(lReserve0, lReserve1);
+
+        // assert
+        assertEq(lLogPrice, LogCompression.toLowResLog(1));
+    }
 }
