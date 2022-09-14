@@ -1,10 +1,10 @@
 pragma solidity 0.8.13;
 
-import "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
-import "src/libraries/Math.sol";
-import "src/libraries/LogCompression.sol";
-import "src/libraries/StableMath.sol";
+import { Math } from "src/libraries/Math.sol";
+import { LogCompression} from "src/libraries/LogCompression.sol";
+import { StableMath } from "src/libraries/StableMath.sol";
 
 // todo: to make calculating price and liquidity one function as liquidity is just the invariant for StablePair
 library StableOracleMath {

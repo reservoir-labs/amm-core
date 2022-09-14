@@ -14,10 +14,10 @@
 
 pragma solidity 0.8.13;
 
-import "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
-import "src/libraries/Math.sol";
-import "src/libraries/LogCompression.sol";
+import { Math } from "src/libraries/Math.sol";
+import { LogCompression } from "src/libraries/LogCompression.sol";
 
 library ConstantProductOracleMath {
     using FixedPointMathLib for uint256;
