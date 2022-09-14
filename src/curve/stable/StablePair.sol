@@ -186,53 +186,87 @@ contract StablePair is ReservoirPair {
         _managerCallback();
     }
 
-    /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
-    function swap(address tokenIn, address to) public nonReentrant returns (uint256 amountOut) {
+    /// @inheritdoc IPair
+    function swap(int256 amount, bool inOrOut, address to) nonReentrant external returns (uint256 amountOut) {
+        require(amount != 0, "SP: INPUT_AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
         uint256 amountIn;
         address tokenOut;
 
-        if (tokenIn == token0) {
-            tokenOut = token1;
-        unchecked {
-            amountIn = balance0 - _reserve0;
+        // exact in
+        if (inOrOut) {
+            // swap token0 exact in for token1 variable out
+            if (amount > 0) {
+                tokenOut = token1;
+                amountIn = balance0 - _reserve0;
+                require(amountIn == uint256(amount), "SP: AMOUNT_MISMATCH");
+                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+            }
+            // swap token1 exact in for token0 variable out
+            else {
+                tokenOut = token0;
+                amountIn = balance1 - _reserve1;
+                require(amountIn == uint256(-amount), "SP: AMOUNT_MISMATCH");
+                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+            }
         }
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
-        } else {
-            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            tokenOut = token0;
-        unchecked {
-            amountIn = balance1 - _reserve1;
+        // exact out
+        else {
+            uint256 actualAmountIn;
+            // swap token1 variable in for token0 exact out
+            if (amount > 0) {
+                tokenOut = token0;
+                amountOut = uint256(amount);
+                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, true);
+                actualAmountIn = balance1 - _reserve1;
+            }
+            // swap token0 variable in for token1 exact out
+            else {
+                tokenOut = token1;
+                amountOut = uint256(-amount);
+                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
+                actualAmountIn = balance0 - _reserve0;
+            }
+
+            if (amountIn == actualAmountIn) {
+                // do nothing
+            }
+            else if (amountIn > actualAmountIn) {
+                revert("SP: INSUFFICIENT_AMOUNT_IN");
+            }
+            else {
+                // refund the user if the amountIn is too much
+                _safeTransfer(tokenOut == token0 ? token1 : token0, to, actualAmountIn - amountIn);
+            }
         }
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
-        }
+
         _safeTransfer(tokenOut, to, amountOut);
         _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
-        emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
+        emit Swap(msg.sender, tokenOut == token1, amountIn, amountOut, to);
     }
 
     /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
-    function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
-        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
-        address tokenOut;
-
-        if (tokenIn == token0) {
-            tokenOut = token1;
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
-            _processSwap(token1, to, amountOut, context);
-            uint256 balance0 = _totalToken0();
-            require(balance0 - _reserve0 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
-        } else {
-            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            tokenOut = token0;
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
-            _processSwap(token0, to, amountOut, context);
-            uint256 balance1 = _totalToken1();
-            require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
-        }
-        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
-        emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
-    }
+//    function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
+//        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
+//        address tokenOut;
+//
+//        if (tokenIn == token0) {
+//            tokenOut = token1;
+//            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+//            _processSwap(token1, to, amountOut, context);
+//            uint256 balance0 = _totalToken0();
+//            require(balance0 - _reserve0 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+//        } else {
+//            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
+//            tokenOut = token0;
+//            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+//            _processSwap(token0, to, amountOut, context);
+//            uint256 balance1 = _totalToken1();
+//            require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+//        }
+//        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
+//        emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
+//    }
 
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
         require(msg.sender == address(this), "SP: NOT_SELF");
@@ -294,7 +328,7 @@ contract StablePair is ReservoirPair {
         uint256 _reserve0,
         uint256 _reserve1,
         bool token0In
-    ) internal view returns (uint256 dy) {
+    ) internal view returns (uint256) {
         return StableMath._getAmountOut(
             amountIn,
             _reserve0,
@@ -302,6 +336,24 @@ contract StablePair is ReservoirPair {
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
             token0In,
+            swapFee,
+            _getNA()
+        );
+    }
+
+    function _getAmountIn(
+        uint256 amountOut,
+        uint256 _reserve0,
+        uint256 _reserve1,
+        bool token0Out
+    ) internal view returns (uint256) {
+        return StableMath._getAmountIn(
+            amountOut,
+            _reserve0,
+            _reserve1,
+            token0PrecisionMultiplier,
+            token1PrecisionMultiplier,
+            token0Out,
             swapFee,
             _getNA()
         );

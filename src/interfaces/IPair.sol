@@ -15,7 +15,12 @@ interface IPair {
 
     function mint(address to) external returns (uint256 liquidity);
     function burn(address to) external returns (uint256 amount0, uint256 amount1);
-    function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external;
+    /**
+     * @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
+     * @param amount positive to indicate token0, negative to indicate token1
+     * @param inOrOut true to indicate exact amount in, false to indicate exact amount out
+     */
+    function swap(int256 amount, bool inOrOut, address to) external returns (uint256 amountOut);
 
     function swapFee() external view returns (uint256);
     function platformFee() external view returns (uint256);
@@ -32,10 +37,9 @@ interface IPair {
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
     event Swap(
         address indexed sender,
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 amount0Out,
-        uint256 amount1Out,
+        bool zeroForOne,
+        uint256 amountIn,
+        uint256 amountOut,
         address indexed to
     );
     event Sync(uint112 reserve0, uint112 reserve1);

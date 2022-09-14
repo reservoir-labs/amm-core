@@ -51,6 +51,36 @@ library StableMath {
     }
     }
 
+    function _getAmountIn(
+        uint256 amountOut,
+        uint256 reserve0,
+        uint256 reserve1,
+        uint256 token0PrecisionMultiplier,
+        uint256 token1PrecisionMultiplier,
+        bool token0Out,
+        uint256 swapFee,
+        uint256 N_A        // solhint-disable-line var-name-mixedcase
+    ) internal pure returns(uint256 dx) {
+    unchecked {
+        uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
+        uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
+        uint256 feeDeductedAmountOut = amountOut - (amountOut * swapFee) / MAX_FEE;
+        uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
+
+        if (token0Out) {
+            uint256 y = adjustedReserve0 - (feeDeductedAmountOut * token0PrecisionMultiplier);
+            uint256 x = _getX(y, d, N_A);
+            dx = x - adjustedReserve1 + 1;
+            dx /= token1PrecisionMultiplier;
+        } else {
+            uint256 y = adjustedReserve1 - (feeDeductedAmountOut * token1PrecisionMultiplier);
+            uint256 x = _getX(y, d, N_A);
+            dx = x - adjustedReserve0 + 1;
+            dx /= token0PrecisionMultiplier;
+        }
+    }
+    }
+
     function _computeLiquidityFromAdjustedBalances(
         uint256 xp0,
         uint256 xp1,
@@ -73,6 +103,11 @@ library StableMath {
             }
         }
         revert("SM: DID_NOT_CONVERGE");
+    }
+
+    // do we need this function?
+    function _getX(uint256 x, uint256 D, uint256 N_A) internal pure returns (uint256) {
+        return _getY(x, D, N_A);
     }
 
     /// @notice Calculate the new balances of the tokens given the indexes of the token
