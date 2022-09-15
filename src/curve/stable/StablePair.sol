@@ -227,13 +227,7 @@ contract StablePair is ReservoirPair {
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
                 actualAmountIn = balance0 - _reserve0;
             }
-
             require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
-            if (amountIn < actualAmountIn) {
-                // refund the user if actualAmountIn is too much
-                _safeTransfer(tokenOut == token0 ? token1 : token0, to, actualAmountIn - amountIn);
-            }
-            // do nothing if they are equal
         }
 
         _safeTransfer(tokenOut, to, amountOut);

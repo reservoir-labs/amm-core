@@ -245,11 +245,6 @@ contract ConstantProductPair is ReservoirPair {
                 actualAmountIn = _totalToken0() - _reserve0;
             }
             require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
-            if (amountIn < actualAmountIn) {
-                // refund the user if the actualAmountIn is too much
-                _safeTransfer(tokenOut == token0 ? token1 : token0, to, actualAmountIn - amountIn);
-            }
-            // do nothing if they are equal
         }
 
         _safeTransfer(tokenOut, to, amountOut);
