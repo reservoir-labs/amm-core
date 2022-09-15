@@ -80,8 +80,9 @@ contract StablePairTest is BaseTest
     function testSwap() public
     {
         // act
-        _tokenA.mint(address(address(_stablePair)), 5e18);
-        uint256 lAmountOut = _stablePair.swap(address(_tokenA), address(this));
+        uint256 lAmountToSwap = 5e18;
+        _tokenA.mint(address(address(_stablePair)), lAmountToSwap);
+        uint256 lAmountOut = _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
 
         // assert
         assertEq(lAmountOut, _tokenB.balanceOf(address(this)));
@@ -90,8 +91,8 @@ contract StablePairTest is BaseTest
     function testSwap_ZeroInput() public
     {
         // act & assert
-        vm.expectRevert("SP: TRANSFER_FAILED");
-        _stablePair.swap(address(_tokenA), address(this));
+        vm.expectRevert("SP: AMOUNT_ZERO");
+        _stablePair.swap(0, true, address(this), "");
     }
 
     function testSwap_BetterPerformanceThanConstantProduct() public
@@ -99,12 +100,12 @@ contract StablePairTest is BaseTest
         // act
         uint256 lSwapAmount = 5e18;
         _tokenA.mint(address(_stablePair), lSwapAmount);
-        _stablePair.swap(address(_tokenA), address(this));
+        _stablePair.swap(int256(lSwapAmount), true, address(this), "");
         uint256 lStablePairOutput = _tokenB.balanceOf(address(this));
 
         uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
         _tokenA.mint(address(_constantProductPair), lSwapAmount);
-        _constantProductPair.swap(lExpectedConstantProductOutput, 0, address(this), "");
+        _constantProductPair.swap(int256(lSwapAmount), true, address(this), "");
         uint256 lConstantProductOutput = _tokenB.balanceOf(address(this)) - lStablePairOutput;
 
         // assert
@@ -118,8 +119,7 @@ contract StablePairTest is BaseTest
         uint256 lLpTokenBalance = _stablePair.balanceOf(_alice);
         uint256 lLpTokenTotalSupply = _stablePair.totalSupply();
         (uint256 lReserve0, uint256 lReserve1, ) = _stablePair.getReserves();
-        address[] memory lAssets = _stablePair.getAssets();
-        address lToken0 = lAssets[0];
+        address lToken0 = _stablePair.token0();
 
         // act
         _stablePair.transfer(address(_stablePair), _stablePair.balanceOf(_alice));
