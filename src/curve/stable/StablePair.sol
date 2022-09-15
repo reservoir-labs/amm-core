@@ -187,7 +187,7 @@ contract StablePair is ReservoirPair {
     }
 
     /// @inheritdoc IPair
-    function swap(int256 amount, bool inOrOut, address to) nonReentrant external returns (uint256 amountOut) {
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
         require(amount != 0, "SP: INPUT_AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
         uint256 amountIn;
@@ -228,16 +228,12 @@ contract StablePair is ReservoirPair {
                 actualAmountIn = balance0 - _reserve0;
             }
 
-            if (amountIn == actualAmountIn) {
-                // do nothing
-            }
-            else if (amountIn > actualAmountIn) {
-                revert("SP: INSUFFICIENT_AMOUNT_IN");
-            }
-            else {
-                // refund the user if the amountIn is too much
+            require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+            if (amountIn < actualAmountIn) {
+                // refund the user if actualAmountIn is too much
                 _safeTransfer(tokenOut == token0 ? token1 : token0, to, actualAmountIn - amountIn);
             }
+            // do nothing if they are equal
         }
 
         _safeTransfer(tokenOut, to, amountOut);

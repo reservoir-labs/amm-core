@@ -19,8 +19,10 @@ interface IPair {
      * @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
      * @param amount positive to indicate token0, negative to indicate token1
      * @param inOrOut true to indicate exact amount in, false to indicate exact amount out
+     * @param to address to send the output token and leftover input tokens, callee for the flash swap
+     * @param data calls to with this data, in the event of a flash swap
      */
-    function swap(int256 amount, bool inOrOut, address to) external returns (uint256 amountOut);
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external returns (uint256 amountOut);
 
     function swapFee() external view returns (uint256);
     function platformFee() external view returns (uint256);

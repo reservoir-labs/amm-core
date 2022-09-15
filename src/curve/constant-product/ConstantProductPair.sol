@@ -8,7 +8,7 @@ import "src/libraries/ConstantProductOracleMath.sol";
 import "src/interfaces/IUniswapV2Callee.sol";
 
 import { ReservoirPair } from "src/ReservoirPair.sol";
-import { Pair } from "src/Pair.sol";
+import { IPair, Pair } from "src/Pair.sol";
 
 contract ConstantProductPair is ReservoirPair {
     using SafeCast for uint256;
@@ -21,7 +21,7 @@ contract ConstantProductPair is ReservoirPair {
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
-    {}
+    {} // solhint-disable-line no-empty-blocks
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
@@ -40,6 +40,25 @@ contract ConstantProductPair is ReservoirPair {
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
+    }
+
+    function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountOut) {
+        require(amountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
+        require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
+
+        uint256 amountInWithFee = amountIn * (FEE_ACCURACY - swapFee);
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * FEE_ACCURACY + amountInWithFee;
+        amountOut = numerator / denominator;
+    }
+
+    function _getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountIn) {
+        require(amountOut > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
+
+        uint numerator = reserveIn * amountOut * FEE_ACCURACY;
+        uint denominator = (reserveOut - amountOut) * (FEE_ACCURACY - swapFee);
+        amountIn = numerator / denominator + 1;
     }
 
     /**
@@ -154,34 +173,89 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external nonReentrant {
-        require(amount0Out > 0 || amount1Out > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
+//    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external nonReentrant {
+//        require(amount0Out > 0 || amount1Out > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
+//        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+//        require(amount0Out < _reserve0 && amount1Out < _reserve1, "CP: INSUFFICIENT_LIQ_SWAP");
+//
+//        uint balance0;
+//        uint balance1;
+//        { // scope for _token{0,1}, avoids stack too deep errors
+//            address _token0 = token0;
+//            address _token1 = token1;
+//            require(to != _token0 && to != _token1, "CP: INVALID_TO");
+//            if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
+//            if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
+//            if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+//            balance0 = _totalToken0();
+//            balance1 = _totalToken1();
+//        }
+//        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+//        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+//        require(amount0In > 0 || amount1In > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
+//        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+//            uint balance0Adjusted = (balance0 * 10000) - (amount0In * swapFee);
+//            uint balance1Adjusted = (balance1 * 10000) - (amount1In * swapFee);
+//            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (10000**2), "CP: K");
+//        }
+//
+//        _update(balance0, balance1, _reserve0, _reserve1);
+//        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+//    }
+
+    /// @inheritdoc IPair
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
+        require(amount != 0, "CP:INPUT_AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, "CP: INSUFFICIENT_LIQ_SWAP");
+        uint256 amountIn;
+        address tokenOut;
 
-        uint balance0;
-        uint balance1;
-        { // scope for _token{0,1}, avoids stack too deep errors
-            address _token0 = token0;
-            address _token1 = token1;
-            require(to != _token0 && to != _token1, "CP: INVALID_TO");
-            if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-            if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-            if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
-            balance0 = _totalToken0();
-            balance1 = _totalToken1();
+        // exact in
+        if (inOrOut) {
+            // swap token0 exact in for token1 variable out
+            if (amount > 0) {
+                tokenOut = token1;
+                amountIn = _totalToken0() - _reserve0;
+                require(amountIn == uint256(amount), "CP: AMOUNT_MISMATCH");
+                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, swapFee);
+            }
+            // swap token1 exact in for token0 variable out
+            else {
+                tokenOut = token0;
+                amountIn = _totalToken1() - _reserve1;
+                require(amountIn == uint256(amount), "CP: AMOUNT_MISMATCH");
+                amountOut = _getAmountOut(amountIn, _reserve1, _reserve0, swapFee);
+            }
         }
-        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
-        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
-        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
-            uint balance0Adjusted = (balance0 * 10000) - (amount0In * swapFee);
-            uint balance1Adjusted = (balance1 * 10000) - (amount1In * swapFee);
-            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (10000**2), "CP: K");
+        // exact out
+        else {
+            uint256 actualAmountIn;
+            // swap token1 variable in for token0 exact out
+            if (amount > 0) {
+                tokenOut = token1;
+                amountOut = uint256(amount);
+                amountIn = _getAmountIn(amountOut, _reserve1, _reserve0, swapFee);
+                actualAmountIn = _totalToken1() - _reserve1;
+            }
+            // swap token0 variable in for token1 exact out
+            else {
+                tokenOut = token0;
+                amountOut = uint256(-amount);
+                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, swapFee);
+                actualAmountIn = _totalToken0() - _reserve0;
+            }
+            require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
+            if (amountIn < actualAmountIn) {
+                // refund the user if the actualAmountIn is too much
+                _safeTransfer(tokenOut == token0 ? token1 : token0, to, actualAmountIn - amountIn);
+            }
+            // do nothing if they are equal
         }
 
-        _update(balance0, balance1, _reserve0, _reserve1);
-        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+        require(_totalToken0() * _totalToken1() >= uint256(reserve0) * reserve1, "CP: K");
+        _safeTransfer(tokenOut, to, amountOut);
+        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
+        emit Swap(msg.sender, tokenOut == token1, amountIn, amountOut, to);
     }
 
     // force balances to match reserves
