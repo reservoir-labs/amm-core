@@ -1,8 +1,9 @@
 pragma solidity 0.8.13;
 
 import { GenericFactory } from "src/GenericFactory.sol";
+import { IUniswapV2ERC20 } from "src/interfaces/IUniswapV2ERC20.sol";
 
-interface IPair {
+interface IPair is IUniswapV2ERC20 {
     // solhint-disable-next-line func-name-mixedcase
     function MINIMUM_LIQUIDITY() external pure returns (uint);
 

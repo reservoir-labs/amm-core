@@ -1,9 +1,9 @@
 pragma solidity 0.8.13;
 
-import "@openzeppelin/interfaces/IERC20.sol";
+import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
-import "src/interfaces/IAssetManagedPair.sol";
-import "src/Pair.sol";
+import { IAssetManagedPair, IAssetManager } from "src/interfaces/IAssetManagedPair.sol";
+import { Pair } from "src/Pair.sol";
 
 abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 

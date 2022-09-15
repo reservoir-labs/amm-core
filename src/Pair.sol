@@ -8,8 +8,9 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { IPair } from "src/interfaces/IPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
+import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
 
-abstract contract Pair is IPair {
+abstract contract Pair is IPair, UniswapV2ERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
