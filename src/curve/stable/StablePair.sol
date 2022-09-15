@@ -188,7 +188,7 @@ contract StablePair is ReservoirPair {
 
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
-        require(amount != 0, "SP: INPUT_AMOUNT_ZERO");
+        require(amount != 0, "SP: AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
         uint256 amountIn;
         address tokenOut;

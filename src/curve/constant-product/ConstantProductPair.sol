@@ -205,7 +205,7 @@ contract ConstantProductPair is ReservoirPair {
 
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
-        require(amount != 0, "CP:INPUT_AMOUNT_ZERO");
+        require(amount != 0, "CP: AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint256 amountIn;
         address tokenOut;
@@ -223,7 +223,7 @@ contract ConstantProductPair is ReservoirPair {
             else {
                 tokenOut = token0;
                 amountIn = _totalToken1() - _reserve1;
-                require(amountIn == uint256(amount), "CP: AMOUNT_MISMATCH");
+                require(amountIn == uint256(-amount), "CP: AMOUNT_MISMATCH");
                 amountOut = _getAmountOut(amountIn, _reserve1, _reserve0, swapFee);
             }
         }
