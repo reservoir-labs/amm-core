@@ -252,8 +252,8 @@ contract ConstantProductPair is ReservoirPair {
             // do nothing if they are equal
         }
 
-        require(_totalToken0() * _totalToken1() >= uint256(reserve0) * reserve1, "CP: K");
         _safeTransfer(tokenOut, to, amountOut);
+        require(_totalToken0() * _totalToken1() >= uint256(reserve0) * reserve1, "CP: K");
         _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
         emit Swap(msg.sender, tokenOut == token1, amountIn, amountOut, to);
     }

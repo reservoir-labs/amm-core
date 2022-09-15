@@ -13,10 +13,10 @@ abstract contract Pair is IPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    bytes4 private constant SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
-    uint public constant MINIMUM_LIQUIDITY = 10**3;
+    bytes4 private constant SELECTOR        = bytes4(keccak256("transfer(address,uint256)"));
+    uint public constant MINIMUM_LIQUIDITY  = 10**3;
 
-    uint256 public constant FEE_ACCURACY     = 10_000;
+    uint256 public constant FEE_ACCURACY  = 10_000;
     uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
     uint public constant MIN_SWAP_FEE     = 0;      //  0.00%
     uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
