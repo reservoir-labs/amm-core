@@ -210,14 +210,16 @@ contract StablePair is ReservoirPair {
         else {
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
-                tokenOut = token0;
                 amountOut = uint256(amount);
+                require(amountOut < _reserve0, "SP: NOT_ENOUGH_LIQ");
+                tokenOut = token0;
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, true);
             }
             // swap token0 variable in for token1 exact out
             else {
-                tokenOut = token1;
                 amountOut = uint256(-amount);
+                require(amountOut < _reserve1, "SP: NOT_ENOUGH_LIQ");
+                tokenOut = token1;
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
             }
         }
