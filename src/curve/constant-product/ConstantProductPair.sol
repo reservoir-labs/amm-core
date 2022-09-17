@@ -263,7 +263,7 @@ contract ConstantProductPair is ReservoirPair {
         require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        emit Swap(msg.sender, tokenOut == token1, amountIn, amountOut, to);
+        emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
     // force balances to match reserves

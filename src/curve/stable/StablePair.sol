@@ -9,7 +9,7 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 
-import "src/interfaces/ITridentCallee.sol";
+import "src/interfaces/IReservoirCallee.sol";
 import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
@@ -189,7 +189,7 @@ contract StablePair is ReservoirPair {
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint112 _reserve0, uint112 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
+        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
         uint256 amountIn;
         address tokenOut;
 
@@ -198,106 +198,64 @@ contract StablePair is ReservoirPair {
             // swap token0 exact in for token1 variable out
             if (amount > 0) {
                 tokenOut = token1;
-                amountIn = balance0 - _reserve0;
-                require(amountIn == uint256(amount), "SP: AMOUNT_MISMATCH");
+                amountIn = uint256(amount);
                 amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
             }
             // swap token1 exact in for token0 variable out
             else {
                 tokenOut = token0;
-                amountIn = balance1 - _reserve1;
-                require(amountIn == uint256(-amount), "SP: AMOUNT_MISMATCH");
+                amountIn = uint256(-amount);
                 amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
             }
         }
         // exact out
         else {
-            uint256 actualAmountIn;
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
                 tokenOut = token0;
                 amountOut = uint256(amount);
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, true);
-                actualAmountIn = balance1 - _reserve1;
             }
             // swap token0 variable in for token1 exact out
             else {
                 tokenOut = token1;
                 amountOut = uint256(-amount);
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
-                actualAmountIn = balance0 - _reserve0;
             }
-            require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
         }
 
+        // optimistically transfers tokens
         _safeTransfer(tokenOut, to, amountOut);
-        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
-        emit Swap(msg.sender, tokenOut == token1, amountIn, amountOut, to);
-    }
 
-    /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
-//    function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
-//        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
-//        address tokenOut;
-//
-//        if (tokenIn == token0) {
-//            tokenOut = token1;
-//            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
-//            _processSwap(token1, to, amountOut, context);
-//            uint256 balance0 = _totalToken0();
-//            require(balance0 - _reserve0 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
-//        } else {
-//            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-//            tokenOut = token0;
-//            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
-//            _processSwap(token0, to, amountOut, context);
-//            uint256 balance1 = _totalToken1();
-//            require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
-//        }
-//        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
-//        emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
-//    }
+        if (data.length > 0) {
+            IReservoirCallee(to).reservoirCall(
+                msg.sender,
+                tokenOut == token0 ? amountOut : 0,
+                tokenOut == token1 ? amountOut : 0,
+                data
+            );
+        }
+
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
+
+        uint256 actualAmountIn =
+            tokenOut == token0 ?
+            balance1 - _reserve1 :
+            balance0 - _reserve0;
+        require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
+    }
 
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
         require(msg.sender == address(this), "SP: NOT_SELF");
         return _mintFee(_reserve0, _reserve1);
     }
 
-    function _processSwap(
-        address tokenOut,
-        address to,
-        uint256 amountOut,
-        bytes memory data
-    ) internal {
-        _safeTransfer(tokenOut, to, amountOut);
-        if (data.length != 0) ITridentCallee(msg.sender).tridentSwapCallback(data);
-    }
-
     function _getReserves() internal view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
         (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
-    }
-
-    function _getReservesAndBalances()
-    internal
-    view
-    returns (
-        uint112 _reserve0,
-        uint112 _reserve1,
-        uint256 balance0,
-        uint256 balance1
-    )
-    {
-        (_reserve0, _reserve1) = (reserve0, reserve1);
-        (balance0, balance1) = _balance();
-
-        // TODO: take into account calculation of rebase tokens
-        // Rebase memory total0 = bento.totals(token0);
-        // Rebase memory total1 = bento.totals(token1);
-
-        // _reserve0 = total0.toElastic(_reserve0);
-        // _reserve1 = total1.toElastic(_reserve1);
-        // balance0 = total0.toElastic(balance0);
-        // balance1 = total1.toElastic(balance1);
     }
 
     // todo: currently the reserve arguments are not used but will be used once we implement the oracle
