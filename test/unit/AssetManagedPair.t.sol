@@ -173,7 +173,6 @@ contract AssetManagedPairTest is BaseTest
         // assert
         assertEq(_manager.getBalance(_constantProductPair, lToken0), 19e18);
         assertEq(_manager.getBalance(_constantProductPair, lToken1), 19e18);
-        (uint112 lReserve0, uint112 lReserve1, ) = _constantProductPair.getReserves();
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }

@@ -103,7 +103,6 @@ contract StablePairTest is BaseTest
         _stablePair.swap(int256(lSwapAmount), true, address(this), "");
         uint256 lStablePairOutput = _tokenB.balanceOf(address(this));
 
-        uint256 lExpectedConstantProductOutput = _calculateConstantProductOutput(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, lSwapAmount, 25);
         _tokenA.mint(address(_constantProductPair), lSwapAmount);
         _constantProductPair.swap(int256(lSwapAmount), true, address(this), "");
         uint256 lConstantProductOutput = _tokenB.balanceOf(address(this)) - lStablePairOutput;

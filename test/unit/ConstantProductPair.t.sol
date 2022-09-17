@@ -318,7 +318,6 @@ contract ConstantProductPairTest is BaseTest
         uint256 lAmountToSwap = 1e17;
 
         // act
-        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
 
@@ -343,8 +342,6 @@ contract ConstantProductPairTest is BaseTest
         for (uint i = 0; i < lMaxObservations + 4; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
-            (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
-            uint lOutput = _calculateOutput(lReserve0, lReserve1, lAmountToSwap, 30);
             _tokenA.mint(address(_constantProductPair), lAmountToSwap);
             _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
         }
@@ -412,9 +409,7 @@ contract ConstantProductPairTest is BaseTest
         (int112 lPrevAccPrice, , ) = _constantProductPair.observations(_constantProductPair.index());
 
         // act
-        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint256 lAmountToSwap = 1e18;
-        uint256 lOutput = _calculateOutput(lReserve1, lReserve0, lAmountToSwap, 30);
         _tokenB.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(-int256(lAmountToSwap), true, address(this), "");
 
@@ -451,9 +446,6 @@ contract ConstantProductPairTest is BaseTest
     {
         // arrange
         uint256 lAmountToSwap = 1e18;
-        // solhint-disable-next-line var-name-mixedcase
-        (uint256 lReserve0_0, uint256 lReserve1_0, ) = _constantProductPair.getReserves();
-        uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
         _stepTime(5);
 
         // act
@@ -465,7 +457,6 @@ contract ConstantProductPairTest is BaseTest
         uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
         _stepTime(5);
 
-        uint lOutput2 = _calculateOutput(lReserve0_1, lReserve1_1, lAmountToSwap, 30);
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
         // solhint-disable-next-line var-name-mixedcase

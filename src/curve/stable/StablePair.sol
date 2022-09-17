@@ -10,7 +10,6 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 import "src/interfaces/IReservoirCallee.sol";
-import "src/libraries/MathUtils.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
 import "src/ReservoirPair.sol";
@@ -29,7 +28,6 @@ struct AmplificationData {
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 contract StablePair is ReservoirPair {
-    using MathUtils for uint256;
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
