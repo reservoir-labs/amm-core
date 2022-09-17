@@ -5,7 +5,7 @@ import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
 import "src/libraries/ConstantProductOracleMath.sol";
-import "src/interfaces/IUniswapV2Callee.sol";
+import "src/interfaces/IReservoirCallee.sol";
 
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IPair, Pair } from "src/Pair.sol";
@@ -215,41 +215,54 @@ contract ConstantProductPair is ReservoirPair {
             // swap token0 exact in for token1 variable out
             if (amount > 0) {
                 tokenOut = token1;
-                amountIn = _totalToken0() - _reserve0;
-                require(amountIn == uint256(amount), "CP: AMOUNT_MISMATCH");
+                amountIn = uint256(amount);
                 amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, swapFee);
             }
             // swap token1 exact in for token0 variable out
             else {
                 tokenOut = token0;
-                amountIn = _totalToken1() - _reserve1;
-                require(amountIn == uint256(-amount), "CP: AMOUNT_MISMATCH");
+                amountIn = uint256(-amount);
                 amountOut = _getAmountOut(amountIn, _reserve1, _reserve0, swapFee);
             }
         }
         // exact out
         else {
-            uint256 actualAmountIn;
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
                 tokenOut = token1;
                 amountOut = uint256(amount);
                 amountIn = _getAmountIn(amountOut, _reserve1, _reserve0, swapFee);
-                actualAmountIn = _totalToken1() - _reserve1;
             }
             // swap token0 variable in for token1 exact out
             else {
                 tokenOut = token0;
                 amountOut = uint256(-amount);
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, swapFee);
-                actualAmountIn = _totalToken0() - _reserve0;
             }
-            require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
         }
 
+        // optimistically transfers token
         _safeTransfer(tokenOut, to, amountOut);
-        require(_totalToken0() * _totalToken1() >= uint256(reserve0) * reserve1, "CP: K");
-        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
+
+        if (data.length > 0) {
+            IReservoirCallee(to).reservoirCall(
+                msg.sender,
+                tokenOut == token0 ? amountOut : 0,
+                tokenOut == token1 ? amountOut : 0,
+                data
+            );
+        }
+
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
+
+        uint256 actualAmountIn =
+            tokenOut == token0 ?
+            balance1 - _reserve1 :
+            balance0 - _reserve0;
+        require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
+
+        _update(balance0, balance1, _reserve0, _reserve1);
         emit Swap(msg.sender, tokenOut == token1, amountIn, amountOut, to);
     }
 
