@@ -64,20 +64,21 @@ library StableMath {
     unchecked {
         uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
         uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
-        uint256 feeDeductedAmountOut = amountOut - (amountOut * swapFee) / MAX_FEE;
         uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
 
         if (token0Out) {
-            uint256 y = adjustedReserve0 - (feeDeductedAmountOut * token0PrecisionMultiplier);
+            uint256 y = adjustedReserve0 - amountOut * token0PrecisionMultiplier;
             uint256 x = _getX(y, d, N_A);
             dx = x - adjustedReserve1 + 1;
             dx /= token1PrecisionMultiplier;
         } else {
-            uint256 y = adjustedReserve1 - (feeDeductedAmountOut * token1PrecisionMultiplier);
+            uint256 y = adjustedReserve1 - amountOut * token1PrecisionMultiplier;
             uint256 x = _getX(y, d, N_A);
             dx = x - adjustedReserve0 + 1;
             dx /= token0PrecisionMultiplier;
         }
+        // add the swap fee
+        dx = dx * (MAX_FEE + swapFee) / MAX_FEE;
     }
     }
 
