@@ -240,9 +240,9 @@ contract StablePair is ReservoirPair {
         uint256 balance1 = _totalToken1();
 
         uint256 actualAmountIn =
-            tokenOut == token0 ?
-            balance1 - _reserve1 :
-            balance0 - _reserve0;
+            tokenOut == token0
+            ? balance1 - _reserve1
+            : balance0 - _reserve0;
         require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
         _update(balance0, balance1, _reserve0, _reserve1);
