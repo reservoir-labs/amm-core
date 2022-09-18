@@ -145,6 +145,12 @@ contract StablePairTest is BaseTest
 
         vm.expectRevert("SP: NOT_ENOUGH_LIQ");
         _stablePair.swap(int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+
+        vm.expectRevert("SP: NOT_ENOUGH_LIQ");
+        _stablePair.swap(-int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+
+        vm.expectRevert("SP: NOT_ENOUGH_LIQ");
+        _stablePair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
     }
 
     function testSwap_BetterPerformanceThanConstantProduct() public

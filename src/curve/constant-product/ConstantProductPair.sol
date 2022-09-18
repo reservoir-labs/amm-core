@@ -229,14 +229,16 @@ contract ConstantProductPair is ReservoirPair {
         else {
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
-                tokenOut = token1;
                 amountOut = uint256(amount);
+                require(amountOut < _reserve0, "CP: NOT_ENOUGH_LIQ");
+                tokenOut = token1;
                 amountIn = _getAmountIn(amountOut, _reserve1, _reserve0, swapFee);
             }
             // swap token0 variable in for token1 exact out
             else {
-                tokenOut = token0;
                 amountOut = uint256(-amount);
+                require(amountOut < _reserve1, "CP: NOT_ENOUGH_LIQ");
+                tokenOut = token0;
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, swapFee);
             }
         }

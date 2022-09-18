@@ -268,6 +268,22 @@ contract ConstantProductPairTest is BaseTest
         assertEq(MintableERC20(token0).balanceOf(address(this)), 0);
     }
 
+    function testSwap_ExactOutExceedReserves() public
+    {
+        // act & assert
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+    }
+
     function testBurn() public
     {
         // arrange
