@@ -427,7 +427,7 @@ contract StablePair is ReservoirPair {
         unchecked {
             int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));
             int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int112(int256(uint256(timeElapsed)));
-            ++index;
+            index += 1;
             observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
         }
     }
