@@ -68,12 +68,12 @@ library StableMath {
 
         if (token0Out) {
             uint256 y = adjustedReserve0 - amountOut * token0PrecisionMultiplier;
-            uint256 x = _getX(y, d, N_A);
+            uint256 x = _getY(y, d, N_A);
             dx = x - adjustedReserve1 + 1;
             dx /= token1PrecisionMultiplier;
         } else {
             uint256 y = adjustedReserve1 - amountOut * token1PrecisionMultiplier;
-            uint256 x = _getX(y, d, N_A);
+            uint256 x = _getY(y, d, N_A);
             dx = x - adjustedReserve0 + 1;
             dx /= token0PrecisionMultiplier;
         }
@@ -106,18 +106,12 @@ library StableMath {
         revert("SM: DID_NOT_CONVERGE");
     }
 
-    // do we need this function?
-    function _getX(uint256 x, uint256 D, uint256 N_A) internal pure returns (uint256) {
-        return _getY(x, D, N_A);
-    }
-
-    /// @notice Calculate the new balances of the tokens given the indexes of the token
-    /// that is swapped from (FROM) and the token that is swapped to (TO).
-    /// This function is used as a helper function to calculate how much TO token
-    /// the user should receive on swap.
+    /// @notice Calculate the new balance of one token given the balance of the other token
+    /// This function is used as a helper function to calculate how much TO/FROM token
+    /// the user should receive/provide on swap.
     /// @dev Originally https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L432.
-    /// @param x The new total amount of FROM token.
-    /// @return y The amount of TO token that should remain in the pool.
+    /// @param x The new total amount of FROM/TO token.
+    /// @return y The amount of TO/FROM token that should remain in the pool.
     function _getY(
         uint256 x,
         uint256 D,          // solhint-disable-line var-name-mixedcase
