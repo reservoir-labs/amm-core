@@ -2,7 +2,7 @@
 
 ## Setup
 
-## Install global dependencies
+### Install global dependencies
 
 This repo uses [foundry](https://github.com/foundry-rs/foundry)
 as the main tool for compiling and testing smart contracts. You can install
