@@ -12,6 +12,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import "src/interfaces/IReservoirCallee.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
+import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import "src/ReservoirPair.sol";
 import "src/Pair.sol";
 
@@ -261,8 +262,24 @@ contract StablePair is ReservoirPair {
     // todo: currently the reserve arguments are not used but will be used once we implement the oracle
     function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
         require(totalToken0 <= type(uint112).max && totalToken1 <= type(uint112).max, "SP: OVERFLOW");
+
+        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+        uint32 timeElapsed;
+        unchecked {
+            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        }
+
+        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+            _updateOracle(
+                uint256(_reserve0) * token0PrecisionMultiplier,
+                uint256(_reserve1) * token1PrecisionMultiplier,
+                timeElapsed,
+                blockTimestampLast
+            );
+        }
         reserve0 = uint112(totalToken0);
         reserve1 = uint112(totalToken1);
+        blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
     }
 
@@ -404,7 +421,16 @@ contract StablePair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
-        // todo: implement this
+    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
+        Observation storage previous = observations[index];
+
+        (int112 currLogPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(_getCurrentAPrecise(), _reserve0, _reserve1);
+
+        unchecked {
+            int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));
+            int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int112(int256(uint256(timeElapsed)));
+            ++index;
+            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
+        }
     }
 }
