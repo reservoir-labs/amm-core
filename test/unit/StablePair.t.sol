@@ -669,8 +669,8 @@ contract StablePairTest is BaseTest
 
     function testOracle_SimplePrices() external
     {
-        // prices = [1, 4, 16]
-        // geo_mean = sqrt3(1 * 4 * 16) = 4
+        // prices = [1, 0.4944, 0.0000936563]
+        // geo_mean = sqrt3(1 * 0.4944 * 0000936563) = 0.0166676
 
         // arrange
         vm.prank(address(_factory));
@@ -680,14 +680,18 @@ contract StablePairTest is BaseTest
         _stepTime(10);
 
         // act
-        // price = 4
+        // price = 0.4944
         _tokenA.mint(address(_stablePair), 100e18);
         _stablePair.swap(100e18, true, _bob, "");
+        (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
+        (uint256 lSpotPrice1, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(10);
 
-        // price = 16
+        // price = 0.0000936563
         _tokenA.mint(address(_stablePair), 200e18);
         _stablePair.swap(200e18, true, _bob, "");
+        (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
+        (uint256 lSpotPrice2, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);
         _stablePair.sync();
 
@@ -697,31 +701,31 @@ contract StablePairTest is BaseTest
         (int lAccPrice3, , uint32 lTimestamp3) = _stablePair.observations(2);
 
         assertEq(lAccPrice1, LogCompression.toLowResLog(1e18) * 10, "1");
-        assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10, "2");
+        assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(lSpotPrice1) * 10, "2");
         assertEq(
             lAccPrice3,
             LogCompression.toLowResLog(1e18) * 10
-            + LogCompression.toLowResLog(0.25e18) * 10
-            + LogCompression.toLowResLog(0.0625e18) * 10,
+            + LogCompression.toLowResLog(lSpotPrice1) * 10
+            + LogCompression.toLowResLog(lSpotPrice2) * 10,
             "3"
         );
 
         // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog((lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1)),
-            0.25e18,
+            lSpotPrice1,
             0.0001e18
         );
         // Price for observation window 2-3
         assertApproxEqRel(
             LogCompression.fromLowResLog((lAccPrice3 - lAccPrice2) / int32(lTimestamp3 - lTimestamp2)),
-            0.0625e18,
+            lSpotPrice2,
             0.0001e18
         );
         // Price for observation window 1-3
         assertApproxEqRel(
             LogCompression.fromLowResLog((lAccPrice3 - lAccPrice1) / int32(lTimestamp3 - lTimestamp1)),
-            0.125e18,
+            Math.sqrt(lSpotPrice1 * lSpotPrice2),
             0.0001e18
         );
     }
