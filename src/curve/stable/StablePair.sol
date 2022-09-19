@@ -257,7 +257,6 @@ contract StablePair is ReservoirPair {
         (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
     }
 
-    // todo: currently the reserve arguments are not used but will be used once we implement the oracle
     function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
         require(totalToken0 <= type(uint112).max && totalToken1 <= type(uint112).max, "SP: OVERFLOW");
 

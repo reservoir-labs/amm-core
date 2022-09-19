@@ -55,7 +55,7 @@ Are you interested in helping us build the future of Vexchange with our V3?
 Contribute in these ways:
 
 - If you find bugs or code errors, you can open a new
-[issue ticket here.](https://https://github.com/vexchange/v3-core/issues/new)
+[issue ticket here.](https://github.com/vexchange/v3-core/issues/new)
 
 - If you find an issue and would like to submit a fix for said issue, follow
 these steps:
