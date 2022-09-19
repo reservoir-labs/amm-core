@@ -1,12 +1,12 @@
 pragma solidity 0.8.13;
 
 import "test/__fixtures/BaseTest.sol";
-
 import "test/__fixtures/MintableERC20.sol";
 
 import { Math } from "src/libraries/Math.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
+import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
@@ -594,7 +594,7 @@ contract StablePairTest is BaseTest
         (int112 lPrevAccPrice, , ) = _stablePair.observations(_stablePair.index());
 
         // act
-        uint256 lAmountToSwap = 1e18;
+        uint256 lAmountToSwap = 5e18;
         _tokenB.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(-int256(lAmountToSwap), true, address(this), "");
 
@@ -639,14 +639,14 @@ contract StablePairTest is BaseTest
 
         // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
-        uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
+        (uint256 lPrice1, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(5);
 
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
         // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
-        uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
+        (uint256 lPrice2, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
 
         _stepTime(5);
         _stablePair.sync();
@@ -733,8 +733,7 @@ contract StablePairTest is BaseTest
         uint256 lAmountToBurn = 1e18;
 
         // act
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
+        _stepTime(5);
         vm.prank(_alice);
         _stablePair.transfer(address(_stablePair), lAmountToBurn);
         _stablePair.burn(address(this));
@@ -743,17 +742,16 @@ contract StablePairTest is BaseTest
         (, int256 lAccLiq, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq = LogCompression.fromLowResLog(lAccLiq / 5);
         // we check that it is within 0.01% of accuracy
-        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
+        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT * 2, 0.0001e18);
 
         // act
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
+        _stepTime(5);
         _stablePair.sync();
 
         // assert
         (, int256 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
-        assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
+        assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT * 2 - lAmountToBurn, 0.0001e18);
     }
 
     function testOracle_LiquidityAtMaximum() public
@@ -778,10 +776,10 @@ contract StablePairTest is BaseTest
 
         // assert
         uint256 lTotalSupply = _stablePair.totalSupply();
-        assertEq(lTotalSupply, type(uint112).max);
+        assertEq(lTotalSupply, uint256(type(uint112).max) * 2);
 
         (, int112 lAccLiq1, ) = _stablePair.observations(0);
         (, int112 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
-        assertApproxEqRel(type(uint112).max, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
+        assertApproxEqRel(uint256(type(uint112).max) * 2, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
     }
 }
