@@ -528,8 +528,7 @@ contract StablePairTest is BaseTest
 
         // act
         for (uint i = 0; i < lMaxObservations + 4; ++i) {
-            vm.roll(block.number + 1);
-            vm.warp(block.timestamp + 5);
+            _stepTime(5);
             _tokenA.mint(address(_stablePair), lAmountToSwap);
             _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
         }
@@ -758,8 +757,7 @@ contract StablePairTest is BaseTest
     {
         // arrange
         uint256 lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
+        _stepTime(5);
         _tokenA.mint(address(_stablePair), lLiquidityToAdd);
         _tokenB.mint(address(_stablePair), lLiquidityToAdd);
         _stablePair.mint(address(this));
@@ -770,8 +768,7 @@ contract StablePairTest is BaseTest
         assertEq(lReserve1, type(uint112).max);
 
         // act
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
+        _stepTime(5);
         _stablePair.sync();
 
         // assert
