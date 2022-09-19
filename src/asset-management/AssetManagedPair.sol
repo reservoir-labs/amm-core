@@ -1,27 +1,11 @@
 pragma solidity 0.8.13;
 
-import "@openzeppelin/interfaces/IERC20.sol";
+import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
-import "src/interfaces/IAssetManagedPair.sol";
-import "src/interfaces/IAssetManager.sol";
+import { IAssetManagedPair, IAssetManager } from "src/interfaces/IAssetManagedPair.sol";
+import { Pair } from "src/Pair.sol";
 
-import "src/GenericFactory.sol";
-
-abstract contract AssetManagedPair is IAssetManagedPair {
-
-    GenericFactory public immutable factory;
-    address public immutable token0;
-    address public immutable token1;
-
-    uint112 internal reserve0;
-    uint112 internal reserve1;
-    uint32  internal blockTimestampLast;
-
-    constructor(address aToken0, address aToken1) {
-        factory = GenericFactory(msg.sender);
-        token0  = aToken0;
-        token1  = aToken1;
-    }
+abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
     /*//////////////////////////////////////////////////////////////////////////
                                 ASSET MANAGER
@@ -36,11 +20,6 @@ abstract contract AssetManagedPair is IAssetManagedPair {
 
     modifier onlyManager() {
         require(msg.sender == address(assetManager), "AMP: AUTH_NOT_ASSET_MANAGER");
-        _;
-    }
-
-    modifier onlyFactory() {
-        require(msg.sender == address(factory), "AMP: FORBIDDEN");
         _;
     }
 
@@ -65,9 +44,6 @@ abstract contract AssetManagedPair is IAssetManagedPair {
     function _totalToken1() internal view returns (uint256) {
         return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
     }
-
-    event ProfitReported(address token, uint112 amount);
-    event LossReported(address token, uint112 amount);
 
     function _handleReport(address token, uint112 prevBalance, uint112 newBalance) internal {
         if (newBalance > prevBalance) {
@@ -159,6 +135,4 @@ abstract contract AssetManagedPair is IAssetManagedPair {
             reserve1
         );
     }
-
-    function _update(uint256 aTotalToken0, uint256 aTotalToken1, uint112 aReserve0, uint112 aReserve1) internal virtual;
 }

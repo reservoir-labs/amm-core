@@ -110,7 +110,7 @@ contract ConstantProductPairTest is BaseTest
     function testSetSwapFeeForPair_BreachMaximum() public
     {
         // act & assert
-        vm.expectRevert("CP: INVALID_SWAP_FEE");
+        vm.expectRevert("P: INVALID_SWAP_FEE");
         _factory.rawCall(
             address(_constantProductPair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", 4000),
@@ -163,7 +163,7 @@ contract ConstantProductPairTest is BaseTest
     function testSetPlatformFeeForPair_BreachMaximum() public
     {
         // act & assert
-        vm.expectRevert("CP: INVALID_PLATFORM_FEE");
+        vm.expectRevert("P: INVALID_PLATFORM_FEE");
         _factory.rawCall(
             address(_constantProductPair),
             abi.encodeWithSignature("setCustomPlatformFee(uint256)", 9000),
@@ -261,11 +261,27 @@ contract ConstantProductPairTest is BaseTest
         (token0, token1) = _getToken0Token1(address(_tokenA), address(_tokenB));
 
         MintableERC20(token0).mint(address(_constantProductPair), 1e18);
-        _constantProductPair.swap(0, expectedOutput, address(this), "");
+        _constantProductPair.swap(1e18, true, address(this), "");
 
         // assert
         assertEq(MintableERC20(token1).balanceOf(address(this)), expectedOutput);
         assertEq(MintableERC20(token0).balanceOf(address(this)), 0);
+    }
+
+    function testSwap_ExactOutExceedReserves() public
+    {
+        // act & assert
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+
+        vm.expectRevert("CP: NOT_ENOUGH_LIQ");
+        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
     }
 
     function testBurn() public
@@ -318,10 +334,8 @@ contract ConstantProductPairTest is BaseTest
         uint256 lAmountToSwap = 1e17;
 
         // act
-        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        uint lOutput = _calculateOutput(lReserve0, lReserve1, lAmountToSwap, 30);
-        _constantProductPair.swap(lOutput, 0, address(this), "");
+        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
 
         vm.prank(_alice);
         _constantProductPair.transfer(address(_constantProductPair), 1e18);
@@ -344,10 +358,8 @@ contract ConstantProductPairTest is BaseTest
         for (uint i = 0; i < lMaxObservations + 4; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
-            (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
-            uint lOutput = _calculateOutput(lReserve0, lReserve1, lAmountToSwap, 30);
             _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-            _constantProductPair.swap(0, lOutput, address(this), "");
+            _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
         }
 
         // assert
@@ -362,14 +374,14 @@ contract ConstantProductPairTest is BaseTest
         (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
-        _constantProductPair.swap(0, lOutput, address(this), "");
+        _constantProductPair.swap(1e17, true, address(this), "");
 
         // swap 2
         _stepTime(1);
         (lReserve0, lReserve1, ) = _constantProductPair.getReserves();
         lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
-        _constantProductPair.swap(0, lOutput, address(this), "");
+        _constantProductPair.swap(1e17, true, address(this), "");
 
         // sanity
         assertEq(_constantProductPair.index(), 1);
@@ -413,11 +425,9 @@ contract ConstantProductPairTest is BaseTest
         (int112 lPrevAccPrice, , ) = _constantProductPair.observations(_constantProductPair.index());
 
         // act
-        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint256 lAmountToSwap = 1e18;
-        uint256 lOutput = _calculateOutput(lReserve1, lReserve0, lAmountToSwap, 30);
         _tokenB.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(lOutput, 0, address(this), "");
+        _constantProductPair.swap(-int256(lAmountToSwap), true, address(this), "");
 
         _stepTime(5);
         _constantProductPair.sync();
@@ -452,22 +462,19 @@ contract ConstantProductPairTest is BaseTest
     {
         // arrange
         uint256 lAmountToSwap = 1e18;
-        // solhint-disable-next-line var-name-mixedcase
-        (uint256 lReserve0_0, uint256 lReserve1_0, ) = _constantProductPair.getReserves();
-        uint lOutput1 = _calculateOutput(lReserve0_0, lReserve1_0, lAmountToSwap, 30);
         _stepTime(5);
 
         // act
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(0, lOutput1, address(this), "");
+        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
+
         // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _constantProductPair.getReserves();
         uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
         _stepTime(5);
 
-        uint lOutput2 = _calculateOutput(lReserve0_1, lReserve1_1, lAmountToSwap, 30);
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(0, lOutput2, address(this), "");
+        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
         // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _constantProductPair.getReserves();
         uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
@@ -507,12 +514,12 @@ contract ConstantProductPairTest is BaseTest
         // act
         // price = 4
         _tokenA.mint(address(_constantProductPair), 100e18);
-        _constantProductPair.swap(0, 50e18, _bob, bytes(""));
+        _constantProductPair.swap(100e18, true, _bob, "");
         _stepTime(10);
 
         // price = 16
         _tokenA.mint(address(_constantProductPair), 200e18);
-        _constantProductPair.swap(0, 25e18, _bob, bytes(""));
+        _constantProductPair.swap(200e18, true, _bob, "");
         _stepTime(10);
         _constantProductPair.sync();
 

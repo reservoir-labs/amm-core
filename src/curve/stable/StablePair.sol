@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 
-import "@openzeppelin/security/ReentrancyGuard.sol";
 import "@openzeppelin/token/ERC20/ERC20.sol";
 import "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+
 import { GenericFactory } from "src/GenericFactory.sol";
 
-import "src/UniswapV2ERC20.sol";
-import "src/asset-management/AssetManagedPair.sol";
-import "src/interfaces/ITridentCallee.sol";
-import "src/libraries/MathUtils.sol";
+import "src/interfaces/IReservoirCallee.sol";
 import "src/libraries/RebaseLibrary.sol";
 import "src/libraries/StableMath.sol";
+import "src/ReservoirPair.sol";
+import "src/Pair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -28,40 +27,15 @@ struct AmplificationData {
 }
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
-contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
-    using MathUtils for uint256;
+contract StablePair is ReservoirPair {
     using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    event Mint(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
-    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
-    event Swap(address indexed to, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
-    event Sync(uint256 reserve0, uint256 reserve1);
     event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
     event StopRampA(uint64 currentAPrecise, uint64 time);
-    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
-    event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
-    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
-    event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
-
-    uint256 internal constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
-
-    uint8 internal constant PRECISION = 112;
-
-    uint256 public constant FEE_ACCURACY     = 10_000;
-    uint256 public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint256 public constant MIN_SWAP_FEE     = 1;      //  0.01%
-    uint256 public constant MAX_SWAP_FEE     = 200;    //  2.00%
 
     AmplificationData public ampData;
-
-    uint256 public swapFee;
-    uint256 public customSwapFee = type(uint).max;
-
-    uint256 public platformFee;
-    uint256 public customPlatformFee = type(uint).max;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
@@ -75,11 +49,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
     uint112 internal lastLiquidityEventReserve0;
     uint112 internal lastLiquidityEventReserve1;
 
-    constructor(address aToken0, address aToken1)
-        AssetManagedPair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
-        swapFee     = factory.read("ConstantProductPair::swapFee").toUint256();
-        platformFee = factory.read("ConstantProductPair::platformFee").toUint256();
         ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
@@ -99,45 +70,6 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "INVALID_A"
         );
-    }
-
-    function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
-        // we assume the factory won't spam events, so no early check & return
-        emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
-        customSwapFee = _customSwapFee;
-
-        updateSwapFee();
-    }
-
-    function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
-        emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
-        customPlatformFee = _customPlatformFee;
-
-        updatePlatformFee();
-    }
-
-    function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-        ? customSwapFee
-        : factory.read("ConstantProductPair::swapFee").toUint256();
-        if (_swapFee == swapFee) { return; }
-
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
-
-        emit SwapFeeChanged(swapFee, _swapFee);
-        swapFee = _swapFee;
-    }
-
-    function updatePlatformFee() public {
-        uint256 _platformFee = customPlatformFee != type(uint).max
-        ? customPlatformFee
-        : factory.read("ConstantProductPair::platformFee").toUint256();
-        if (_platformFee == platformFee) { return; }
-
-        require(_platformFee <= MAX_PLATFORM_FEE, "SP: INVALID_PLATFORM_FEE");
-
-        emit PlatformFeeChanged(platformFee, _platformFee);
-        platformFee = _platformFee;
     }
 
     function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {
@@ -210,14 +142,13 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         lastLiquidityEventReserve0 = reserve0; // reserves are up to date
         lastLiquidityEventReserve1 = reserve1; // reserves are up to date
 
-        uint256 liquidityForEvent = liquidity;
-        emit Mint(msg.sender, amount0, amount1, to, liquidityForEvent);
+        emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
     }
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public nonReentrant returns (uint256[] memory withdrawnAmounts) {
+    function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
         (uint256 balance0, uint256 balance1) = _balance();
@@ -236,8 +167,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
             _totalSupply = totalSupply;
         }
 
-        uint256 amount0 = (liquidity * balance0) / _totalSupply;
-        uint256 amount1 = (liquidity * balance1) / _totalSupply;
+        amount0 = (liquidity * balance0) / _totalSupply;
+        amount1 = (liquidity * balance1) / _totalSupply;
 
         _burn(address(this), liquidity);
         _safeTransfer(token0, to, amount0);
@@ -245,64 +176,77 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
-        withdrawnAmounts = new uint256[](2);
-        withdrawnAmounts[0] = amount0;
-        withdrawnAmounts[1] = amount1;
-
         lastLiquidityEventReserve0 = reserve0;
         lastLiquidityEventReserve1 = reserve1;
 
-        emit Burn(msg.sender, amount0, amount1, to, liquidity);
+        emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
     }
 
-    /// @dev Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.
-    function swap(address tokenIn, address to) public nonReentrant returns (uint256 amountOut) {
-        (uint112 _reserve0, uint112 _reserve1, uint256 balance0, uint256 balance1) = _getReservesAndBalances();
+    /// @inheritdoc IPair
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
+        require(amount != 0, "SP: AMOUNT_ZERO");
+        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
         uint256 amountIn;
         address tokenOut;
 
-        if (tokenIn == token0) {
-            tokenOut = token1;
-        unchecked {
-            amountIn = balance0 - _reserve0;
+        // exact in
+        if (inOrOut) {
+            // swap token0 exact in for token1 variable out
+            if (amount > 0) {
+                tokenOut = token1;
+                amountIn = uint256(amount);
+                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+            }
+            // swap token1 exact in for token0 variable out
+            else {
+                tokenOut = token0;
+                amountIn = uint256(-amount);
+                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+            }
         }
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
-        } else {
-            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            tokenOut = token0;
-        unchecked {
-            amountIn = balance1 - _reserve1;
+        // exact out
+        else {
+            // swap token1 variable in for token0 exact out
+            if (amount > 0) {
+                amountOut = uint256(amount);
+                require(amountOut < _reserve0, "SP: NOT_ENOUGH_LIQ");
+                tokenOut = token0;
+                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, true);
+            }
+            // swap token0 variable in for token1 exact out
+            else {
+                amountOut = uint256(-amount);
+                require(amountOut < _reserve1, "SP: NOT_ENOUGH_LIQ");
+                tokenOut = token1;
+                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
+            }
         }
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
-        }
+
+        // optimistically transfers tokens
         _safeTransfer(tokenOut, to, amountOut);
-        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
-        emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
-    }
 
-    /// @dev Swaps one token for another with payload. The router must support swap callbacks and ensure there isn't too much slippage.
-    function flashSwap(address tokenIn, address to, uint256 amountIn, bytes memory context) public nonReentrant returns (uint256 amountOut) {
-        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
-        address tokenOut;
-
-        if (tokenIn == token0) {
-            tokenOut = token1;
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
-            _processSwap(token1, to, amountOut, context);
-            uint256 balance0 = _totalToken0();
-            require(balance0 - _reserve0 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
-        } else {
-            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            tokenOut = token0;
-            amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
-            _processSwap(token0, to, amountOut, context);
-            uint256 balance1 = _totalToken1();
-            require(balance1 - _reserve1 >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+        if (data.length > 0) {
+            IReservoirCallee(to).reservoirCall(
+                msg.sender,
+                tokenOut == token0 ? amountOut : 0,
+                tokenOut == token1 ? amountOut : 0,
+                data
+            );
         }
-        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
-        emit Swap(to, tokenIn, tokenOut, amountIn, amountOut);
+
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
+
+        uint256 actualAmountIn =
+            tokenOut == token0
+            ? balance1 - _reserve1
+            : balance0 - _reserve0;
+        require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
@@ -310,41 +254,8 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         return _mintFee(_reserve0, _reserve1);
     }
 
-    function _processSwap(
-        address tokenOut,
-        address to,
-        uint256 amountOut,
-        bytes memory data
-    ) internal {
-        _safeTransfer(tokenOut, to, amountOut);
-        if (data.length != 0) ITridentCallee(msg.sender).tridentSwapCallback(data);
-    }
-
     function _getReserves() internal view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
         (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
-    }
-
-    function _getReservesAndBalances()
-    internal
-    view
-    returns (
-        uint112 _reserve0,
-        uint112 _reserve1,
-        uint256 balance0,
-        uint256 balance1
-    )
-    {
-        (_reserve0, _reserve1) = (reserve0, reserve1);
-        (balance0, balance1) = _balance();
-
-        // TODO: take into account calculation of rebase tokens
-        // Rebase memory total0 = bento.totals(token0);
-        // Rebase memory total1 = bento.totals(token1);
-
-        // _reserve0 = total0.toElastic(_reserve0);
-        // _reserve1 = total1.toElastic(_reserve1);
-        // balance0 = total0.toElastic(balance0);
-        // balance1 = total1.toElastic(balance1);
     }
 
     // todo: currently the reserve arguments are not used but will be used once we implement the oracle
@@ -365,7 +276,7 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         uint256 _reserve0,
         uint256 _reserve1,
         bool token0In
-    ) internal view returns (uint256 dy) {
+    ) internal view returns (uint256) {
         return StableMath._getAmountOut(
             amountIn,
             _reserve0,
@@ -378,10 +289,22 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         );
     }
 
-    function _safeTransfer(address token, address to, uint value) private {
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(TRANSFER, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "SP: TRANSFER_FAILED");
+    function _getAmountIn(
+        uint256 amountOut,
+        uint256 _reserve0,
+        uint256 _reserve1,
+        bool token0Out
+    ) internal view returns (uint256) {
+        return StableMath._getAmountIn(
+            amountOut,
+            _reserve0,
+            _reserve1,
+            token0PrecisionMultiplier,
+            token1PrecisionMultiplier,
+            token0Out,
+            swapFee,
+            _getNA()
+        );
     }
 
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
@@ -456,12 +379,6 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         return _getCurrentAPrecise();
     }
 
-    function getAssets() public view returns (address[] memory assets) {
-        assets = new address[](2);
-        assets[0] = token0;
-        assets[1] = token1;
-    }
-
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
         (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
 
@@ -473,24 +390,21 @@ contract StablePair is UniswapV2ERC20, ReentrancyGuard, AssetManagedPair {
         }
     }
 
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        (_reserve0, _reserve1, _blockTimestampLast) = _getReserves();
-    }
-
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
         (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
     }
 
-    function recoverToken(address token) external {
-        address _recoverer = factory.read("ConstantProductPair::defaultRecoverer").toAddress();
-        require(token != token0, "SP: INVALID_TOKEN_TO_RECOVER");
-        require(token != token1, "SP: INVALID_TOKEN_TO_RECOVER");
-        require(_recoverer != address(0), "SP: RECOVERER_ZERO_ADDRESS");
+    function skim(address to) external nonReentrant {
+        // todo: implement this
+    }
 
-        uint _amountToRecover = ERC20(token).balanceOf(address(this));
+    /*//////////////////////////////////////////////////////////////////////////
+                                ORACLE METHODS
+    //////////////////////////////////////////////////////////////////////////*/
 
-        _safeTransfer(token, _recoverer, _amountToRecover);
+    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
+        // todo: implement this
     }
 }

@@ -5,123 +5,23 @@ import "@openzeppelin/utils/math/SafeCast.sol";
 
 import "src/libraries/Math.sol";
 import "src/libraries/ConstantProductOracleMath.sol";
-import "src/interfaces/IConstantProductPair.sol";
-import "src/interfaces/IUniswapV2Callee.sol";
-import "src/UniswapV2ERC20.sol";
-import "src/asset-management/AssetManagedPair.sol";
+import "src/interfaces/IReservoirCallee.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
+import { ReservoirPair } from "src/ReservoirPair.sol";
+import { IPair, Pair } from "src/Pair.sol";
 
-contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManagedPair {
+contract ConstantProductPair is ReservoirPair {
     using SafeCast for uint256;
 
-    uint public constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
     // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
     uint256 public constant SQUARED_ACCURACY = 1e76;
     // Accuracy: 100_000_000_000_000_000_000_000_000_000_000_000_000
     uint256 public constant ACCURACY         = 1e38;
-    uint256 public constant FEE_ACCURACY     = 10_000;
-
-    uint public constant MAX_PLATFORM_FEE = 5000;   // 50.00%
-    uint public constant MIN_SWAP_FEE     = 0;      //  0.01%
-    uint public constant MAX_SWAP_FEE     = 200;    //  2.00%
-
-    uint public swapFee;
-    uint public customSwapFee = type(uint).max;
-
-    uint public platformFee;
-    uint public customPlatformFee = type(uint).max;
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
-    uint16 public index = type(uint16).max;
 
-    Observation[65536] public observations;
-
-    // todo: move struct def to a lib or a base class
-    struct Observation {
-        // natural log (ln) of the price (token1/token0)
-        int112 logAccPrice;
-        // natural log (ln) of the liquidity (sqrt(k))
-        int112 logAccLiquidity;
-        // overflows every 136 years, in the year 2106
-        uint32 timestamp;
-    }
-
-    uint private unlocked = 1;
-    modifier lock() {
-        require(unlocked == 1, "CP: LOCKED");
-        unlocked = 0;
-        _;
-        unlocked = 1;
-    }
-
-    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
-    event CustomSwapFeeChanged(uint oldCustomSwapFee, uint newCustomSwapFee);
-    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
-    event CustomPlatformFeeChanged(uint oldCustomPlatformFee, uint newCustomPlatformFee);
-
-    constructor(address aToken0, address aToken1)
-        AssetManagedPair(aToken0, aToken1)
-    {
-        swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
-        platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
-    }
-
-    function platformFeeOn() external view returns (bool _platformFeeOn) {
-        _platformFeeOn = platformFee > 0;
-    }
-
-    function setCustomSwapFee(uint _customSwapFee) external onlyFactory {
-        // we assume the factory won't spam events, so no early check & return
-        emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
-        customSwapFee = _customSwapFee;
-
-        updateSwapFee();
-    }
-
-    function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
-        emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
-        customPlatformFee = _customPlatformFee;
-
-        updatePlatformFee();
-    }
-
-    function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-            ? customSwapFee
-            : uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
-        if (_swapFee == swapFee) { return; }
-
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
-
-        emit SwapFeeChanged(swapFee, _swapFee);
-        swapFee = _swapFee;
-    }
-
-    function updatePlatformFee() public {
-        uint256 _platformFee = customPlatformFee != type(uint).max
-            ? customPlatformFee
-            : uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
-        if (_platformFee == platformFee) { return; }
-
-        require(_platformFee <= MAX_PLATFORM_FEE, "CP: INVALID_PLATFORM_FEE");
-
-        emit PlatformFeeChanged(platformFee, _platformFee);
-        platformFee = _platformFee;
-    }
-
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        _reserve0 = reserve0;
-        _reserve1 = reserve1;
-        _blockTimestampLast = blockTimestampLast;
-    }
-
-    function _safeTransfer(address token, address to, uint value) private {
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "CP: TRANSFER_FAILED");
-    }
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
+    {} // solhint-disable-line no-empty-blocks
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
@@ -140,6 +40,25 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManag
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
+    }
+
+    function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountOut) {
+        require(amountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
+        require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
+
+        uint256 amountInWithFee = amountIn * (FEE_ACCURACY - swapFee);
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * FEE_ACCURACY + amountInWithFee;
+        amountOut = numerator / denominator;
+    }
+
+    function _getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountIn) {
+        require(amountOut > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
+
+        uint numerator = reserveIn * amountOut * FEE_ACCURACY;
+        uint denominator = (reserveOut - amountOut) * (FEE_ACCURACY - swapFee);
+        amountIn = numerator / denominator + 1;
     }
 
     /**
@@ -197,7 +116,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManag
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function mint(address to) external lock returns (uint liquidity) {
+    function mint(address to) external nonReentrant returns (uint256 liquidity) {
         _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
@@ -225,7 +144,7 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManag
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function burn(address to) external lock returns (uint amount0, uint amount1) {
+    function burn(address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
@@ -248,72 +167,89 @@ contract ConstantProductPair is IConstantProductPair, UniswapV2ERC20, AssetManag
 
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
-        emit Burn(msg.sender, amount0, amount1, to);
+        emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
     }
 
-    // this low-level function should be called from a contract which performs important safety checks
-    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
-        require(amount0Out > 0 || amount1Out > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
+    /// @inheritdoc IPair
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
+        require(amount != 0, "CP: AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, "CP: INSUFFICIENT_LIQ_SWAP");
+        uint256 amountIn;
+        address tokenOut;
 
-        uint balance0;
-        uint balance1;
-        { // scope for _token{0,1}, avoids stack too deep errors
-            address _token0 = token0;
-            address _token1 = token1;
-            require(to != _token0 && to != _token1, "CP: INVALID_TO");
-            if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-            if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-            if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
-            balance0 = _totalToken0();
-            balance1 = _totalToken1();
+        // exact in
+        if (inOrOut) {
+            // swap token0 exact in for token1 variable out
+            if (amount > 0) {
+                tokenOut = token1;
+                amountIn = uint256(amount);
+                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, swapFee);
+            }
+            // swap token1 exact in for token0 variable out
+            else {
+                tokenOut = token0;
+                amountIn = uint256(-amount);
+                amountOut = _getAmountOut(amountIn, _reserve1, _reserve0, swapFee);
+            }
         }
-        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
-        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
-        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
-            uint balance0Adjusted = (balance0 * 10000) - (amount0In * swapFee);
-            uint balance1Adjusted = (balance1 * 10000) - (amount1In * swapFee);
-            require(balance0Adjusted * balance1Adjusted >= uint(_reserve0) * _reserve1 * (10000**2), "CP: K");
+        // exact out
+        else {
+            // swap token1 variable in for token0 exact out
+            if (amount > 0) {
+                amountOut = uint256(amount);
+                require(amountOut < _reserve0, "CP: NOT_ENOUGH_LIQ");
+                tokenOut = token1;
+                amountIn = _getAmountIn(amountOut, _reserve1, _reserve0, swapFee);
+            }
+            // swap token0 variable in for token1 exact out
+            else {
+                amountOut = uint256(-amount);
+                require(amountOut < _reserve1, "CP: NOT_ENOUGH_LIQ");
+                tokenOut = token0;
+                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, swapFee);
+            }
         }
+
+        // optimistically transfers token
+        _safeTransfer(tokenOut, to, amountOut);
+
+        if (data.length > 0) {
+            IReservoirCallee(to).reservoirCall(
+                msg.sender,
+                tokenOut == token0 ? amountOut : 0,
+                tokenOut == token1 ? amountOut : 0,
+                data
+            );
+        }
+
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
+
+        uint256 actualAmountIn =
+            tokenOut == token0
+            ? balance1 - _reserve1
+            : balance0 - _reserve0;
+        require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
 
         _update(balance0, balance1, _reserve0, _reserve1);
-        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+        emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
     // force balances to match reserves
-    function skim(address to) external lock {
+    function skim(address to) external nonReentrant {
         address _token0 = token0; // gas savings
         address _token1 = token1; // gas savings
         _safeTransfer(_token0, to, _totalToken0() - reserve0);
         _safeTransfer(_token1, to, _totalToken1() - reserve1);
     }
 
-    function recoverToken(address token) external {
-        address _recoverer = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::defaultRecoverer")))));
-        require(token != token0, "CP: INVALID_TOKEN_TO_RECOVER");
-        require(token != token1, "CP: INVALID_TOKEN_TO_RECOVER");
-        require(_recoverer != address(0), "CP: RECOVERER_ZERO_ADDRESS");
-
-        uint _amountToRecover = IERC20(token).balanceOf(address(this));
-
-        _safeTransfer(token, _recoverer, _amountToRecover);
-    }
-
-    // force reserves to match balances
-    function sync() external lock {
-        _syncManaged();
-        _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) private {
+    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
         int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(_reserve0, _reserve1);
