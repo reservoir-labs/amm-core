@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
+import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
@@ -67,5 +68,29 @@ abstract contract BaseTest is Test {
     function _createPair(address aTokenA, address aTokenB, uint256 aCurveId) internal returns (address rPair)
     {
         rPair = _factory.createPair(aTokenA, aTokenB, aCurveId);
+    }
+
+    function _stepTime(uint256 aTime) internal
+    {
+        vm.roll(block.number + 1);
+        skip(aTime);
+    }
+
+    function _writeObservation(
+        ReservoirPair aPair,
+        uint256 aIndex,
+        int112 aPrice,
+        int112 aLiq,
+        uint32 aTime
+    ) internal
+    {
+        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aPrice));
+
+        vm.record();
+        aPair.observations(aIndex);
+        (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
+        require(lAccesses.length == 1, "invalid number of accesses");
+
+        vm.store(address(aPair), lAccesses[0], lEncoded);
     }
 }

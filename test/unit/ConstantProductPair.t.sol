@@ -22,30 +22,6 @@ contract ConstantProductPairTest is BaseTest
 
     AssetManager private _manager = new AssetManager();
 
-    function _writeObservation(
-        ConstantProductPair aPair,
-        uint256 aIndex,
-        int112 aPrice,
-        int112 aLiq,
-        uint32 aTime
-    ) internal
-    {
-        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aPrice));
-
-        vm.record();
-        aPair.observations(aIndex);
-        (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
-        require(lAccesses.length == 1, "invalid number of accesses");
-
-        vm.store(address(aPair), lAccesses[0], lEncoded);
-    }
-
-    function _stepTime(uint256 aTime) internal
-    {
-        vm.roll(block.number + 1);
-        skip(aTime);
-    }
-
     function _calculateOutput(
         uint256 aReserveIn,
         uint256 aReserveOut,
@@ -411,7 +387,6 @@ contract ConstantProductPairTest is BaseTest
         assertTrue(lTimestamp != 0);
     }
 
-    // not running cuz it goes beyond the gas limit
     function testOracle_OverflowAccPrice() public
     {
         // arrange - make the last observation close to overflowing
