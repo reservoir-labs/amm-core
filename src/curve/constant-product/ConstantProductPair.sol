@@ -249,7 +249,7 @@ contract ConstantProductPair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
+    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
         int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(_reserve0, _reserve1);

@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 
-import "@openzeppelin/token/ERC20/ERC20.sol";
-import "@openzeppelin/utils/math/Math.sol";
+import { ERC20 } from "@openzeppelin/token/ERC20/ERC20.sol";
+import { Math } from "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 
-import "src/interfaces/IReservoirCallee.sol";
-import "src/libraries/RebaseLibrary.sol";
-import "src/libraries/StableMath.sol";
-import "src/ReservoirPair.sol";
-import "src/Pair.sol";
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { StableMath } from "src/libraries/StableMath.sol";
+import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+import { ReservoirPair } from "src/ReservoirPair.sol";
+import { IPair, Pair } from "src/Pair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -28,7 +28,6 @@ struct AmplificationData {
 
 /// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 contract StablePair is ReservoirPair {
-    using RebaseLibrary for Rebase;
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
@@ -258,11 +257,26 @@ contract StablePair is ReservoirPair {
         (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
     }
 
-    // todo: currently the reserve arguments are not used but will be used once we implement the oracle
     function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
         require(totalToken0 <= type(uint112).max && totalToken1 <= type(uint112).max, "SP: OVERFLOW");
+
+        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+        uint32 timeElapsed;
+        unchecked {
+            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        }
+
+        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+            _updateOracle(
+                uint256(_reserve0) * token0PrecisionMultiplier,
+                uint256(_reserve1) * token1PrecisionMultiplier,
+                timeElapsed,
+                blockTimestampLast
+            );
+        }
         reserve0 = uint112(totalToken0);
         reserve1 = uint112(totalToken1);
+        blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
     }
 
@@ -404,7 +418,16 @@ contract StablePair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint112 _reserve0, uint112 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
-        // todo: implement this
+    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
+        Observation storage previous = observations[index];
+
+        (int112 currLogPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(_getCurrentAPrecise(), _reserve0, _reserve1);
+
+        unchecked {
+            int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));
+            int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int112(int256(uint256(timeElapsed)));
+            index += 1;
+            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
+        }
     }
 }
