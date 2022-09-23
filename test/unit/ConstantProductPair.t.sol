@@ -464,7 +464,6 @@ contract ConstantProductPairTest is BaseTest
     function testOracle_CorrectPriceDiffDecimals() public
     {
         // arrange
-        uint256 lAmountToSwap = 100e18;
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenD), 0));
         _tokenA.mint(address(lPair), 100e18);
         _tokenD.mint(address(lPair), 50e6);
@@ -475,7 +474,7 @@ contract ConstantProductPairTest is BaseTest
         lPair.sync();
 
         // assert
-        (int112 accLogPrice, int112 b, uint32 c) = lPair.observations(0);
+        (int112 accLogPrice, ,) = lPair.observations(0);
         assertApproxEqRel(LogCompression.fromLowResLog(accLogPrice / 5), 0.5e18, 0.0001e18);
     }
 
