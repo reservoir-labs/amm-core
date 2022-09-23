@@ -21,8 +21,8 @@ contract ConstantProductPair is ReservoirPair {
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // optimization: might want to move this into the Pair base class, since StablePair uses it too
-    uint128 public immutable token0PrecisionMultiplier;
-    uint128 public immutable token1PrecisionMultiplier;
+    uint128 private immutable token0PrecisionMultiplier;
+    uint128 private immutable token1PrecisionMultiplier;
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {

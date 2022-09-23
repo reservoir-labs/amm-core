@@ -39,8 +39,8 @@ contract StablePair is ReservoirPair {
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint256 public immutable token0PrecisionMultiplier;
-    uint256 public immutable token1PrecisionMultiplier;
+    uint256 private immutable token0PrecisionMultiplier;
+    uint256 private immutable token1PrecisionMultiplier;
 
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
