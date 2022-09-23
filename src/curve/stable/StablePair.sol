@@ -268,8 +268,8 @@ contract StablePair is ReservoirPair {
 
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
             _updateOracle(
-                uint256(_reserve0) * token0PrecisionMultiplier,
-                uint256(_reserve1) * token1PrecisionMultiplier,
+                uint256(_reserve0),
+                uint256(_reserve1),
                 timeElapsed,
                 blockTimestampLast
             );
@@ -421,7 +421,11 @@ contract StablePair is ReservoirPair {
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
-        (int112 currLogPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(_getCurrentAPrecise(), _reserve0, _reserve1);
+        (int112 currLogPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(
+            _getCurrentAPrecise(),
+            _reserve0 * token0PrecisionMultiplier,
+            _reserve1 * token1PrecisionMultiplier
+        );
 
         unchecked {
             int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));

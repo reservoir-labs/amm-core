@@ -20,9 +20,12 @@ abstract contract BaseTest is Test {
     address         internal _bob           = _makeAddress("bob");
     address         internal _cal           = _makeAddress("cal");
 
-    MintableERC20   internal _tokenA        = new MintableERC20("TokenA", "TA");
-    MintableERC20   internal _tokenB        = new MintableERC20("TokenB", "TB");
-    MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC");
+    MintableERC20   internal _tokenA        = new MintableERC20("TokenA", "TA", 18);
+    MintableERC20   internal _tokenB        = new MintableERC20("TokenB", "TB", 18);
+    MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC", 18);
+    MintableERC20   internal _tokenD        = new MintableERC20("TokenD", "TD", 6);
+    MintableERC20   internal _tokenE        = new MintableERC20("TokenF", "TF", 25);
+
 
     ConstantProductPair   internal _constantProductPair;
     StablePair            internal _stablePair;
