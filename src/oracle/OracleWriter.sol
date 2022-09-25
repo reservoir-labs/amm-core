@@ -7,8 +7,8 @@ abstract contract OracleWriter is IOracleWriter {
     uint16 public index = type(uint16).max;
 
     /**
-     * @param _reserve0 already normalized to 18 decimals
-     * @param _reserve1 already normalized to 18 decimals
+     * @param _reserve0 in its native precision
+     * @param _reserve1 in its native precision
      * @param timeElapsed time since the last oracle observation
      * @param timestampLast the time of the last activity on the pair
      */

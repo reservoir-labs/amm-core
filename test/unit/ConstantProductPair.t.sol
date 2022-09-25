@@ -162,6 +162,13 @@ contract ConstantProductPairTest is BaseTest
         assertEq(_constantProductPair.platformFee(), 5000);
     }
 
+    function testCreatePair_MoreThan18Decimals() public
+    {
+        // act & assert
+        vm.expectRevert("FACTORY: DEPLOY_FAILED");
+        ConstantProductPair(_createPair(address(_tokenE), address(_tokenA), 0));
+    }
+
     function testMint() public
     {
         // arrange
@@ -277,26 +284,6 @@ contract ConstantProductPairTest is BaseTest
         (address lToken0, address lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
         assertEq(ConstantProductPair(lToken0).balanceOf(_alice), lLpTokenBalance * lReserve0 / lLpTokenTotalSupply);
         assertEq(ConstantProductPair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
-    }
-
-    // TODO: Move to AM tests once interface is stable.
-    function testSync() public
-    {
-        // arrange
-        vm.prank(address(_factory));
-        _constantProductPair.setManager(_manager);
-        _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
-        _manager.adjustBalance(_constantProductPair, _constantProductPair.token0(), 25e18);
-        _manager.adjustBalance(_constantProductPair, _constantProductPair.token1(), 26e18);
-
-        // act
-        _constantProductPair.sync();
-
-        // assert
-        (uint112 lReserve0, uint112 lReserve1, ) = _constantProductPair.getReserves();
-        assertEq(_constantProductPair.token0Managed(), 25e18);
-        assertEq(lReserve0, 105e18);
-        assertEq(lReserve1, 106e18);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -472,6 +459,23 @@ contract ConstantProductPairTest is BaseTest
             Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
         );
+    }
+
+    function testOracle_CorrectPriceDiffDecimals() public
+    {
+        // arrange
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenD), 0));
+        _tokenA.mint(address(lPair), 100e18);
+        _tokenD.mint(address(lPair), 50e6);
+        lPair.mint(address(this));
+
+        // act
+        _stepTime(5);
+        lPair.sync();
+
+        // assert
+        (int112 accLogPrice, ,) = lPair.observations(0);
+        assertApproxEqRel(LogCompression.fromLowResLog(accLogPrice / 5), 0.5e18, 0.0001e18);
     }
 
     function testOracle_SimplePrices() external

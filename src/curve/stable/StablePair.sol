@@ -39,8 +39,8 @@ contract StablePair is ReservoirPair {
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint256 public immutable token0PrecisionMultiplier;
-    uint256 public immutable token1PrecisionMultiplier;
+    uint256 private immutable token0PrecisionMultiplier;
+    uint256 private immutable token1PrecisionMultiplier;
 
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
@@ -268,8 +268,8 @@ contract StablePair is ReservoirPair {
 
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
             _updateOracle(
-                uint256(_reserve0) * token0PrecisionMultiplier,
-                uint256(_reserve1) * token1PrecisionMultiplier,
+                uint256(_reserve0),
+                uint256(_reserve1),
                 timeElapsed,
                 blockTimestampLast
             );
@@ -421,7 +421,11 @@ contract StablePair is ReservoirPair {
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
-        (int112 currLogPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(_getCurrentAPrecise(), _reserve0, _reserve1);
+        (int112 currLogPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(
+            _getCurrentAPrecise(),
+            _reserve0 * token0PrecisionMultiplier,
+            _reserve1 * token1PrecisionMultiplier
+        );
 
         unchecked {
             int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));

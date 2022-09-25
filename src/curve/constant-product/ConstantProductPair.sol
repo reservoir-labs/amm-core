@@ -1,7 +1,7 @@
 pragma solidity 0.8.13;
 
-import "@openzeppelin/token/ERC20/IERC20.sol";
 import "@openzeppelin/utils/math/SafeCast.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import "src/libraries/Math.sol";
 import "src/libraries/ConstantProductOracleMath.sol";
@@ -20,8 +20,15 @@ contract ConstantProductPair is ReservoirPair {
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
+    // optimization: might want to move this into the Pair base class, since StablePair uses it too
+    uint128 private immutable token0PrecisionMultiplier;
+    uint128 private immutable token1PrecisionMultiplier;
+
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
-    {} // solhint-disable-line no-empty-blocks
+    {
+        token0PrecisionMultiplier = uint128(10) ** (18 - ERC20(token0).decimals());
+        token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(token1).decimals());
+    }
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
@@ -252,7 +259,10 @@ contract ConstantProductPair is ReservoirPair {
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
-        int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(_reserve0, _reserve1);
+        int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(
+            _reserve0 * token0PrecisionMultiplier,
+            _reserve1 * token1PrecisionMultiplier
+        );
         int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(_reserve0, _reserve1);
 
         // overflow is okay
