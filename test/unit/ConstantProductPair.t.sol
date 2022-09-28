@@ -282,10 +282,14 @@ contract ConstantProductPairTest is BaseTest
     function testSwap_ExactOut(uint256 aAmountOut) public
     {
         // arrange
-        uint256 lAmountOut = bound(aAmountOut, 1, INITIAL_MINT_AMOUNT);
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomSwapFee(0);
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        // this amount makes the new reserve of the input token stay within uint112 and not overflow
+        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        uint256 lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
         (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
-        vm.assume(lAmountIn <= type(uint112).max); // would overflow uint112 if too large
 
         // act - exact token1 out
         _tokenA.mint(address(_constantProductPair), lAmountIn);
@@ -295,6 +299,24 @@ contract ConstantProductPairTest is BaseTest
         assertGt(lAmountIn, lAmountOut);
         assertEq(lActualAmountOut, lAmountOut);
         assertEq(_tokenB.balanceOf(address(this)), lAmountOut);
+    }
+
+    function testSwap_ExactOut_NewReservesExceedUint112() public
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomSwapFee(0);
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        // 1 more than the max
+        uint256 lAmountOut = lMaxOutputAmt + 1;
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+        uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
+
+        // act & assert
+        _tokenA.mint(address(_constantProductPair), lAmountIn);
+        vm.expectRevert("CP: OVERFLOW");
+        _constantProductPair.swap(-int256(lAmountOut), false, address(this), bytes(""));
     }
 
     function testBurn() public
