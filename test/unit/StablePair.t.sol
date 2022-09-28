@@ -9,7 +9,6 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
-import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract StablePairTest is BaseTest
@@ -99,8 +98,10 @@ contract StablePairTest is BaseTest
 
     function testSwap_Token0ExactOut(uint256 aAmountOut) public
     {
-        // arrange
+        // assume
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
+
+        // arrange
         (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, true, 30, 2 * _stablePair.getCurrentAPrecise());
 
@@ -120,8 +121,10 @@ contract StablePairTest is BaseTest
 
     function testSwap_Token1ExactOut(uint256 aAmountOut) public
     {
-        // arrange
+        // assume
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
+
+        // arrange
         (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, false, 30, 2 * _stablePair.getCurrentAPrecise());
 

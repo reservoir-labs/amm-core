@@ -281,13 +281,15 @@ contract ConstantProductPairTest is BaseTest
 
     function testSwap_ExactOut(uint256 aAmountOut) public
     {
-        // arrange
-        vm.prank(address(_factory));
-        _constantProductPair.setCustomSwapFee(0);
+        // assume
         uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
         // this amount makes the new reserve of the input token stay within uint112 and not overflow
         uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         uint256 lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
+
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomSwapFee(0);
         (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
 
