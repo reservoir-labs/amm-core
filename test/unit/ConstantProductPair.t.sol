@@ -25,15 +25,27 @@ contract ConstantProductPairTest is BaseTest
     function _calculateOutput(
         uint256 aReserveIn,
         uint256 aReserveOut,
-        uint256 aTokenIn,
+        uint256 aAmountIn,
         uint256 aFee
     ) private pure returns (uint256 rExpectedOut)
     {
-        uint256 lAmountInWithFee = aTokenIn * (10_000 - aFee);
+        uint256 lAmountInWithFee = aAmountIn * (10_000 - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
         uint256 lDenominator = aReserveIn * 10_000 + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
+    }
+
+    function _calculateInput(
+        uint256 aReserveIn,
+        uint256 aReserveOut,
+        uint256 aAmountOut,
+        uint256 aFee
+    ) private pure returns (uint256 rExpectedIn)
+    {
+        uint256 lNumerator = aReserveIn * aAmountOut * 10_000;
+        uint256 lDenominator = (aReserveOut - aAmountOut) * (10_000 - aFee);
+        rExpectedIn = lNumerator / lDenominator + 1;
     }
 
     function _getToken0Token1(address aTokenA, address aTokenB) private pure returns (address rToken0, address rToken1)
@@ -265,6 +277,48 @@ contract ConstantProductPairTest is BaseTest
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
         _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+    }
+
+    function testSwap_ExactOut(uint256 aAmountOut) public
+    {
+        // assume
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        // this amount makes the new reserve of the input token stay within uint112 and not overflow
+        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        uint256 lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
+
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomSwapFee(0);
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+        uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
+
+        // act - exact token1 out
+        _tokenA.mint(address(_constantProductPair), lAmountIn);
+        uint256 lActualAmountOut = _constantProductPair.swap(-int256(lAmountOut), false, address(this), bytes(""));
+
+        // assert
+        assertGt(lAmountIn, lAmountOut);
+        assertEq(lActualAmountOut, lAmountOut);
+        assertEq(_tokenB.balanceOf(address(this)), lAmountOut);
+    }
+
+    function testSwap_ExactOut_NewReservesExceedUint112() public
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomSwapFee(0);
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        // 1 more than the max
+        uint256 lAmountOut = lMaxOutputAmt + 1;
+        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
+        uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
+
+        // act & assert
+        _tokenA.mint(address(_constantProductPair), lAmountIn);
+        vm.expectRevert("CP: OVERFLOW");
+        _constantProductPair.swap(-int256(lAmountOut), false, address(this), bytes(""));
     }
 
     function testBurn() public
