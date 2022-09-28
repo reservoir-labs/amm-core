@@ -285,6 +285,7 @@ contract ConstantProductPairTest is BaseTest
         uint256 lAmountOut = bound(aAmountOut, 1, INITIAL_MINT_AMOUNT);
         (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
         uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
+        vm.assume(lAmountIn <= type(uint112).max); // would overflow uint112 if too large
 
         // act - exact token1 out
         _tokenA.mint(address(_constantProductPair), lAmountIn);
