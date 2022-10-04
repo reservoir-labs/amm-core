@@ -181,6 +181,7 @@ contract StablePair is ReservoirPair {
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
+
         _managerCallback();
     }
 
