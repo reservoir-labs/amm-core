@@ -35,6 +35,7 @@ abstract contract BaseTest is Test {
         // set shared variables
         _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(30)));
         _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(2500)));
+        _factory.set(keccak256("ConstantProductPair::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
         _factory.set(keccak256("ConstantProductPair::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
 
         // add constant product curve
