@@ -78,7 +78,69 @@ contract StablePairTest is BaseTest
         _stablePair.mintFee(0, 0);
     }
 
-    function testMintFee_WhenRampingA(uint256 aFutureA) public
+    function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public
+    {
+        // assume - for ramping up or down from 1000
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 500, 5000));
+        vm.assume(lFutureAToSet != 1000);
+
+        // arrange
+        StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
+        _tokenA.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        lOtherPair.mint(_alice);
+
+        for (uint256 i = 0; i < 10; ++i) {
+            uint256 lAmountToSwap = 5e18;
+
+            _tokenA.mint(address(_stablePair), lAmountToSwap);
+            _stablePair.swap(int256(lAmountToSwap), true, address(this), bytes(""));
+
+            _tokenB.mint(address(_stablePair), lAmountToSwap);
+            _stablePair.swap(-int256(lAmountToSwap), true, address(this), bytes(""));
+
+            _tokenA.mint(address(lOtherPair), lAmountToSwap);
+            lOtherPair.swap(int256(lAmountToSwap), true, address(this), bytes(""));
+
+            _tokenC.mint(address(lOtherPair), lAmountToSwap);
+            lOtherPair.swap(-int256(lAmountToSwap), true, address(this), bytes(""));
+        }
+
+        // we change A for _stablePair but not for lOtherPair
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        // sanity
+        assertEq(_stablePair.getCurrentA(), lOtherPair.getCurrentA());
+
+        // act - warp to the end
+        vm.warp(lFutureATimestamp);
+        assertEq(_stablePair.getCurrentA(), lFutureAToSet);
+        assertTrue(_stablePair.getCurrentA() != lOtherPair.getCurrentA());
+
+        // sanity
+        (uint256 lReserve0_S, uint256 lReserve1_S, ) = _stablePair.getReserves();
+        (uint256 lReserve0_O, uint256 lReserve1_O, ) = lOtherPair.getReserves();
+        assertEq(lReserve0_S, lReserve0_O);
+        assertEq(lReserve1_S, lReserve1_O);
+
+        vm.prank(address(_stablePair));
+        (uint256 lTotalSupply1, ) = _stablePair.mintFee(lReserve0_S, lReserve1_S);
+        vm.prank(address(lOtherPair));
+        (uint256 lTotalSupply2, ) = lOtherPair.mintFee(lReserve0_O, lReserve1_O);
+
+        // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
+        assertEq(lTotalSupply1, lTotalSupply2);
+    }
+
+    function testMintFee_WhenRampingA_PoolUnbalanced(uint256 aFutureA) public
     {
         // assume - for ramping up or down from 1000
         uint64 lFutureAToSet = uint64(bound(aFutureA, 500, 5000));
@@ -119,18 +181,19 @@ contract StablePairTest is BaseTest
         assertTrue(_stablePair.getCurrentA() != lOtherPair.getCurrentA());
 
         // sanity
-        (uint256 lReserve0, uint256 lReserve1, ) = _stablePair.getReserves();
-        (uint256 lReserveB0, uint256 lReserveB1, ) = lOtherPair.getReserves();
-        assertEq(lReserve0, lReserveB0);
-        assertEq(lReserve1, lReserveB1);
+        (uint256 lReserve0_S, uint256 lReserve1_S, ) = _stablePair.getReserves();
+        (uint256 lReserve0_O, uint256 lReserve1_O, ) = lOtherPair.getReserves();
+        assertEq(lReserve0_S, lReserve0_O);
+        assertEq(lReserve1_S, lReserve1_O);
 
         vm.prank(address(_stablePair));
-        _stablePair.mintFee(lReserve0, lReserve1);
+        (uint256 lTotalSupply1, ) = _stablePair.mintFee(lReserve0_S, lReserve1_S);
         vm.prank(address(lOtherPair));
-        lOtherPair.mintFee(lReserveB0, lReserveB1);
+        (uint256 lTotalSupply2, ) = lOtherPair.mintFee(lReserve0_O, lReserve1_O);
 
         // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
         assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
+        assertEq(lTotalSupply1, lTotalSupply2);
     }
 
     function testSwap() public
