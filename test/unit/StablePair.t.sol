@@ -82,6 +82,7 @@ contract StablePairTest is BaseTest
     {
         // assume - for ramping up or down from 1000
         uint64 lFutureAToSet = uint64(bound(aFutureA, 500, 5000));
+        vm.assume(lFutureAToSet != 1000);
 
         // arrange
         StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));

@@ -44,8 +44,8 @@ contract StablePair is ReservoirPair {
 
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
-    uint128 private lastInvariant;
-    uint128 private lastInvariantAmp;
+    uint192 private lastInvariant;
+    uint64 private lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
@@ -137,8 +137,10 @@ contract StablePair is ReservoirPair {
         _mint(to, liquidity);
         _update(balance0, balance1, _reserve0, _reserve1);
 
-        // casting safe as the max invariant would be uint112 + uint112 which fits into uint128
-        lastInvariant = uint128(newLiq);
+        // casting is safe as the max invariant would be 2 * uint112 (* uint60 in the case of tokens with 0 decimal places)
+        // which results in 112 + 60 + 1 = 173 bits
+        // which fits into uint192
+        lastInvariant = uint192(newLiq);
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Mint(msg.sender, amount0, amount1);
@@ -175,12 +177,10 @@ contract StablePair is ReservoirPair {
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
-        // casting safe as the max invariant would be uint112 + uint112 which fits into uint128
-        lastInvariant = uint128(_computeLiquidity(reserve0, reserve1));
+        lastInvariant = uint192(_computeLiquidity(reserve0, reserve1));
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
-
         _managerCallback();
     }
 
