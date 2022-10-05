@@ -76,6 +76,43 @@ contract StablePairTest is BaseTest
         assertGt(_stablePair.getVirtualPrice(), 1e18);
     }
 
+    // This test case demonstrates that if a LP provider provides liquidity in non-optimal proportions
+    // and then removes liquidity, they would be worse off had they just swapped it instead
+    // and thus the mechanism cannot be gamed into getting a better price
+    function testMint_NonOptimalProportion_ThenBurn() public
+    {
+        // arrange
+        uint256 lBefore = vm.snapshot();
+        uint256 lAmountAToMint = 1e18;
+        uint256 lAmountBToMint = 100e18;
+
+        _tokenA.mint(address(_stablePair), lAmountAToMint);
+        _tokenB.mint(address(_stablePair), lAmountBToMint);
+
+        // act
+        _stablePair.mint(address(this));
+        _stablePair.transfer(address(_stablePair), _stablePair.balanceOf(address(this)));
+        _stablePair.burn(address(this));
+
+        uint256 lBalA = _tokenA.balanceOf(address(this));
+        uint256 lBalB = _tokenB.balanceOf(address(this));
+
+        vm.revertTo(lBefore);
+
+        // swap
+        uint256 lAmountToSwap = lAmountBToMint - lBalB;
+        _tokenB.mint(address(_stablePair), lAmountToSwap);
+        _stablePair.swap(-int256(lAmountToSwap), true, address(this), bytes(""));
+
+        uint256 lNewBalA = _tokenA.balanceOf(address(this));
+
+        console.log(lNewBalA + lAmountAToMint);
+        console.log(lBalA);
+
+        // assert
+        assertGt(lNewBalA + lAmountAToMint, lBalA);
+    }
+
     function testMintFee_CallableBySelf() public
     {
         // arrange
