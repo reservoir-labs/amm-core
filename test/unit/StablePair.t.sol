@@ -94,23 +94,20 @@ contract StablePairTest is BaseTest
         _stablePair.transfer(address(_stablePair), _stablePair.balanceOf(address(this)));
         _stablePair.burn(address(this));
 
-        uint256 lBalA = _tokenA.balanceOf(address(this));
-        uint256 lBalB = _tokenB.balanceOf(address(this));
+        uint256 lBurnOutputA = _tokenA.balanceOf(address(this));
+        uint256 lBurnOutputB = _tokenB.balanceOf(address(this));
 
         vm.revertTo(lBefore);
 
         // swap
-        uint256 lAmountToSwap = lAmountBToMint - lBalB;
+        uint256 lAmountToSwap = lAmountBToMint - lBurnOutputB;
         _tokenB.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(-int256(lAmountToSwap), true, address(this), bytes(""));
 
-        uint256 lNewBalA = _tokenA.balanceOf(address(this));
-
-        console.log(lNewBalA + lAmountAToMint);
-        console.log(lBalA);
+        uint256 lSwapOutputA = _tokenA.balanceOf(address(this));
 
         // assert
-        assertGt(lNewBalA + lAmountAToMint, lBalA);
+        assertLt(lBurnOutputA, lSwapOutputA + lAmountAToMint);
     }
 
     function testMintFee_CallableBySelf() public
