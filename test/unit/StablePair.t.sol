@@ -78,7 +78,7 @@ contract StablePairTest is BaseTest
 
     // This test case demonstrates that if a LP provider provides liquidity in non-optimal proportions
     // and then removes liquidity, they would be worse off had they just swapped it instead
-    // and thus the mechanism cannot be gamed into getting a better price
+    // and thus the mint-burn mechanism cannot be gamed into getting a better price
     function testMint_NonOptimalProportion_ThenBurn() public
     {
         // arrange
