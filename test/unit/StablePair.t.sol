@@ -59,6 +59,23 @@ contract StablePairTest is BaseTest
         lPair.mint(address(this));
     }
 
+    function testMint_NonOptimalProportion() public
+    {
+        // arrange
+        uint256 lAmountAToMint = 1e18;
+        uint256 lAmountBToMint = 100e18;
+
+        _tokenA.mint(address(_stablePair), lAmountAToMint);
+        _tokenB.mint(address(_stablePair), lAmountBToMint);
+
+        // act
+        _stablePair.mint(address(this));
+
+        // assert
+        assertLt(_stablePair.balanceOf(address(this)), lAmountAToMint + lAmountBToMint);
+        assertGt(_stablePair.getVirtualPrice(), 1e18);
+    }
+
     function testMintFee_CallableBySelf() public
     {
         // arrange
