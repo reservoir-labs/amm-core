@@ -113,6 +113,25 @@ contract StablePair is ReservoirPair {
         emit StopRampA(currentAPrecise, ampData.initialATime);
     }
 
+    /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
+    function _nonOptimalMintFee(
+        uint256 _amount0,
+        uint256 _amount1,
+        uint256 _reserve0,
+        uint256 _reserve1
+    ) internal view returns (uint256 token0Fee, uint256 token1Fee) {
+        if (_reserve0 == 0 || _reserve1 == 0) return (0, 0);
+        uint256 amount1Optimal = (_amount0 * _reserve1) / _reserve0;
+
+        if (amount1Optimal <= _amount1) {
+            token1Fee = (swapFee * (_amount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
+        } else {
+            uint256 amount0Optimal = (_amount1 * _reserve0) / _reserve1;
+            token0Fee = (swapFee * (_amount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
+        }
+        require(token0Fee <= type(uint112).max && token1Fee <= type(uint112).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
+    }
+
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
@@ -124,6 +143,10 @@ contract StablePair is ReservoirPair {
         uint256 newLiq = _computeLiquidity(balance0, balance1);
         uint256 amount0 = balance0 - _reserve0;
         uint256 amount1 = balance1 - _reserve1;
+
+        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, _reserve0, _reserve1);
+        _reserve0 += uint112(fee0);
+        _reserve1 += uint112(fee1);
 
         (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
 
