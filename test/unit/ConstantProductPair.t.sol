@@ -27,11 +27,12 @@ contract ConstantProductPairTest is BaseTest
         uint256 aReserveOut,
         uint256 aAmountIn,
         uint256 aFee
-    ) private pure returns (uint256 rExpectedOut)
+    ) private view returns (uint256 rExpectedOut)
     {
-        uint256 lAmountInWithFee = aAmountIn * (10_000 - aFee);
+        uint256 MAX_FEE = _constantProductPair.FEE_ACCURACY();
+        uint256 lAmountInWithFee = aAmountIn * (MAX_FEE - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
-        uint256 lDenominator = aReserveIn * 10_000 + lAmountInWithFee;
+        uint256 lDenominator = aReserveIn * MAX_FEE + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
     }
@@ -41,10 +42,11 @@ contract ConstantProductPairTest is BaseTest
         uint256 aReserveOut,
         uint256 aAmountOut,
         uint256 aFee
-    ) private pure returns (uint256 rExpectedIn)
+    ) private view returns (uint256 rExpectedIn)
     {
-        uint256 lNumerator = aReserveIn * aAmountOut * 10_000;
-        uint256 lDenominator = (aReserveOut - aAmountOut) * (10_000 - aFee);
+        uint256 MAX_FEE = _constantProductPair.FEE_ACCURACY();
+        uint256 lNumerator = aReserveIn * aAmountOut * MAX_FEE;
+        uint256 lDenominator = (aReserveOut - aAmountOut) * (MAX_FEE - aFee);
         rExpectedIn = lNumerator / lDenominator + 1;
     }
 
@@ -119,8 +121,9 @@ contract ConstantProductPairTest is BaseTest
     function testSwap() public
     {
         // arrange
+        uint256 lSwapFee = 3_000;
         (uint256 reserve0, uint256 reserve1, ) = _constantProductPair.getReserves();
-        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, 30);
+        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, lSwapFee);
 
         // act
         address token0;
@@ -260,15 +263,11 @@ contract ConstantProductPairTest is BaseTest
         // arrange
         // swap 1
         _stepTime(1);
-        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
-        uint lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
         _constantProductPair.swap(1e17, true, address(this), "");
 
         // swap 2
         _stepTime(1);
-        (lReserve0, lReserve1, ) = _constantProductPair.getReserves();
-        lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
         _constantProductPair.swap(1e17, true, address(this), "");
 
