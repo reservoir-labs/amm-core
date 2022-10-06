@@ -117,7 +117,7 @@ contract StablePair is ReservoirPair {
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
-        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -152,7 +152,7 @@ contract StablePair is ReservoirPair {
     function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 liquidity = balanceOf[address(this)];
 
         // this is a safety feature that prevents revert when removing liquidity
@@ -188,7 +188,7 @@ contract StablePair is ReservoirPair {
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
         uint256 amountIn;
         address tokenOut;
 
@@ -253,10 +253,6 @@ contract StablePair is ReservoirPair {
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
         require(msg.sender == address(this), "SP: NOT_SELF");
         return _mintFee(_reserve0, _reserve1);
-    }
-
-    function _getReserves() internal view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
     }
 
     function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
@@ -400,7 +396,7 @@ contract StablePair is ReservoirPair {
     }
 
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
 
         if (tokenIn == token0) {
             finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
@@ -411,7 +407,7 @@ contract StablePair is ReservoirPair {
     }
 
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
     }
