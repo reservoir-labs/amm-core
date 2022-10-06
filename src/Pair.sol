@@ -15,11 +15,11 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     using Bytes32Lib for bytes32;
 
     bytes4 private constant SELECTOR        = bytes4(keccak256("transfer(address,uint256)"));
-    uint public constant MINIMUM_LIQUIDITY  = 10**3;
+    uint256 public constant MINIMUM_LIQUIDITY  = 10**3;
 
     uint256 public constant FEE_ACCURACY  = 1_000_000; // 100%
-    uint public constant MAX_PLATFORM_FEE = 500_000;   //  50%
-    uint public constant MAX_SWAP_FEE     = 20_000;    //   2%
+    uint256 public constant MAX_PLATFORM_FEE = 500_000;   //  50%
+    uint256 public constant MAX_SWAP_FEE     = 20_000;    //   2%
 
     GenericFactory public immutable factory;
     address public immutable token0;
@@ -48,8 +48,8 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
         platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
 
-        require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
-        require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
+        require(swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
+        require(platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
     }
 
     function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
