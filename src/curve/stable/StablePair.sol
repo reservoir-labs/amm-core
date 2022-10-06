@@ -61,7 +61,7 @@ contract StablePair is ReservoirPair {
         // @dev Factory ensures that the tokens are sorted.
         require(token0 != address(0), "SP: ZERO_ADDRESS");
         require(token0 != token1, "SP: IDENTICAL_ADDRESSES");
-        require(swapFee >= MIN_SWAP_FEE && swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
+        require(swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
         require(
             // perf: check if an immutable/constant var is cheaper than always casting
             ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)

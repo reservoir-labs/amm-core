@@ -19,7 +19,6 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     uint256 public constant FEE_ACCURACY  = 1_000_000;
     uint public constant MAX_PLATFORM_FEE = 500_000;   // 50.00%
-    uint public constant MIN_SWAP_FEE     = 0;      //  0.00%
     uint public constant MAX_SWAP_FEE     = 20_000;    //  2.00%
 
     GenericFactory public immutable factory;
@@ -77,7 +76,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
             : uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
         if (_swapFee == swapFee) { return; }
 
-        require(_swapFee >= MIN_SWAP_FEE && _swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
+        require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
