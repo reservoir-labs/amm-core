@@ -108,7 +108,7 @@ contract PairTest is BaseTest
         vm.expectRevert("P: INVALID_PLATFORM_FEE");
         _factory.rawCall(
             address(_constantProductPair),
-            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 900_000),
+            abi.encodeWithSignature("setCustomPlatformFee(uint256)", lPlatformFee),
             0
         );
     }
@@ -128,4 +128,17 @@ contract PairTest is BaseTest
         assertEq(_constantProductPair.platformFee(), 5000);
     }
 
+    function testRecoverToken() public
+    {
+        // arrange
+        uint256 lAmountToRecover = 1e18;
+        _tokenC.mint(address(_stablePair), 1e18);
+
+        // act
+        _stablePair.recoverToken(address(_tokenC));
+
+        // assert
+        assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
+        assertEq(_tokenC.balanceOf(address(_stablePair)), 0);
+    }
 }

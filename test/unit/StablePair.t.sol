@@ -374,20 +374,6 @@ contract StablePairTest is BaseTest
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
     }
 
-    function testRecoverToken() public
-    {
-        // arrange
-        uint256 lAmountToRecover = 1e18;
-        _tokenC.mint(address(_stablePair), 1e18);
-
-        // act
-        _stablePair.recoverToken(address(_tokenC));
-
-        // assert
-        assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
-        assertEq(_tokenC.balanceOf(address(_stablePair)), 0);
-    }
-
     function testRampA() public
     {
         // arrange
