@@ -44,9 +44,8 @@ contract StablePair is ReservoirPair {
 
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
-    // We no longer store dLast as dLast is dependent on the amp coefficient, which is dynamic
-    uint112 internal lastLiquidityEventReserve0;
-    uint112 internal lastLiquidityEventReserve1;
+    uint192 private lastInvariant;
+    uint64 private lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
@@ -137,7 +136,7 @@ contract StablePair is ReservoirPair {
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
-        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -161,8 +160,11 @@ contract StablePair is ReservoirPair {
         _mint(to, liquidity);
         _update(balance0, balance1, _reserve0, _reserve1);
 
-        lastLiquidityEventReserve0 = reserve0; // reserves are up to date
-        lastLiquidityEventReserve1 = reserve1; // reserves are up to date
+        // casting is safe as the max invariant would be 2 * uint112 (* uint60 in the case of tokens with 0 decimal places)
+        // which results in 112 + 60 + 1 = 173 bits
+        // which fits into uint192
+        lastInvariant = uint192(newLiq);
+        lastInvariantAmp = _getCurrentAPrecise();
 
         emit Mint(msg.sender, amount0, amount1);
 
@@ -173,7 +175,7 @@ contract StablePair is ReservoirPair {
     function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
-        (uint256 balance0, uint256 balance1) = _balance();
+        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 liquidity = balanceOf[address(this)];
 
         // this is a safety feature that prevents revert when removing liquidity
@@ -182,15 +184,15 @@ contract StablePair is ReservoirPair {
         // and use the current totalSupply of LP tokens for calculations since there is no new
         // LP tokens minted for platformFee
         uint256 _totalSupply;
-        try StablePair(this).mintFee(balance0, balance1) returns (uint256 rTotalSupply, uint256) {
+        try StablePair(this).mintFee(_reserve0, _reserve1) returns (uint256 rTotalSupply, uint256) {
             _totalSupply = rTotalSupply;
         }
         catch {
             _totalSupply = totalSupply;
         }
 
-        amount0 = (liquidity * balance0) / _totalSupply;
-        amount1 = (liquidity * balance1) / _totalSupply;
+        amount0 = (liquidity * _reserve0) / _totalSupply;
+        amount1 = (liquidity * _reserve1) / _totalSupply;
 
         _burn(address(this), liquidity);
         _safeTransfer(token0, to, amount0);
@@ -198,8 +200,8 @@ contract StablePair is ReservoirPair {
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
-        lastLiquidityEventReserve0 = reserve0;
-        lastLiquidityEventReserve1 = reserve1;
+        lastInvariant = uint192(_computeLiquidity(reserve0, reserve1));
+        lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
 
@@ -209,7 +211,7 @@ contract StablePair is ReservoirPair {
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint112 _reserve0, uint112 _reserve1, ) = _getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
         uint256 amountIn;
         address tokenOut;
 
@@ -274,10 +276,6 @@ contract StablePair is ReservoirPair {
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
         require(msg.sender == address(this), "SP: NOT_SELF");
         return _mintFee(_reserve0, _reserve1);
-    }
-
-    function _getReserves() internal view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        (_reserve0, _reserve1, _blockTimestampLast) = (reserve0, reserve1, blockTimestampLast);
     }
 
     function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
@@ -358,9 +356,13 @@ contract StablePair is ReservoirPair {
 
     function _mintFee(uint256 _reserve0, uint256 _reserve1) internal returns (uint256 _totalSupply, uint256 d) {
         _totalSupply = totalSupply;
-        uint256 _dLast = _computeLiquidity(lastLiquidityEventReserve0, lastLiquidityEventReserve1);
+        uint256 _dLast = lastInvariant;
         if (_dLast != 0) {
-            d = _computeLiquidity(_reserve0, _reserve1);
+            d = StableMath._computeLiquidityFromAdjustedBalances(
+                _reserve0 * token0PrecisionMultiplier,
+                _reserve1 * token1PrecisionMultiplier,
+                2 * lastInvariantAmp
+            );
             if (d > _dLast) {
                 // @dev `platformFee` % of increase in liquidity.
                 uint256 _platformFee = platformFee;
@@ -417,7 +419,7 @@ contract StablePair is ReservoirPair {
     }
 
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
 
         if (tokenIn == token0) {
             finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
@@ -428,7 +430,7 @@ contract StablePair is ReservoirPair {
     }
 
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 _reserve0, uint256 _reserve1, ) = _getReserves();
+        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
     }
