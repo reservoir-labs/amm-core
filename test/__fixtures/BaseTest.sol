@@ -33,8 +33,8 @@ abstract contract BaseTest is Test {
     constructor()
     {
         // set shared variables
-        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(30)));
-        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(2500)));
+        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(3_000))); // 0.3%
+        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(250_000))); // 25%
         _factory.set(keccak256("ConstantProductPair::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
         _factory.set(keccak256("ConstantProductPair::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
 
