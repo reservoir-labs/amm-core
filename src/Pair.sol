@@ -1,6 +1,6 @@
 pragma solidity 0.8.13;
 
-import "@openzeppelin/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/token/ERC20/ERC20.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -25,6 +25,13 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     address public immutable token0;
     address public immutable token1;
 
+    /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
+    /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
+    /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
+    // perf: can we use a smaller type?
+    uint128 internal immutable token0PrecisionMultiplier;
+    uint128 internal immutable token1PrecisionMultiplier;
+
     uint112 internal reserve0;
     uint112 internal reserve1;
     uint32  internal blockTimestampLast;
@@ -47,6 +54,9 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
         swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
         platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
+
+        token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
+        token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
 
         require(swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
         require(platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
@@ -103,7 +113,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         require(token != token1, "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");
 
-        uint _amountToRecover = IERC20(token).balanceOf(address(this));
+        uint _amountToRecover = ERC20(token).balanceOf(address(this));
 
         _safeTransfer(token, _recoverer, _amountToRecover);
     }

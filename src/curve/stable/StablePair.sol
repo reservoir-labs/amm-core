@@ -36,12 +36,6 @@ contract StablePair is ReservoirPair {
 
     AmplificationData public ampData;
 
-    /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
-    /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
-    /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint256 private immutable token0PrecisionMultiplier;
-    uint256 private immutable token1PrecisionMultiplier;
-
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
     uint192 private lastInvariant;
@@ -54,9 +48,6 @@ contract StablePair is ReservoirPair {
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
-
-        token0PrecisionMultiplier = uint256(10)**(18 - ERC20(token0).decimals());
-        token1PrecisionMultiplier = uint256(10)**(18 - ERC20(token1).decimals());
 
         // @dev Factory ensures that the tokens are sorted.
         require(token0 != address(0), "SP: ZERO_ADDRESS");
