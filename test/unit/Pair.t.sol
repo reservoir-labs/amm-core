@@ -9,6 +9,12 @@ contract PairTest is BaseTest
     IPair[] internal _pairs;
     IPair   internal _pair;
 
+    function setUp() public
+    {
+        _pairs.push(_constantProductPair);
+        _pairs.push(_stablePair);
+    }
+
     modifier parameterizedTest() {
         for (uint256 i = 0; i < _pairs.length; ++i) {
             uint256 lBefore = vm.snapshot();
