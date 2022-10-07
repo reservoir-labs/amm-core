@@ -29,10 +29,10 @@ contract ConstantProductPairTest is BaseTest
         uint256 aFee
     ) private view returns (uint256 rExpectedOut)
     {
-        uint256 MAX_FEE = _constantProductPair.FEE_ACCURACY();
-        uint256 lAmountInWithFee = aAmountIn * (MAX_FEE - aFee);
+        uint256 lMaxFee = _constantProductPair.FEE_ACCURACY();
+        uint256 lAmountInWithFee = aAmountIn * (lMaxFee - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
-        uint256 lDenominator = aReserveIn * MAX_FEE + lAmountInWithFee;
+        uint256 lDenominator = aReserveIn * lMaxFee + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
     }
@@ -44,9 +44,9 @@ contract ConstantProductPairTest is BaseTest
         uint256 aFee
     ) private view returns (uint256 rExpectedIn)
     {
-        uint256 MAX_FEE = _constantProductPair.FEE_ACCURACY();
-        uint256 lNumerator = aReserveIn * aAmountOut * MAX_FEE;
-        uint256 lDenominator = (aReserveOut - aAmountOut) * (MAX_FEE - aFee);
+        uint256 lMaxFee = _constantProductPair.FEE_ACCURACY();
+        uint256 lNumerator = aReserveIn * aAmountOut * lMaxFee;
+        uint256 lDenominator = (aReserveOut - aAmountOut) * (lMaxFee - aFee);
         rExpectedIn = lNumerator / lDenominator + 1;
     }
 
