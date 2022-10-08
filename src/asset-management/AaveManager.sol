@@ -65,6 +65,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
                                 ADJUST MANAGEMENT
     //////////////////////////////////////////////////////////////////////////*/
 
+    /// @notice if token0 or token1 does not have a market in AAVE, the tokens will not be transferred
     function adjustManagement(
         IAssetManagedPair aPair,
         int256 aAmount0Change,
@@ -85,11 +86,19 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         address lToken0AToken = _getATokenAddress(address(lToken0));
         address lToken1AToken = _getATokenAddress(address(lToken1));
 
+        // do not do anything if there isn't a market for the token
+        if (lToken0AToken == address(0)) {
+            aAmount0Change = 0;
+        }
+        if (lToken1AToken == address(0)) {
+            aAmount1Change = 0;
+        }
+
         // withdraw from the market
-        if (aAmount0Change < 0 && lToken0AToken != address(0)) {
+        if (aAmount0Change < 0) {
             _doDivest(aPair, lToken0, uint256(-aAmount0Change));
         }
-        if (aAmount1Change < 0 && lToken1AToken != address(0)) {
+        if (aAmount1Change < 0) {
             _doDivest(aPair, lToken1, uint256(-aAmount1Change));
         }
 
@@ -97,10 +106,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         aPair.adjustManagement(aAmount0Change, aAmount1Change);
 
         // transfer the managed tokens to the destination
-        if (aAmount0Change > 0 && lToken0AToken != address(0)) {
+        if (aAmount0Change > 0) {
             _doInvest(aPair, lToken0, uint256(aAmount0Change));
         }
-        if (aAmount1Change > 0 && lToken1AToken != address(0)) {
+        if (aAmount1Change > 0) {
             _doInvest(aPair, lToken1, uint256(aAmount1Change));
         }
     }
