@@ -66,11 +66,10 @@ contract AaveIntegrationTest is BaseTest
         rOtherPair.setManager(_manager);
     }
 
-    // todo: diff combos of no market, positive negative amount
-    function testAdjustManagement_NoMarket() public parameterizedTest
+    function testAdjustManagement_NoMarket(uint256 aAmountToManage) public parameterizedTest
     {
-        // arrange
-        int256 lAmountToManage = 5e6;
+        // assume - we want negative numbers too
+        int256 lAmountToManage = int256(bound(aAmountToManage, 0, type(uint256).max));
 
         // act
         _manager.adjustManagement(
