@@ -10,8 +10,10 @@ verbosity = 3
 
 [profile.integration]
 match_path = "test/integration/*.sol"
-eth_rpc_url = "https://api.avax.network/ext/bc/C/rpc"
-block_number = 20817909
 
 [profile.ci]
 fuzz-runs = 10_000
+
+[rpc_endpoints]
+avalanche = "https://api.avax.network/ext/bc/C/rpc"
+polygon = "https://polygon-rpc.com"
