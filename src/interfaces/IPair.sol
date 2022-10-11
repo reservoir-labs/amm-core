@@ -5,7 +5,13 @@ import { IUniswapV2ERC20 } from "src/interfaces/IUniswapV2ERC20.sol";
 
 interface IPair is IUniswapV2ERC20 {
     // solhint-disable-next-line func-name-mixedcase
-    function MINIMUM_LIQUIDITY() external pure returns (uint);
+    function MINIMUM_LIQUIDITY() external pure returns (uint256);
+    // solhint-disable-next-line func-name-mixedcase
+    function FEE_ACCURACY() external pure returns (uint256);
+    // solhint-disable-next-line func-name-mixedcase
+    function MAX_PLATFORM_FEE() external pure returns (uint256);
+    // solhint-disable-next-line func-name-mixedcase
+    function MAX_SWAP_FEE() external pure returns (uint256);
 
     function factory() external returns (GenericFactory);
     function token0() external view returns (address);

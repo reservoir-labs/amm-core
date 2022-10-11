@@ -18,8 +18,8 @@ library StableMath {
     uint256 public constant MAX_AMP_UPDATE_DAILY_RATE   = 2;
     /// @dev required as an upper limit for iterative calculations not guaranteed to converge
     uint256 private constant MAX_LOOP_LIMIT             = 256;
-    /// @dev 100% in basis points
-    uint256 private constant MAX_FEE                    = 10_000;
+    /// @dev 100%
+    uint256 private constant MAX_FEE                    = 1_000_000;
 
     function _getAmountOut(
         uint256 amountIn,
