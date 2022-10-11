@@ -78,7 +78,7 @@ jobs:
         with:
           version: nightly
 
-      - name: Run unit tests
+      - name: Run integration tests
         run: npm run test:integration
 
   test-uniswap-v2:
