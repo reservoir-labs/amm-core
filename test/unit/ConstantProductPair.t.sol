@@ -138,6 +138,26 @@ contract ConstantProductPairTest is BaseTest
         assertEq(MintableERC20(token0).balanceOf(address(this)), 0);
     }
 
+    function testSwap_ExtremeAmounts() public
+    {
+        // arrange
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
+        uint256 lSwapAmount = 1e18;
+        uint256 lAmountB = type(uint112).max - lSwapAmount;
+        uint256 lAmountC = type(uint112).max;
+        _tokenB.mint(address(lPair), lAmountB);
+        _tokenC.mint(address(lPair), lAmountC);
+        lPair.mint(address(this));
+
+        // act
+        _tokenB.mint(address(lPair), lSwapAmount);
+        lPair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+
+        // assert
+        assertEq(_tokenC.balanceOf(address(this)), 0.997e18);
+        assertEq(_tokenB.balanceOf(address(lPair)), type(uint112).max);
+    }
+
     function testSwap_ExactOutExceedReserves() public
     {
         // act & assert
