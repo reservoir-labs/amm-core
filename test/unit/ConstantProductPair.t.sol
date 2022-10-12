@@ -27,11 +27,12 @@ contract ConstantProductPairTest is BaseTest
         uint256 aReserveOut,
         uint256 aAmountIn,
         uint256 aFee
-    ) private pure returns (uint256 rExpectedOut)
+    ) private view returns (uint256 rExpectedOut)
     {
-        uint256 lAmountInWithFee = aAmountIn * (10_000 - aFee);
+        uint256 lMaxFee = _constantProductPair.FEE_ACCURACY();
+        uint256 lAmountInWithFee = aAmountIn * (lMaxFee - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
-        uint256 lDenominator = aReserveIn * 10_000 + lAmountInWithFee;
+        uint256 lDenominator = aReserveIn * lMaxFee + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
     }
@@ -41,144 +42,17 @@ contract ConstantProductPairTest is BaseTest
         uint256 aReserveOut,
         uint256 aAmountOut,
         uint256 aFee
-    ) private pure returns (uint256 rExpectedIn)
+    ) private view returns (uint256 rExpectedIn)
     {
-        uint256 lNumerator = aReserveIn * aAmountOut * 10_000;
-        uint256 lDenominator = (aReserveOut - aAmountOut) * (10_000 - aFee);
+        uint256 lMaxFee = _constantProductPair.FEE_ACCURACY();
+        uint256 lNumerator = aReserveIn * aAmountOut * lMaxFee;
+        uint256 lDenominator = (aReserveOut - aAmountOut) * (lMaxFee - aFee);
         rExpectedIn = lNumerator / lDenominator + 1;
     }
 
     function _getToken0Token1(address aTokenA, address aTokenB) private pure returns (address rToken0, address rToken1)
     {
         (rToken0, rToken1) = aTokenA < aTokenB ? (aTokenA, aTokenB) : (aTokenB, aTokenA);
-    }
-
-    function testCustomSwapFee_OffByDefault() public
-    {
-        // assert
-        assertEq(_constantProductPair.customSwapFee(), type(uint).max);
-        assertEq(_constantProductPair.swapFee(), 30);
-    }
-
-    function testSetSwapFeeForPair() public
-    {
-        // act
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
-            0
-        );
-
-        // assert
-        assertEq(_constantProductPair.customSwapFee(), 100);
-        assertEq(_constantProductPair.swapFee(), 100);
-    }
-
-    function testSetSwapFeeForPair_Reset() public
-    {
-        // arrange
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
-            0
-        );
-
-        // act
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", type(uint).max),
-            0
-        );
-
-        // assert
-        assertEq(_constantProductPair.customSwapFee(), type(uint).max);
-        assertEq(_constantProductPair.swapFee(), 30);
-    }
-
-    function testSetSwapFeeForPair_BreachMaximum() public
-    {
-        // act & assert
-        vm.expectRevert("P: INVALID_SWAP_FEE");
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", 4000),
-            0
-        );
-    }
-
-    function testCustomPlatformFee_OffByDefault() public
-    {
-        // assert
-        assertEq(_constantProductPair.customPlatformFee(), type(uint).max);
-        assertEq(_constantProductPair.platformFee(), 2500);
-    }
-
-    function testSetPlatformFeeForPair() public
-    {
-        // act
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 100),
-            0
-        );
-
-        // assert
-        assertEq(_constantProductPair.customPlatformFee(), 100);
-        assertEq(_constantProductPair.platformFee(), 100);
-    }
-
-    function testSetPlatformFeeForPair_Reset() public
-    {
-        // arrange
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 100),
-            0
-        );
-
-        // act
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomPlatformFee(uint256)", type(uint).max),
-            0
-        );
-
-        // assert
-        assertEq(_constantProductPair.customPlatformFee(), type(uint).max);
-        assertEq(_constantProductPair.platformFee(), 2500);
-    }
-
-    function testSetPlatformFeeForPair_BreachMaximum() public
-    {
-        // act & assert
-        vm.expectRevert("P: INVALID_PLATFORM_FEE");
-        _factory.rawCall(
-            address(_constantProductPair),
-            abi.encodeWithSignature("setCustomPlatformFee(uint256)", 9000),
-            0
-        );
-    }
-
-    function testUpdateDefaultFees() public
-    {
-        // arrange
-        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(200)));
-        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(5000)));
-
-        // act
-        _constantProductPair.updateSwapFee();
-        _constantProductPair.updatePlatformFee();
-
-        // assert
-        assertEq(_constantProductPair.swapFee(), 200);
-        assertEq(_constantProductPair.platformFee(), 5000);
-    }
-
-    function testCreatePair_MoreThan18Decimals() public
-    {
-        // act & assert
-        vm.expectRevert("FACTORY: DEPLOY_FAILED");
-        ConstantProductPair(_createPair(address(_tokenE), address(_tokenA), 0));
     }
 
     function testMint() public
@@ -247,8 +121,9 @@ contract ConstantProductPairTest is BaseTest
     function testSwap() public
     {
         // arrange
+        uint256 lSwapFee = 3_000;
         (uint256 reserve0, uint256 reserve1, ) = _constantProductPair.getReserves();
-        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, 30);
+        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, lSwapFee);
 
         // act
         address token0;
@@ -261,6 +136,26 @@ contract ConstantProductPairTest is BaseTest
         // assert
         assertEq(MintableERC20(token1).balanceOf(address(this)), expectedOutput);
         assertEq(MintableERC20(token0).balanceOf(address(this)), 0);
+    }
+
+    function testSwap_ExtremeAmounts() public
+    {
+        // arrange
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
+        uint256 lSwapAmount = 1e18;
+        uint256 lAmountB = type(uint112).max - lSwapAmount;
+        uint256 lAmountC = type(uint112).max;
+        _tokenB.mint(address(lPair), lAmountB);
+        _tokenC.mint(address(lPair), lAmountC);
+        lPair.mint(address(this));
+
+        // act
+        _tokenB.mint(address(lPair), lSwapAmount);
+        lPair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+
+        // assert
+        assertEq(_tokenC.balanceOf(address(this)), 0.997e18);
+        assertEq(_tokenB.balanceOf(address(lPair)), type(uint112).max);
     }
 
     function testSwap_ExactOutExceedReserves() public
@@ -388,15 +283,11 @@ contract ConstantProductPairTest is BaseTest
         // arrange
         // swap 1
         _stepTime(1);
-        (uint256 lReserve0, uint256 lReserve1, ) = _constantProductPair.getReserves();
-        uint lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
         _constantProductPair.swap(1e17, true, address(this), "");
 
         // swap 2
         _stepTime(1);
-        (lReserve0, lReserve1, ) = _constantProductPair.getReserves();
-        lOutput = _calculateOutput(lReserve0, lReserve1, 1e17, 30);
         _tokenA.mint(address(_constantProductPair), 1e17);
         _constantProductPair.swap(1e17, true, address(this), "");
 

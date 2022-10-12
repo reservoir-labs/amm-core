@@ -20,11 +20,12 @@ contract StablePairTest is BaseTest
         uint256 aReserveOut,
         uint256 aTokenIn,
         uint256 aFee
-    ) private pure returns (uint256 rExpectedOut)
+    ) private view returns (uint256 rExpectedOut)
     {
-        uint256 lAmountInWithFee = aTokenIn * (10_000 - aFee);
+        uint256 MAX_FEE = _constantProductPair.FEE_ACCURACY();
+        uint256 lAmountInWithFee = aTokenIn * (MAX_FEE - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
-        uint256 lDenominator = aReserveIn * 10_000 + lAmountInWithFee;
+        uint256 lDenominator = aReserveIn * MAX_FEE + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
     }
@@ -271,8 +272,9 @@ contract StablePairTest is BaseTest
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
+        uint256 lSwapFee = 3_000; // 0.3%
         (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
-        uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, true, 30, 2 * _stablePair.getCurrentAPrecise());
+        uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, true, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
         assertGt(lAmountIn, lAmountOut);
@@ -282,7 +284,7 @@ contract StablePairTest is BaseTest
         uint256 lActualOut = _stablePair.swap(int256(lAmountOut), false, address(this), bytes(""));
 
         // assert
-        uint256 inverse = StableMath._getAmountOut(lAmountIn, lReserve0, lReserve1, 1, 1, false, 30, 2 * _stablePair.getCurrentAPrecise());
+        uint256 inverse = StableMath._getAmountOut(lAmountIn, lReserve0, lReserve1, 1, 1, false, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
         assertEq(lActualOut, lAmountOut);
@@ -294,8 +296,9 @@ contract StablePairTest is BaseTest
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
+        uint256 lSwapFee = 3_000;
         (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
-        uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, false, 30, 2 * _stablePair.getCurrentAPrecise());
+        uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, false, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
         assertGt(lAmountIn, lAmountOut);
@@ -305,7 +308,7 @@ contract StablePairTest is BaseTest
         uint256 lActualOut = _stablePair.swap(-int256(lAmountOut), false, address(this), bytes(""));
 
         // assert
-        uint256 inverse = StableMath._getAmountOut(lAmountIn, lReserve0, lReserve1, 1, 1, true, 30, 2 * _stablePair.getCurrentAPrecise());
+        uint256 inverse = StableMath._getAmountOut(lAmountIn, lReserve0, lReserve1, 1, 1, true, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
         assertEq(lActualOut, lAmountOut);
@@ -372,20 +375,6 @@ contract StablePairTest is BaseTest
         assertGt(lExpectedTokenAReceived, 0);
         assertEq(_tokenA.balanceOf(_alice), lExpectedTokenAReceived);
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
-    }
-
-    function testRecoverToken() public
-    {
-        // arrange
-        uint256 lAmountToRecover = 1e18;
-        _tokenC.mint(address(_stablePair), 1e18);
-
-        // act
-        _stablePair.recoverToken(address(_tokenC));
-
-        // assert
-        assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);
-        assertEq(_tokenC.balanceOf(address(_stablePair)), 0);
     }
 
     function testRampA() public

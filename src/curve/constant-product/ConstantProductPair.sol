@@ -20,15 +20,8 @@ contract ConstantProductPair is ReservoirPair {
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
-    // optimization: might want to move this into the Pair base class, since StablePair uses it too
-    uint128 private immutable token0PrecisionMultiplier;
-    uint128 private immutable token1PrecisionMultiplier;
-
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
-    {
-        token0PrecisionMultiplier = uint128(10) ** (18 - ERC20(token0).decimals());
-        token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(token1).decimals());
-    }
+    {} // solhint-disable-line no-empty-blocks
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {

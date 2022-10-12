@@ -10,16 +10,27 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 contract GenericFactoryTest is BaseTest
 {
-    function testCreatePair_ConstantProduct() public
+    function testCreatePair_AllCurves(uint256 aCurveId) public
     {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
         // act
-        address lPair = _factory.createPair(address(_tokenA), address(_tokenC), 0);
+        address lPair = _factory.createPair(address(_tokenA), address(_tokenC), lCurveId);
 
         // assert
-        assertEq(_factory.getPair(address(_tokenA), address(_tokenC), 0), address(lPair));
+        assertEq(_factory.getPair(address(_tokenA), address(_tokenC), lCurveId), address(lPair));
     }
 
-    // todo: test creating the StablePair
+    function testCreatePair_MoreThan18Decimals(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
+        // act & assert
+        vm.expectRevert("FACTORY: DEPLOY_FAILED");
+        _createPair(address(_tokenE), address(_tokenA), lCurveId);
+    }
 
     function testAllPairs() public
     {
