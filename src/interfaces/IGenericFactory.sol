@@ -8,6 +8,7 @@ interface IGenericFactory
 
     function addCurve(bytes calldata initCode) external returns (uint256 curveId);
 
+    function allPairs() external view returns (address[] memory);
     function getPair(address tokenA, address tokenB, uint256 curveId) external view returns (address);
     function createPair(address tokenA, address tokenB, uint256 curveId) external returns (address);
 }

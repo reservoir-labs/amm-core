@@ -31,4 +31,21 @@ contract GenericFactoryTest is BaseTest
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
         _createPair(address(_tokenE), address(_tokenA), lCurveId);
     }
+
+    function testAllPairs() public
+    {
+        // arrange
+        address lPair3 = _factory.createPair(address(_tokenA), address(_tokenC), 0);
+        address lPair4 = _factory.createPair(address(_tokenA), address(_tokenC), 1);
+
+        // act
+        address[] memory lAllPairs = _factory.allPairs();
+
+        // assert
+        assertEq(lAllPairs.length, 4);
+        assertEq(lAllPairs[0], address(_constantProductPair));
+        assertEq(lAllPairs[1], address(_stablePair));
+        assertEq(lAllPairs[2], lPair3);
+        assertEq(lAllPairs[3], lPair4);
+    }
 }

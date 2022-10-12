@@ -42,6 +42,12 @@ contract GenericFactory is IGenericFactory, Ownable
     event PairCreated(address indexed token0, address indexed token1, uint256 curveId, address pair);
 
     mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
+    address[] private _allPairs;
+
+    function allPairs() external view returns (address[] memory)
+    {
+        return _allPairs;
+    }
 
     function _sortAddresses(address a, address b) private pure returns (address r0, address r1)
     {
@@ -82,6 +88,7 @@ contract GenericFactory is IGenericFactory, Ownable
         // double-map the newly created pair for reverse lookup
         getPair[lToken0][lToken1][aCurveId] = rPair;
         getPair[lToken1][lToken0][aCurveId] = rPair;
+        _allPairs.push(rPair);
 
         emit PairCreated(lToken0, lToken1, aCurveId, rPair);
     }
