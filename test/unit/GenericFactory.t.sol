@@ -28,13 +28,13 @@ contract GenericFactoryTest is BaseTest
         address lPair4 = _factory.createPair(address(_tokenA), address(_tokenC), 1);
 
         // act
-        uint256 lLength = _factory.allPairsLength();
+        address[] memory lAllPairs = _factory.allPairs();
 
         // assert
-        assertEq(lLength, 4);
-        assertEq(_factory.allPairs(0), address(_constantProductPair));
-        assertEq(_factory.allPairs(1), address(_stablePair));
-        assertEq(_factory.allPairs(2), lPair3);
-        assertEq(_factory.allPairs(3), lPair4);
+        assertEq(lAllPairs.length, 4);
+        assertEq(lAllPairs[0], address(_constantProductPair));
+        assertEq(lAllPairs[1], address(_stablePair));
+        assertEq(lAllPairs[2], lPair3);
+        assertEq(lAllPairs[3], lPair4);
     }
 }
