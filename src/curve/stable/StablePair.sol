@@ -45,7 +45,6 @@ contract StablePair is ReservoirPair {
     {
         ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
-        // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
@@ -53,7 +52,6 @@ contract StablePair is ReservoirPair {
         require(token0 != address(0), "SP: ZERO_ADDRESS");
         require(token0 != token1, "SP: IDENTICAL_ADDRESSES");
         require(
-            // perf: check if an immutable/constant var is cheaper than always casting
             ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "INVALID_A"
