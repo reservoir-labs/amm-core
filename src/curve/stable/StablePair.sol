@@ -95,11 +95,11 @@ contract StablePair is ReservoirPair {
 
         ampData.initialA = currentAPrecise;
         ampData.futureA = currentAPrecise;
-        // perf: check performance of using intermediate variable instead of struct property
-        ampData.initialATime =  uint64(block.timestamp);
-        ampData.futureATime = ampData.initialATime;
+        uint64 timestamp = uint64(block.timestamp);
+        ampData.initialATime =  timestamp;
+        ampData.futureATime = timestamp;
 
-        emit StopRampA(currentAPrecise, ampData.initialATime);
+        emit StopRampA(currentAPrecise, timestamp);
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
