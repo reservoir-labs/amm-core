@@ -537,8 +537,71 @@ contract StablePairTest is BaseTest
         assertEq(lFutureATime, lFutureATimestamp);
     }
 
-    // todo: testStopRampA_Early
-    // todo: testStopRampA_Late
+    function testStopRampA_Early(uint256 aFutureA) public
+    {
+        // assume
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, StableMath.MAX_A));
+
+        // arrange
+        uint64 lInitialA = _stablePair.getCurrentA();
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1000 days;
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        _stepTime(lFutureATimestamp / 2);
+
+        // act
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("stopRampA()"),
+            0
+        );
+
+        // assert
+        uint256 lTotalADiff = lFutureAToSet > lInitialA ? lFutureAToSet - lInitialA : lInitialA - lFutureAToSet;
+        uint256 lActualADiff = lFutureAToSet > lInitialA ? _stablePair.getCurrentA() - lInitialA : lInitialA - _stablePair.getCurrentA();
+        assertApproxEqAbs(lActualADiff, lTotalADiff / 2, 1);
+        (uint64 lNewInitialA, uint64 lNewFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
+        assertEq(lNewInitialA, lNewFutureA);
+        assertEq(lInitialATime, block.timestamp);
+        assertEq(lFutureATime, block.timestamp);
+    }
+
+    function testStopRampA_Late(uint256 aFutureA) public
+    {
+        // assume
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, StableMath.MAX_A));
+
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1000 days;
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        _stepTime(lFutureATimestamp + 10 days);
+
+        // act
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("stopRampA()"),
+            0
+        );
+
+        // assert
+        assertEq(_stablePair.getCurrentA(), lFutureAToSet);
+        (uint64 lNewInitialA, uint64 lNewFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
+        assertEq(_stablePair.getCurrentA(), lNewInitialA / StableMath.A_PRECISION);
+        assertEq(lNewInitialA, lNewFutureA);
+        assertEq(lInitialATime, block.timestamp);
+        assertEq(lFutureATime, block.timestamp);
+    }
 
     function testGetCurrentA() public
     {
