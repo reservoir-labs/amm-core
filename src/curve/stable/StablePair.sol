@@ -48,13 +48,10 @@ contract StablePair is ReservoirPair {
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
-        // @dev Factory ensures that the tokens are sorted.
-        require(token0 != address(0), "SP: ZERO_ADDRESS");
-        require(token0 != token1, "SP: IDENTICAL_ADDRESSES");
         require(
             ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
-            "INVALID_A"
+            "SP: INVALID_A"
         );
     }
 
