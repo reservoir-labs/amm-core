@@ -32,6 +32,36 @@ contract GenericFactoryTest is BaseTest
         _createPair(address(_tokenE), address(_tokenA), lCurveId);
     }
 
+    function testCreatePair_ZeroAddress(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
+        // act & assert
+        vm.expectRevert("FACTORY: ZERO_ADDRESS");
+        _createPair(address(0), address(_tokenA), lCurveId);
+    }
+
+    function testCreatePair_CurveDoesNotExist(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 2, type(uint256).max);
+
+        // act & assert
+        vm.expectRevert(stdError.indexOOBError);
+        _createPair(address(_tokenB), address(_tokenD), lCurveId);
+    }
+
+    function testCreatePair_IdenticalAddress(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
+        // act & assert
+        vm.expectRevert("FACTORY: IDENTICAL_ADDRESSES");
+        _createPair(address(_tokenD), address(_tokenD), lCurveId);
+    }
+
     function testAllPairs() public
     {
         // arrange

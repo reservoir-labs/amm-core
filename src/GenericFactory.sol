@@ -62,7 +62,6 @@ contract GenericFactory is IGenericFactory, Ownable
         require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
         address lCodePointer = _getByteCode[aCurveId];
-        require(lCodePointer != address(0), "FACTORY: INVALID_CURVE_ID");
 
         (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
 
