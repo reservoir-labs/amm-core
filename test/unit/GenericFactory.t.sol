@@ -89,6 +89,18 @@ contract GenericFactoryTest is BaseTest
         assertEq(lAllPairs[3], lPair4);
     }
 
+    function testAddCurve() public
+    {
+        // arrange
+        bytes memory lInitCode = bytes("dummy bytes");
+
+        // act
+        uint256 lNewCurveId = _factory.addCurve(lInitCode);
+
+        // assert
+        assertEq(lNewCurveId, 2);
+    }
+
     function testAddCurve_OnlyOwner() public
     {
         // arrange
@@ -97,5 +109,12 @@ contract GenericFactoryTest is BaseTest
         // act & assert
         vm.expectRevert("Ownable: caller is not the owner");
         _factory.addCurve(bytes("random bytes"));
+    }
+
+    function testGetPair() public
+    {
+        // assert - ensure double mapped
+        assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
+        assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
     }
 }
