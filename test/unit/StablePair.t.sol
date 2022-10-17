@@ -30,6 +30,26 @@ contract StablePairTest is BaseTest
         rExpectedOut = lNumerator / lDenominator;
     }
 
+    function testFactoryAmpTooLow() public
+    {
+        // arrange
+        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(StableMath.MIN_A - 1)));
+
+        // act & assert
+        vm.expectRevert("FACTORY: DEPLOY_FAILED");
+        _createPair(address(_tokenC), address(_tokenD), 1);
+    }
+
+    function testFactoryAmpTooHigh() public
+    {
+        // arrange
+        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(StableMath.MAX_A + 1)));
+
+        // act & assert
+        vm.expectRevert("FACTORY: DEPLOY_FAILED");
+        _createPair(address(_tokenC), address(_tokenD), 1);
+    }
+
     function testMint() public
     {
         // arrange
@@ -798,6 +818,91 @@ contract StablePairTest is BaseTest
         assertTrue(lAmountOutT2 <= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 <= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
         assertTrue(lAmountOutT4 <= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
+    }
+
+    // inspired from saddle's test case, which is testing for this vulnerability
+    // https://medium.com/@peter_4205/curve-vulnerability-report-a1d7630140ec
+    function testAttackWhileRampingDown_ShortInterval() public
+    {
+        // arrange
+        uint64 lNewA = 400;
+        vm.startPrank(address(_factory));
+        _stablePair.rampA(lNewA, uint64(block.timestamp + 4 days));
+        _stablePair.setCustomSwapFee(100); // 1 bp
+        vm.stopPrank();
+
+        // swap 70e18 of tokenA to tokenB to cause a large imbalance
+        uint256 lSwapAmt = 70e18;
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        uint256 lAmtOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        assertEq(lAmtOut, 69897580651885320277);
+        assertEq(_tokenB.balanceOf(address(this)), 69897580651885320277);
+
+        // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
+        // tokenA balance in the pool  : 170e18
+        // tokenB balance in the pool : 30.10e18
+        (uint112 lReserve0, uint112 lReserve1, )  = _stablePair.getReserves();
+        assertEq(lReserve0, 170e18);
+        assertEq(lReserve1, 30102419348114679723);
+
+        _stepTime(20 minutes);
+        assertEq(_stablePair.getCurrentA(), 997);
+
+        // act - now attacker swaps from tokenB to tokenA
+        _tokenB.transfer(address(_stablePair), 69897580651885320277);
+        _stablePair.swap(-69897580651885320277, true, address(this), bytes(""));
+
+        // assert
+        // the attacker did not get more than what he started with
+        assertLt(_tokenA.balanceOf(address(this)), lSwapAmt);
+        // the pool was not worse off
+        (lReserve0, lReserve1, ) = _stablePair.getReserves();
+        assertGt(lReserve0, INITIAL_MINT_AMOUNT);
+        assertEq(lReserve1, INITIAL_MINT_AMOUNT);
+    }
+
+    // this is to simulate a sudden large A change, without trades having taken place in between
+    function testAttackWhileRampingDown_LongInterval() public
+    {
+        // arrange
+        uint64 lNewA = 400;
+        vm.startPrank(address(_factory));
+        _stablePair.rampA(lNewA, uint64(block.timestamp + 4 days));
+        _stablePair.setCustomSwapFee(100); // 1 bp
+        vm.stopPrank();
+
+        // swap 70e18 of tokenA to tokenB to cause a large imbalance
+        uint256 lSwapAmt = 70e18;
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        uint256 lAmtOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        assertEq(lAmtOut, 69897580651885320277);
+        assertEq(_tokenB.balanceOf(address(this)), 69897580651885320277);
+
+        // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
+        // tokenA balance in the pool  : 170e18
+        // tokenB balance in the pool : 30.10e18
+        (uint112 lReserve0, uint112 lReserve1, )  = _stablePair.getReserves();
+        assertEq(lReserve0, 170e18);
+        assertEq(lReserve1, 30102419348114679723);
+
+        // to simulate that no trades have taken place throughout the process of ramping down
+        // or rapid A change
+        _stepTime(4 days);
+        assertEq(_stablePair.getCurrentA(), 400);
+
+        // act - now attacker swaps from tokenB to tokenA
+        _tokenB.transfer(address(_stablePair), 69897580651885320277);
+        _stablePair.swap(-69897580651885320277, true, address(this), bytes(""));
+
+        // assert - the attack was successful
+        // the attacker got more than what he started with
+        assertGt(_tokenA.balanceOf(address(this)), lSwapAmt);
+        // the pool is worse off by 0.13%
+        (lReserve0, lReserve1, ) = _stablePair.getReserves();
+        assertEq(lReserve0, 99871702539906228887);
+        assertEq(lReserve1, INITIAL_MINT_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
