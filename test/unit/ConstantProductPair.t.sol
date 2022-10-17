@@ -9,7 +9,6 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
-import { LogExpMath } from "src/libraries/LogExpMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
