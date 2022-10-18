@@ -1,7 +1,6 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/utils/math/SafeCast.sol";
-import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import "src/libraries/Math.sol";
 import "src/libraries/ConstantProductOracleMath.sol";
