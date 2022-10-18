@@ -14,6 +14,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 contract StablePairTest is BaseTest
 {
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTime);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
 
     function _calculateConstantProductOutput(
         uint256 aReserveIn,
@@ -559,6 +560,20 @@ contract StablePairTest is BaseTest
         assertGt(lExpectedTokenAReceived, 0);
         assertEq(_tokenA.balanceOf(_alice), lExpectedTokenAReceived);
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
+    }
+
+    function testBurn_Zero() public
+    {
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit Burn(address(this), 0, 0);
+        _stablePair.burn(address(this));
+
+        // assert
+        assertEq(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_tokenB.balanceOf(address(this)), 0);
+        assertEq(_tokenA.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
     }
 
     function testBurn_SucceedEvenIfMintFeeReverts() public
