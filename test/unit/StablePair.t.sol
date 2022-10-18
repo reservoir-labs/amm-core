@@ -571,7 +571,7 @@ contract StablePairTest is BaseTest
         uint64 lLastInvariantAmp = 0;
         bytes32 lEncoded = bytes32(abi.encodePacked(lLastInvariantAmp, lLastInvariant));
         // hardcoding the slot for now as there is no way to access it publicly
-        // this will break when we change the layout of things
+        // this will break when we change the storage layout
         vm.store(address(_stablePair), bytes32(uint256(65551)), lEncoded);
 
         // ensure that the iterative function that _mintFee calls reverts with the adulterated values
@@ -1175,14 +1175,12 @@ contract StablePairTest is BaseTest
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
 
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
         (uint256 lPrice1, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(5);
 
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
         (uint256 lPrice2, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
 
@@ -1222,7 +1220,6 @@ contract StablePairTest is BaseTest
         // price = 0.4944
         _tokenA.mint(address(_stablePair), 100e18);
         _stablePair.swap(100e18, true, _bob, "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
         (uint256 lSpotPrice1, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(10);
@@ -1230,7 +1227,6 @@ contract StablePairTest is BaseTest
         // price = 0.0000936563
         _tokenA.mint(address(_stablePair), 200e18);
         _stablePair.swap(200e18, true, _bob, "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
         (uint256 lSpotPrice2, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);

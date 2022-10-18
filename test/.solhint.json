@@ -6,6 +6,7 @@
     "avoid-low-level-calls": "off",
     "not-rely-on-time": "off",
     "func-name-mixedcase": "off",
+    "var-name-mixedcase": "off",
     "no-inline-assembly": "off"
   }
 }
