@@ -268,6 +268,61 @@ contract StablePairTest is BaseTest
         assertEq(lTotalSupply1, lTotalSupply2);
     }
 
+    function testMintFee_DiffPlatformFees(uint256 aPlatformFee) public
+    {
+        // assume
+        uint256 lPlatformFee = bound(aPlatformFee, 0, _stablePair.MAX_PLATFORM_FEE());
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        vm.prank(address(_factory));
+        lPair.setCustomPlatformFee(lPlatformFee);
+        _tokenC.mint(address(lPair), 100_000_000e18);
+        _tokenD.mint(address(lPair), 120_000_000e6);
+        lPair.mint(address(this));
+        uint256 lOldLiq = StableMath._computeLiquidityFromAdjustedBalances(
+            120_000_000e6 * 1e12, 100_000_000e18, 2 * lPair.getCurrentAPrecise()
+        );
+
+        uint256 lCSwapAmt = 11_301_493e18;
+        uint256 lDSwapAmt = 10_402_183e6;
+
+        // sanity
+        assertEq(lPair.platformFee(), lPlatformFee);
+
+        // increase liq by swapping back and forth
+        for (uint i; i < 20; ++i) {
+            _tokenD.mint(address(lPair), lDSwapAmt);
+            lPair.swap(int256(lDSwapAmt), true, address(this), bytes(""));
+
+            _tokenC.mint(address(lPair), lCSwapAmt);
+            lPair.swap(-int256(lCSwapAmt), true, address(this), bytes(""));
+        }
+
+        (uint256 lReserve0, uint256 lReserve1, ) = lPair.getReserves();
+        uint256 lTotalSupply = lPair.totalSupply();
+
+        // act
+        lPair.transfer(address(lPair), 1e18);
+        lPair.burn(address(this));
+
+        // assert
+        uint256 lNewLiq = StableMath._computeLiquidityFromAdjustedBalances(
+            lReserve0 * 1e12,
+            lReserve1,
+            2 * lPair.getCurrentAPrecise()
+        );
+        uint256 lGrowthInLiq = lNewLiq - lOldLiq;
+        uint256 lExpectedPlatformFee =
+            lTotalSupply * lGrowthInLiq * lPlatformFee
+            / ((lPair.FEE_ACCURACY() - lPlatformFee ) * lNewLiq + lPlatformFee * lOldLiq);
+
+        assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
+        assertApproxEqRel(
+            lExpectedPlatformFee * 1e18 / lGrowthInLiq, lPlatformFee * 1e18 / lPair.FEE_ACCURACY(), 0.006e18
+        );
+    }
+
     function testSwap() public
     {
         // act
@@ -443,32 +498,6 @@ contract StablePairTest is BaseTest
 
         // assert
         assertEq(lAmtOut, lExpectedAmtOut);
-    }
-
-    function testSwap_DiffPlatformFees(uint256 aPlatformFee) public
-    {
-        // assume
-        uint256 lPlatformFee = bound(aPlatformFee, 0, _stablePair.MAX_PLATFORM_FEE());
-
-        // arrange
-        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
-        vm.prank(address(_factory));
-        lPair.setCustomPlatformFee(lPlatformFee);
-        _tokenC.mint(address(lPair), 100_000_000e18);
-        _tokenD.mint(address(lPair), 120_000_000e6);
-        lPair.mint(address(this));
-
-        uint256 lSwapAmt = 10_000_000e6;
-
-        // increase liq by swapping back and forth
-        for (uint i; i < 20; ++i) {
-            _tokenD.mint(address(lPair), lSwapAmt);
-            lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
-
-            _tokenC.mint(address(lPair), lSwapAmt);
-            lPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
-
-        }
     }
 
     function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintAmt) public
