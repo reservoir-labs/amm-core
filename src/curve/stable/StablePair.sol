@@ -20,13 +20,12 @@ struct AmplificationData {
     uint64 initialA;
     /// @dev futureA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 futureA;
-    /// @dev initialATime is a unix timestamp and will only overflow in the year 2554
+    /// @dev initialATime is a unix timestamp and will only overflow every 584 billion years
     uint64 initialATime;
-    /// @dev futureATime is a unix timestamp and will only overflow in the year 2554
+    /// @dev futureATime is a unix timestamp and will only overflow every 584 billion years
     uint64 futureATime;
 }
 
-/// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 contract StablePair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
