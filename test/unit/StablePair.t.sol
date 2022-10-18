@@ -532,7 +532,7 @@ contract StablePairTest is BaseTest
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
     }
 
-    function testBurn_SucceedEvenIfNotConverge() public
+    function testBurn_SucceedEvenIfMintFeeReverts() public
     {
         // arrange - change some values to make iterative function algorithm not converge
         // I have tried changing the reserves, but no matter how extreme the values are,
@@ -545,12 +545,10 @@ contract StablePairTest is BaseTest
         // this will break when we change the layout of things
         vm.store(address(_stablePair), bytes32(uint256(65551)), lEncoded);
 
-        // currently there's a bug in foundry that makes test functions return early when using vm.expectRevert
-        // https://github.com/foundry-rs/foundry/issues/3437
-        // therefore commenting out the lines below for now
         // ensure that the iterative function that _mintFee calls reverts with the adulterated values
-        // vm.expectRevert(stdError.arithmeticError);
-        // StableMath._computeLiquidityFromAdjustedBalances(100e18, 100e18, 2 * 0);
+        vm.prank(address(_stablePair));
+        vm.expectRevert(stdError.arithmeticError);
+        _stablePair.mintFee(100e18, 100e18);
 
         // act
         vm.prank(_alice);
