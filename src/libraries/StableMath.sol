@@ -103,7 +103,7 @@ library StableMath {
                 return D;
             }
         }
-        revert("SM: DID_NOT_CONVERGE");
+        revert("SM: COMPUTE_DID_NOT_CONVERGE");
     }
 
     /// @notice Calculate the new balance of one token given the balance of the other token
@@ -130,6 +130,6 @@ library StableMath {
                 return y;
             }
         }
-        revert("SM: DID_NOT_CONVERGE");
+        revert("SM: GETY_DID_NOT_CONVERGE");
     }
 }
