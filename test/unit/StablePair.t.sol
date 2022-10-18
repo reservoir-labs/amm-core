@@ -13,7 +13,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 contract StablePairTest is BaseTest
 {
-    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
+    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTime);
 
     function _calculateConstantProductOutput(
         uint256 aReserveIn,
@@ -394,41 +394,112 @@ contract StablePairTest is BaseTest
         assertEq(lAmtOut, lExpectedAmountOut);
     }
 
-    function testSwap_VeryLargeLiquidity() public
+    function testSwap_VeryLargeLiquidity(uint256 aSwapAmt) public
     {
         // assume
-//        uint256 lMinLiq = _stablePair.MINIMUM_LIQUIDITY();
-//        uint256 lAmtBToMint = bound(aAmtBToMint, lMinLiq / 2 + 1, lMinLiq);
-//        uint256 lAmtCToMint = bound(aAmtCToMint, lMinLiq / 2 + 1, lMinLiq);
-//        uint256 lSwapAmt = bound(aSwapAmt, 1, type(uint112).max - lAmtBToMint);
-//
-//        // arrange
-//        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
-//        _tokenB.mint(address(lPair), lAmtBToMint);
-//        _tokenC.mint(address(lPair), lAmtCToMint);
-//        lPair.mint(address(this));
-//
-//        // sanity
-//        assertGe(lPair.balanceOf(address(this)), 2);
-//
-//        // act
-//        _tokenB.mint(address(lPair), lSwapAmt);
-//        uint256 lAmtOut = lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
-//
-//        // assert
-//        uint256 lExpectedAmountOut = StableMath._getAmountOut(
-//            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, true, 3000, 2 * _stablePair.getCurrentAPrecise()
-//        );
-//        assertEq(lAmtOut, lExpectedAmountOut);
+        uint256 lSwapAmt = bound(aSwapAmt, 1, 10e18);
+        uint256 lAmtBToMint = type(uint112).max;
+        uint256 lAmtCToMint = type(uint112).max - lSwapAmt;
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), lAmtBToMint);
+        _tokenC.mint(address(lPair), lAmtCToMint);
+        lPair.mint(address(this));
+
+        // act
+        _tokenC.mint(address(lPair), lSwapAmt);
+        uint256 lAmtOut = lPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        // assert
+        uint256 lExpectedAmountOut = StableMath._getAmountOut(
+            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, false, 3000, 2 * _stablePair.getCurrentAPrecise()
+        );
+        assertEq(lAmtOut, lExpectedAmountOut);
     }
 
-    function testSwap_DiffFees() public
+    function testSwap_DiffSwapFees(uint256 aSwapFee) public
     {
+        // assume
+        uint256 lSwapFee = bound(aSwapFee, 0, _stablePair.MAX_SWAP_FEE());
 
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        vm.prank(address(_factory));
+        lPair.setCustomSwapFee(lSwapFee);
+        _tokenC.mint(address(lPair), 100_000_000e18);
+        _tokenD.mint(address(lPair), 120_000_000e6);
+        lPair.mint(address(this));
+
+        uint256 lSwapAmt = 10_000_000e6;
+        _tokenD.mint(address(lPair), lSwapAmt);
+
+        // act - tokenD is token0
+        uint256 lAmtOut = lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        uint256 lExpectedAmtOut = StableMath._getAmountOut(
+            lSwapAmt, 120_000_000e6, 100_000_000e18, 1e12, 1, true, lSwapFee, 2 * lPair.getCurrentAPrecise()
+        );
+
+        // assert
+        assertEq(lAmtOut, lExpectedAmtOut);
     }
 
-    function testSwap_DiffAs() public
-    {}
+    function testSwap_DiffPlatformFees(uint256 aPlatformFee) public
+    {
+        // assume
+        uint256 lPlatformFee = bound(aPlatformFee, 0, _stablePair.MAX_PLATFORM_FEE());
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        vm.prank(address(_factory));
+        lPair.setCustomPlatformFee(lPlatformFee);
+        _tokenC.mint(address(lPair), 100_000_000e18);
+        _tokenD.mint(address(lPair), 120_000_000e6);
+        lPair.mint(address(this));
+
+        uint256 lSwapAmt = 10_000_000e6;
+
+        // increase liq by swapping back and forth
+        for (uint i; i < 20; ++i) {
+            _tokenD.mint(address(lPair), lSwapAmt);
+            lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+            _tokenC.mint(address(lPair), lSwapAmt);
+            lPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        }
+    }
+
+    function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintAmt) public
+    {
+        // assume
+        uint256 lAmpCoeff = bound(aAmpCoeff, StableMath.MIN_A, StableMath.MAX_A);
+        uint256 lSwapAmt = bound(aSwapAmt, 1e3, type(uint112).max / 2);
+        uint256 lCMintAmt = bound(aMintAmt, 1e18, 10_000_000_000e18);
+        uint256 lDMintAmt = bound(lCMintAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
+
+        // arrange
+        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(lAmpCoeff)));
+        StablePair lPair = StablePair(_createPair(address(_tokenD), address(_tokenC), 1));
+
+        // sanity
+        assertEq(lPair.getCurrentA(), lAmpCoeff);
+
+        _tokenC.mint(address(lPair), lCMintAmt);
+        _tokenD.mint(address(lPair), lDMintAmt);
+        lPair.mint(address(this));
+
+        // act
+        _tokenD.mint(address(lPair), lSwapAmt);
+        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // assert
+        uint256 lExpectedOutput = StableMath._getAmountOut(
+            lSwapAmt, lDMintAmt, lCMintAmt, 1e12, 1, true, lPair.swapFee(), 2 * lPair.getCurrentAPrecise()
+        );
+        assertEq(_tokenC.balanceOf(address(this)), lExpectedOutput);
+    }
 
     function testBurn() public
     {
@@ -462,7 +533,37 @@ contract StablePairTest is BaseTest
     }
 
     function testBurn_SucceedEvenIfNotConverge() public
-    {}
+    {
+        // arrange - change some values to make iterative function algorithm not converge
+        // I have tried changing the reserves, but no matter how extreme the values are,
+        // StableMath._computeLiquidityFromAdjustedBalances would still converge
+        // which is good for our contracts but not good for my attempt to break it
+        uint192 lLastInvariant = 200e18;
+        uint64 lLastInvariantAmp = 0;
+        bytes32 lEncoded = bytes32(abi.encodePacked(lLastInvariantAmp, lLastInvariant));
+        // hardcoding the slot for now as there is no way to access it publicly
+        // this will break when we change the layout of things
+        vm.store(address(_stablePair), bytes32(uint256(65551)), lEncoded);
+
+        // currently there's a bug in foundry that makes test functions return early when using vm.expectRevert
+        // https://github.com/foundry-rs/foundry/issues/3437
+        // therefore commenting out the lines below for now
+        // ensure that the iterative function that _mintFee calls reverts with the adulterated values
+        // vm.expectRevert(stdError.arithmeticError);
+        // StableMath._computeLiquidityFromAdjustedBalances(100e18, 100e18, 2 * 0);
+
+        // act
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), 1e18);
+        // mintFee indeed reverted but burn still succeeded - this can be seen by examining the callstack
+        (uint256 lAmount0, uint256 lAmount1) = _stablePair.burn(address(this)); // mintFee would fail in this call
+
+        // assert
+        assertEq(lAmount0, 0.5e18);
+        assertEq(lAmount0, lAmount1);
+        assertEq(_tokenA.balanceOf(address(this)), lAmount0);
+        assertEq(_tokenB.balanceOf(address(this)), lAmount1);
+    }
 
     function testRampA() public
     {
@@ -863,6 +964,7 @@ contract StablePairTest is BaseTest
     }
 
     // this is to simulate a sudden large A change, without trades having taken place in between
+    // this will not happen in our case as A is changed gently over a period not suddenly
     function testAttackWhileRampingDown_LongInterval() public
     {
         // arrange
