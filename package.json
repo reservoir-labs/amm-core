@@ -38,7 +38,7 @@
     "install": "npm run install:uniswap",
     "install:uniswap": "cd reference/uniswap-v2-core && npm ci",
     "lint": "npm run lint:check",
-    "lint:check": "npm run solhint:check && npm run prettier:check && npm run eslint:check && npm run mdlint:check",
+    "lint:check": "npm run solhint:check && npm run prettier:check && npm run mdlint:check",
     "lint:fix": "npm run solhint:fix && npm run prettier:fix && npm run eslint:fix && npm run mdlint:fix",
     "mdlint": "npm run mdlint:check",
     "mdlint:check": "markdownlint --config .markdownlint.yaml .",
