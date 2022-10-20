@@ -501,6 +501,55 @@ contract StablePairTest is BaseTest
         assertEq(lAmtOut, lExpectedAmtOut);
     }
 
+    function testSwap_IncreasingSwapFees(uint256 aSwapFee0, uint256 aSwapFee1, uint256 aSwapFee2) public
+    {
+        // assume
+        uint256 lSwapFee0 = bound(aSwapFee0, 0, _stablePair.MAX_SWAP_FEE() / 4); // between 0 - 0.5%
+        uint256 lSwapFee1 = bound(aSwapFee1, _stablePair.MAX_SWAP_FEE() / 4 + 1, _stablePair.MAX_SWAP_FEE() / 2); // between 0.5 - 1%
+        uint256 lSwapFee2 = bound(aSwapFee2, _stablePair.MAX_SWAP_FEE() / 2 + 1, _stablePair.MAX_SWAP_FEE()); // between 1 - 2%
+
+        // sanity
+        assertGt(lSwapFee1, lSwapFee0);
+        assertGt(lSwapFee2, lSwapFee1);
+
+        // arrange
+        uint256 lSwapAmt = 10e18;
+        (uint256 lReserve0, uint256 lReserve1, ) = _stablePair.getReserves();
+
+        // act
+        vm.prank(address(_factory));
+        _stablePair.setCustomSwapFee(lSwapFee0);
+        uint256 lBefore = vm.snapshot();
+
+        uint256 lExpectedOut0 = StableMath._getAmountOut(lSwapAmt, lReserve0, lReserve1, 1, 1, true, lSwapFee0, 2 * _stablePair.getCurrentAPrecise());
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        uint256 lActualOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        assertEq(lExpectedOut0, lActualOut);
+
+        vm.revertTo(lBefore);
+        vm.prank(address(_factory));
+        _stablePair.setCustomSwapFee(lSwapFee1);
+        lBefore = vm.snapshot();
+
+        uint256 lExpectedOut1 = StableMath._getAmountOut(lSwapAmt, lReserve0, lReserve1, 1, 1, true, lSwapFee1, 2 * _stablePair.getCurrentAPrecise());
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        lActualOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        assertEq(lExpectedOut1, lActualOut);
+
+        vm.revertTo(lBefore);
+        vm.prank(address(_factory));
+        _stablePair.setCustomSwapFee(lSwapFee2);
+
+        uint256 lExpectedOut2 = StableMath._getAmountOut(lSwapAmt, lReserve0, lReserve1, 1, 1, true, lSwapFee2, 2 * _stablePair.getCurrentAPrecise());
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        lActualOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        assertEq(lExpectedOut2, lActualOut);
+
+        // assert
+        assertLt(lExpectedOut1, lExpectedOut0);
+        assertLt(lExpectedOut2, lExpectedOut1);
+    }
+
     function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintAmt) public
     {
         // assume
