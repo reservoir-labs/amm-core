@@ -21,7 +21,23 @@ contract ConstantProductPair is ReservoirPair {
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
-    {} // solhint-disable-line no-empty-blocks
+    {
+        swapFee = uint256(factory.get(keccak256("CP::swapFee")));
+
+        require(swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
+    }
+
+    function updateSwapFee() public {
+        uint256 _swapFee = customSwapFee != type(uint).max
+            ? customSwapFee
+            : uint256(factory.get(keccak256("CP::swapFee")));
+        if (_swapFee == swapFee) { return; }
+
+        require(_swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
+
+        emit SwapFeeChanged(swapFee, _swapFee);
+        swapFee = _swapFee;
+    }
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
@@ -106,7 +122,7 @@ contract ConstantProductPair is ReservoirPair {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::platformFeeTo")))));
+                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("Shared::platformFeeTo")))));
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }

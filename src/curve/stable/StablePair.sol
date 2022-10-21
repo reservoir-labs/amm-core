@@ -58,6 +58,19 @@ contract StablePair is ReservoirPair {
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "INVALID_A"
         );
+        require(swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
+    }
+
+    function updateSwapFee() public {
+        uint256 _swapFee = customSwapFee != type(uint).max
+            ? customSwapFee
+            : uint256(factory.get(keccak256("SP::swapFee")));
+        if (_swapFee == swapFee) { return; }
+
+        require(_swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
+
+        emit SwapFeeChanged(swapFee, _swapFee);
+        swapFee = _swapFee;
     }
 
     function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {

@@ -52,13 +52,11 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token0  = aToken0;
         token1  = aToken1;
 
-        swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
-        platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
+        platformFee = uint256(factory.get(keccak256("Shared::platformFee")));
 
         token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
         token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
 
-        require(swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
         require(platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
     }
 
@@ -73,7 +71,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
         customSwapFee = _customSwapFee;
 
-        updateSwapFee();
+        this.updateSwapFee();
     }
 
     function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
@@ -83,22 +81,12 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         updatePlatformFee();
     }
 
-    function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-            ? customSwapFee
-            : uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
-        if (_swapFee == swapFee) { return; }
-
-        require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
-
-        emit SwapFeeChanged(swapFee, _swapFee);
-        swapFee = _swapFee;
-    }
+//    function updateSwapFee() public virtual;
 
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
-            : uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
+            : uint256(factory.get(keccak256("Shared::platformFee")));
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
@@ -108,7 +96,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::defaultRecoverer")))));
+        address _recoverer = address(uint160(uint256(factory.get(keccak256("Shared::defaultRecoverer")))));
         require(token != token0, "P: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");

@@ -32,17 +32,18 @@ abstract contract BaseTest is Test {
     constructor()
     {
         // set shared variables
-        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(3_000))); // 0.3%
-        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(250_000))); // 25%
-        _factory.set(keccak256("ConstantProductPair::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
-        _factory.set(keccak256("ConstantProductPair::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
+        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(250_000))); // 25%
+        _factory.set(keccak256("Shared::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
+        _factory.set(keccak256("Shared::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
+        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(3_000))); // 0.3%
 
-        // add hybridpool curve
+        // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
-        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(1000)));
+        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(100))); // 0.01%
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(1000)));
 
         // initial mint
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
