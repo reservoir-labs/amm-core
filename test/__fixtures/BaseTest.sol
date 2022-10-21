@@ -14,6 +14,7 @@ abstract contract BaseTest is Test {
     uint256 public constant DEFAULT_SWAP_FEE_CP = 3_000;
     uint256 public constant DEFAULT_SWAP_FEE_SP = 100;
     uint256 public constant DEFAULT_PLATFORM_FEE = 250_000;
+    uint256 public constant DEFAULT_AMP_COEFF   = 1_000;
 
     GenericFactory  internal _factory       = new GenericFactory();
 
@@ -46,7 +47,7 @@ abstract contract BaseTest is Test {
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
         _factory.set(keccak256("SP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_SP))); // 0.01%
-        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(1000)));
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(DEFAULT_AMP_COEFF)));
 
         // initial mint
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
