@@ -43,7 +43,7 @@ contract StablePair is ReservoirPair {
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
-        ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
+        ampData.initialA        = factory.read("SP::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA         = ampData.initialA;
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
@@ -374,7 +374,7 @@ contract StablePair is ReservoirPair {
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    address platformFeeTo = factory.read("ConstantProductPair::platformFeeTo").toAddress();
+                    address platformFeeTo = factory.read("Shared::platformFeeTo").toAddress();
 
                     _mint(platformFeeTo, liquidity);
                     _totalSupply += liquidity;

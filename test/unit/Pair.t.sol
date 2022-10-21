@@ -28,7 +28,6 @@ contract PairTest is BaseTest
     {
         // assert
         assertEq(_pair.customSwapFee(), type(uint).max);
-        assertEq(_pair.swapFee(), 3_000);
     }
 
     function testSetSwapFeeForPair() public parameterizedTest
@@ -63,13 +62,18 @@ contract PairTest is BaseTest
 
         // assert
         assertEq(_pair.customSwapFee(), type(uint).max);
-        assertEq(_pair.swapFee(), 3_000);
+        if (_pair == _constantProductPair) {
+            assertEq(_pair.swapFee(), DEFAULT_SWAP_FEE_CP);
+        }
+        else if (_pair == _stablePair) {
+            assertEq(_pair.swapFee(), DEFAULT_SWAP_FEE_SP);
+        }
     }
 
     function testSetSwapFeeForPair_BreachMaximum() public parameterizedTest
     {
         // act & assert
-        vm.expectRevert("P: INVALID_SWAP_FEE");
+        vm.expectRevert();
         _factory.rawCall(
             address(_pair),
             abi.encodeWithSignature("setCustomSwapFee(uint256)", 400_000),
@@ -81,7 +85,7 @@ contract PairTest is BaseTest
     {
         // assert
         assertEq(_pair.customPlatformFee(), type(uint).max);
-        assertEq(_pair.platformFee(), 250_000);
+        assertEq(_pair.platformFee(), DEFAULT_PLATFORM_FEE);
     }
 
     function testSetPlatformFeeForPair() public parameterizedTest
@@ -116,7 +120,7 @@ contract PairTest is BaseTest
 
         // assert
         assertEq(_pair.customPlatformFee(), type(uint).max);
-        assertEq(_pair.platformFee(), 250_000);
+        assertEq(_pair.platformFee(), DEFAULT_PLATFORM_FEE);
     }
 
     function testSetPlatformFeeForPair_BreachMaximum(uint256 aPlatformFee) public parameterizedTest
@@ -136,8 +140,9 @@ contract PairTest is BaseTest
     function testUpdateDefaultFees() public parameterizedTest
     {
         // arrange
-        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(200)));
-        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(5000)));
+        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(200)));
+        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(200)));
+        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(5000)));
 
         // act
         _pair.updateSwapFee();

@@ -11,6 +11,9 @@ import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
 abstract contract BaseTest is Test {
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
+    uint256 public constant DEFAULT_SWAP_FEE_CP = 3_000;
+    uint256 public constant DEFAULT_SWAP_FEE_SP = 100;
+    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000;
 
     GenericFactory  internal _factory       = new GenericFactory();
 
@@ -32,17 +35,17 @@ abstract contract BaseTest is Test {
     constructor()
     {
         // set shared variables
-        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(250_000))); // 25%
+        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(DEFAULT_PLATFORM_FEE))); // 25%
         _factory.set(keccak256("Shared::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
         _factory.set(keccak256("Shared::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(3_000))); // 0.3%
+        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_CP))); // 0.3%
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
-        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(100))); // 0.01%
+        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_SP))); // 0.01%
         _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(1000)));
 
         // initial mint
