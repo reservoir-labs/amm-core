@@ -81,8 +81,6 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         updatePlatformFee();
     }
 
-//    function updateSwapFee() public virtual;
-
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
