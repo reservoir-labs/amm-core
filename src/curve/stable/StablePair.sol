@@ -49,6 +49,8 @@ contract StablePair is ReservoirPair {
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
+        swapFee = uint256(factory.get(keccak256("SP::swapFee")));
+
         // @dev Factory ensures that the tokens are sorted.
         require(token0 != address(0), "SP: ZERO_ADDRESS");
         require(token0 != token1, "SP: IDENTICAL_ADDRESSES");
