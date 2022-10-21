@@ -24,6 +24,18 @@ contract PairTest is BaseTest
         }
     }
 
+    function testSwapFee_UseDefault() public parameterizedTest
+    {
+        // assert
+        uint256 lSwapFee = _pair.swapFee();
+        if (_pair == _constantProductPair) {
+            assertEq(lSwapFee, DEFAULT_SWAP_FEE_CP);
+        }
+        else if (_pair == _stablePair) {
+            assertEq(lSwapFee, DEFAULT_SWAP_FEE_SP);
+        }
+    }
+
     function testCustomSwapFee_OffByDefault() public parameterizedTest
     {
         // assert
@@ -35,13 +47,13 @@ contract PairTest is BaseTest
         // act
         _factory.rawCall(
             address(_pair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", 100),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", 357),
             0
         );
 
         // assert
-        assertEq(_pair.customSwapFee(), 100);
-        assertEq(_pair.swapFee(), 100);
+        assertEq(_pair.customSwapFee(), 357);
+        assertEq(_pair.swapFee(), 357);
     }
 
     function testSetSwapFeeForPair_Reset() public parameterizedTest
