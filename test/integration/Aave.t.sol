@@ -73,11 +73,12 @@ contract AaveIntegrationTest is BaseTest
         vm.selectFork(lFork.forkId);
 
         _factory = new GenericFactory();
-        _factory.set(keccak256("ConstantProductPair::swapFee"), bytes32(uint256(30)));
-        _factory.set(keccak256("ConstantProductPair::platformFee"), bytes32(uint256(2500)));
+        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_CP)));
+        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_SP)));
+        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(DEFAULT_PLATFORM_FEE)));
         _factory.addCurve(type(ConstantProductPair).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
-        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(1000)));
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(1000)));
 
         _manager = new AaveManager(AAVE_POOL_ADDRESS_PROVIDER);
         USDC = aNetwork.USDC;
