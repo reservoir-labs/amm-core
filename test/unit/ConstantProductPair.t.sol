@@ -4,6 +4,7 @@ import "test/__fixtures/BaseTest.sol";
 import { stdStorage } from "forge-std/Test.sol";
 
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
@@ -15,9 +16,11 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 
+
 contract ConstantProductPairTest is BaseTest
 {
     using stdStorage for StdStorage;
+    using FixedPointMathLib for uint256;
 
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
 
@@ -550,5 +553,74 @@ contract ConstantProductPairTest is BaseTest
         (, int112 lAccLiq1, ) = _constantProductPair.observations(0);
         (, int112 lAccLiq2, ) = _constantProductPair.observations(_constantProductPair.index());
         assertApproxEqRel(type(uint112).max, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
+    }
+
+
+
+    ///     ORACLE ATTACK TEST CASES
+    function testOracleAttack2Blocks() public
+    {
+        // Create a ETH-USDC pair
+        MintableERC20 lWEth = new MintableERC20("WETH", "WETH", 18);
+        MintableERC20 lUSDC = new MintableERC20("USDC", "USDC", 18);
+
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(lWEth), address(lUSDC), 0));
+
+        // 1 WETH == 1500 USDC
+        // total of 3M in the pool
+        lWEth.mint(address(lPair), 1000e18);
+        lUSDC.mint(address(lPair), 1_500_000e18);
+        lPair.mint(address(this));
+
+        assertGt(lPair.balanceOf(address(this)), 0);
+
+        // let 30 min elapse - assume price has been stable for that time
+        _stepTime(30 minutes);
+
+        // block N - attack the pool -
+        // we want to change the price of WETH from 1500 USDC to 500 USDC
+        uint256 lSwapAmt = 732e18;
+        lWEth.mint(address(lPair), lSwapAmt);
+        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // now the price is around 1 WETH to 500 USDC
+        (uint256 lR0, uint256 lR1, ) = lPair.getReserves();
+        assertApproxEqRel(lR1.divWadDown(lR0), 500e18, 0.01e18);
+
+        // block N ends - assume ETH blocktime
+        _stepTime(12);
+
+        // block N + 1 - we arb the price back to what it was
+        uint256 lUSDCBalance = lUSDC.balanceOf(address(this));
+        lUSDC.mint(address(lPair), lUSDCBalance);
+        lPair.swap(-int256(lUSDCBalance), true, address(this), bytes(""));
+
+        uint256 lEndingWEthBalance = lWEth.balanceOf(address(this));
+
+        console.log("Cost in WETH for the attack", lSwapAmt - lEndingWEthBalance);
+        (lR0, lR1 , ) = lPair.getReserves();
+        console.log("Curr price of WETH/USDC", lR1.divWadDown(lR0));
+
+        // block N + 1 ends
+        _stepTime(12);
+
+        // another 30 mins passes with the same price
+        _stepTime(30 minutes - 12 - 12);
+
+        // write to oracle
+        lPair.sync();
+
+        _stepTime(12);
+        lPair.sync();
+
+        (int112 lAccPrice, , uint32 timestamp) = lPair.observations(0);
+        console.logInt(lAccPrice);
+        console.log(timestamp);
+
+        (int112 lAccPrice2, , uint32 timestamp2) = lPair.observations(3);
+        console.logInt(lAccPrice2);
+        console.log(timestamp2);
+
+        console.log("avg price over that 60 minutes", LogCompression.fromLowResLog((lAccPrice2 - 0) / int32(uint32(block.timestamp) - timestamp)));
     }
 }
