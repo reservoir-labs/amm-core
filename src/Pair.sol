@@ -16,6 +16,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     bytes4 private constant SELECTOR        = bytes4(keccak256("transfer(address,uint256)"));
     uint256 public constant MINIMUM_LIQUIDITY  = 10**3;
+    bytes32 private constant PLATFORM_FEE_NAME = keccak256("Shared::platformFee");
 
     uint256 public constant FEE_ACCURACY  = 1_000_000;  // 100%
     uint256 public constant MAX_PLATFORM_FEE = 500_000; //  50%
@@ -38,6 +39,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     uint public swapFee;
     uint public customSwapFee = type(uint).max;
+    string internal swapFeeName;
 
     uint public platformFee;
     uint public customPlatformFee = type(uint).max;
@@ -52,7 +54,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token0  = aToken0;
         token1  = aToken1;
 
-        platformFee = uint256(factory.get(keccak256("Shared::platformFee")));
+        platformFee = uint256(factory.get(PLATFORM_FEE_NAME));
 
         token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
         token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
@@ -71,7 +73,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
         customSwapFee = _customSwapFee;
 
-        this.updateSwapFee();
+        updateSwapFee();
     }
 
     function setCustomPlatformFee(uint _customPlatformFee) external onlyFactory {
@@ -81,10 +83,22 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         updatePlatformFee();
     }
 
+    function updateSwapFee() public {
+        uint256 _swapFee = customSwapFee != type(uint).max
+            ? customSwapFee
+            : factory.read(swapFeeName).toUint256();
+        if (_swapFee == swapFee) { return; }
+
+        require(_swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
+
+        emit SwapFeeChanged(swapFee, _swapFee);
+        swapFee = _swapFee;
+    }
+
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
-            : uint256(factory.get(keccak256("Shared::platformFee")));
+            : uint256(factory.get(PLATFORM_FEE_NAME));
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");

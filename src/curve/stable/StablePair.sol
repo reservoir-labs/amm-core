@@ -31,6 +31,8 @@ contract StablePair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
+    string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
+
     event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
     event StopRampA(uint64 currentAPrecise, uint64 time);
 
@@ -49,7 +51,8 @@ contract StablePair is ReservoirPair {
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
-        swapFee = uint256(factory.get(keccak256("SP::swapFee")));
+        swapFeeName = PAIR_SWAP_FEE_NAME;
+        swapFee = factory.read(PAIR_SWAP_FEE_NAME).toUint256();
 
         // @dev Factory ensures that the tokens are sorted.
         require(token0 != address(0), "SP: ZERO_ADDRESS");
@@ -61,18 +64,6 @@ contract StablePair is ReservoirPair {
             "INVALID_A"
         );
         require(swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
-    }
-
-    function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-            ? customSwapFee
-            : uint256(factory.get(keccak256("SP::swapFee")));
-        if (_swapFee == swapFee) { return; }
-
-        require(_swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
-
-        emit SwapFeeChanged(swapFee, _swapFee);
-        swapFee = _swapFee;
     }
 
     function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {

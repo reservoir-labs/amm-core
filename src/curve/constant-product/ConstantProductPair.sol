@@ -1,16 +1,22 @@
 pragma solidity 0.8.13;
 
-import "@openzeppelin/utils/math/SafeCast.sol";
+import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
-import "src/libraries/Math.sol";
-import "src/libraries/ConstantProductOracleMath.sol";
-import "src/interfaces/IReservoirCallee.sol";
+import { Math } from "src/libraries/Math.sol";
+import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
+import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IPair, Pair } from "src/Pair.sol";
 
 contract ConstantProductPair is ReservoirPair {
+    using FactoryStoreLib for GenericFactory;
+    using Bytes32Lib for bytes32;
+
     using SafeCast for uint256;
 
     // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
@@ -18,25 +24,16 @@ contract ConstantProductPair is ReservoirPair {
     // Accuracy: 100_000_000_000_000_000_000_000_000_000_000_000_000
     uint256 public constant ACCURACY         = 1e38;
 
+    string private constant PAIR_SWAP_FEE_NAME = "CP::swapFee";
+
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
-        swapFee = uint256(factory.get(keccak256("CP::swapFee")));
+        swapFeeName = PAIR_SWAP_FEE_NAME;
+        swapFee = factory.read(PAIR_SWAP_FEE_NAME).toUint256();
 
         require(swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
-    }
-
-    function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-            ? customSwapFee
-            : uint256(factory.get(keccak256("CP::swapFee")));
-        if (_swapFee == swapFee) { return; }
-
-        require(_swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
-
-        emit SwapFeeChanged(swapFee, _swapFee);
-        swapFee = _swapFee;
     }
 
     // update reserves and, on the first call per block, price accumulators
@@ -122,7 +119,7 @@ contract ConstantProductPair is ReservoirPair {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("Shared::platformFeeTo")))));
+                    address platformFeeTo = address(uint160(uint256(factory.get("Shared::platformFeeTo"))));
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
