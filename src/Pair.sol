@@ -14,12 +14,15 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    bytes4 private constant SELECTOR        = bytes4(keccak256("transfer(address,uint256)"));
-    uint256 public constant MINIMUM_LIQUIDITY  = 10**3;
+    string  internal    constant PLATFORM_FEE_TO_NAME   = "Shared::platformFeeTo";
+    string  private     constant PLATFORM_FEE_NAME      = "Shared::platformFee";
+    string  private     constant RECOVERER_NAME         = "Shared::defaultRecoverer";
+    bytes4  private     constant SELECTOR               = bytes4(keccak256("transfer(address,uint256)"));
 
-    uint256 public constant FEE_ACCURACY  = 1_000_000;  // 100%
-    uint256 public constant MAX_PLATFORM_FEE = 500_000; //  50%
-    uint256 public constant MAX_SWAP_FEE     = 20_000;  //   2%
+    uint256 public constant MINIMUM_LIQUIDITY   = 10**3;
+    uint256 public constant FEE_ACCURACY        = 1_000_000;  // 100%
+    uint256 public constant MAX_PLATFORM_FEE    = 500_000;    //  50%
+    uint256 public constant MAX_SWAP_FEE        = 20_000;     //   2%
 
     GenericFactory public immutable factory;
     address public immutable token0;
@@ -38,6 +41,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     uint public swapFee;
     uint public customSwapFee = type(uint).max;
+    bytes32 internal immutable swapFeeName;
 
     uint public platformFee;
     uint public customPlatformFee = type(uint).max;
@@ -47,13 +51,14 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         _;
     }
 
-    constructor(address aToken0, address aToken1) {
+    constructor(address aToken0, address aToken1, string memory aSwapFeeName) {
         factory = GenericFactory(msg.sender);
         token0  = aToken0;
         token1  = aToken1;
 
-        swapFee = uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
-        platformFee = uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
+        swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
+        swapFee     = factory.get(swapFeeName).toUint256();
+        platformFee = factory.read(PLATFORM_FEE_NAME).toUint256();
 
         token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
         token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
@@ -86,7 +91,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     function updateSwapFee() public {
         uint256 _swapFee = customSwapFee != type(uint).max
             ? customSwapFee
-            : uint256(factory.get(keccak256("ConstantProductPair::swapFee")));
+            : factory.get(swapFeeName).toUint256();
         if (_swapFee == swapFee) { return; }
 
         require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
@@ -98,7 +103,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
-            : uint256(factory.get(keccak256("ConstantProductPair::platformFee")));
+            : factory.read(PLATFORM_FEE_NAME).toUint256();
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
@@ -108,7 +113,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::defaultRecoverer")))));
+        address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         require(token != token0, "P: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");

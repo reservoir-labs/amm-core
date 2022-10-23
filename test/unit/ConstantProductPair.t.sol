@@ -121,9 +121,8 @@ contract ConstantProductPairTest is BaseTest
     function testSwap() public
     {
         // arrange
-        uint256 lSwapFee = 3_000;
         (uint256 reserve0, uint256 reserve1, ) = _constantProductPair.getReserves();
-        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, lSwapFee);
+        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, DEFAULT_SWAP_FEE_CP);
 
         // act
         address token0;
