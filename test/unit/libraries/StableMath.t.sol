@@ -20,13 +20,18 @@ contract StableMathTest is BaseTest {
         // assume - covers ratios up to 1:1000, which is good enough even in the case of a depeg
         uint256 lReserve0 = bound(aReserve0, 1e6, type(uint112).max);
         uint256 lReserve1 = bound(aReserve1, lReserve0 / 1e3, Math.min(type(uint112).max, lReserve0 * 1e3));
-        uint256 lN_A = bound(aN_A, StableMath.MIN_A * StableMath.A_PRECISION, StableMath.MAX_A * StableMath.A_PRECISION);
+        uint256 lN_A = 2 * bound(aN_A, StableMath.MIN_A * StableMath.A_PRECISION, StableMath.MAX_A * StableMath.A_PRECISION);
 
         // act
         uint256 lLiq = StableMath._computeLiquidityFromAdjustedBalances(lReserve0, lReserve1, lN_A);
 
         // assert
         assertLe(lLiq, lReserve0 + lReserve1);
+    }
+
+    function testHurHur() public
+    {
+         StableMath._computeLiquidityFromAdjustedBalances(1000820, 2389, 2 * 127);
     }
 
     function testGetAmountOut(uint256 aAmtIn, uint256 aSwapFee, uint256 aAmp) public
