@@ -16,7 +16,9 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     bytes4 private constant SELECTOR        = bytes4(keccak256("transfer(address,uint256)"));
     uint256 public constant MINIMUM_LIQUIDITY  = 10**3;
-    bytes32 private constant PLATFORM_FEE_NAME = keccak256("Shared::platformFee");
+    string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
+    string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
+    string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
 
     uint256 public constant FEE_ACCURACY  = 1_000_000;  // 100%
     uint256 public constant MAX_PLATFORM_FEE = 500_000; //  50%
@@ -54,7 +56,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token0  = aToken0;
         token1  = aToken1;
 
-        platformFee = uint256(factory.get(PLATFORM_FEE_NAME));
+        platformFee = factory.read(PLATFORM_FEE_NAME).toUint256();
 
         token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
         token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
@@ -98,7 +100,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     function updatePlatformFee() public {
         uint256 _platformFee = customPlatformFee != type(uint).max
             ? customPlatformFee
-            : uint256(factory.get(PLATFORM_FEE_NAME));
+            : factory.read(PLATFORM_FEE_NAME).toUint256();
         if (_platformFee == platformFee) { return; }
 
         require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
@@ -108,7 +110,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     }
 
     function recoverToken(address token) external {
-        address _recoverer = address(uint160(uint256(factory.get(keccak256("Shared::defaultRecoverer")))));
+        address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         require(token != token0, "P: INVALID_TOKEN_TO_RECOVER");
         require(token != token1, "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");

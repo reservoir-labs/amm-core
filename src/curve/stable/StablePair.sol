@@ -367,7 +367,7 @@ contract StablePair is ReservoirPair {
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    address platformFeeTo = factory.read("Shared::platformFeeTo").toAddress();
+                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
 
                     _mint(platformFeeTo, liquidity);
                     _totalSupply += liquidity;

@@ -119,7 +119,7 @@ contract ConstantProductPair is ReservoirPair {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = address(uint160(uint256(factory.get("Shared::platformFeeTo"))));
+                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
