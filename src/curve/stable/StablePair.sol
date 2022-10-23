@@ -32,6 +32,7 @@ contract StablePair is ReservoirPair {
     using Bytes32Lib for bytes32;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
+    string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
 
     event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
     event StopRampA(uint64 currentAPrecise, uint64 time);
@@ -45,8 +46,8 @@ contract StablePair is ReservoirPair {
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
     {
-        ampData.initialA        = factory.read("SP::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
-        ampData.futureA         = ampData.initialA;
+        ampData.initialA    = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
+        ampData.futureA     = ampData.initialA;
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
