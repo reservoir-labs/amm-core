@@ -44,16 +44,13 @@ contract StablePair is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
     {
         ampData.initialA    = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA     = ampData.initialA;
         // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
-
-        swapFeeName = PAIR_SWAP_FEE_NAME;
-        swapFee = factory.read(PAIR_SWAP_FEE_NAME).toUint256();
 
         // @dev Factory ensures that the tokens are sorted.
         require(token0 != address(0), "SP: ZERO_ADDRESS");
@@ -64,7 +61,6 @@ contract StablePair is ReservoirPair {
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "INVALID_A"
         );
-        require(swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
     }
 
     function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {

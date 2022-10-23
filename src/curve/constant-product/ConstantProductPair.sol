@@ -16,7 +16,6 @@ import { IPair, Pair } from "src/Pair.sol";
 contract ConstantProductPair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
-
     using SafeCast for uint256;
 
     // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
@@ -28,13 +27,8 @@ contract ConstantProductPair is ReservoirPair {
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
-    {
-        swapFeeName = PAIR_SWAP_FEE_NAME;
-        swapFee = factory.read(PAIR_SWAP_FEE_NAME).toUint256();
-
-        require(swapFee <= MAX_SWAP_FEE, "CP: INVALID_SWAP_FEE");
-    }
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
+    {}
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {

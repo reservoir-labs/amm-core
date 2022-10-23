@@ -41,7 +41,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     uint public swapFee;
     uint public customSwapFee = type(uint).max;
-    string internal swapFeeName;
+    bytes32 internal immutable swapFeeName;
 
     uint public platformFee;
     uint public customPlatformFee = type(uint).max;
@@ -51,16 +51,19 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         _;
     }
 
-    constructor(address aToken0, address aToken1) {
+    constructor(address aToken0, address aToken1, string memory aSwapFeeName) {
         factory = GenericFactory(msg.sender);
         token0  = aToken0;
         token1  = aToken1;
 
+        swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
+        swapFee     = factory.get(swapFeeName).toUint256();
         platformFee = factory.read(PLATFORM_FEE_NAME).toUint256();
 
         token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
         token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
 
+        require(swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
         require(platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
     }
 
@@ -88,10 +91,10 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     function updateSwapFee() public {
         uint256 _swapFee = customSwapFee != type(uint).max
             ? customSwapFee
-            : factory.read(swapFeeName).toUint256();
+            : factory.get(swapFeeName).toUint256();
         if (_swapFee == swapFee) { return; }
 
-        require(_swapFee <= MAX_SWAP_FEE, "SP: INVALID_SWAP_FEE");
+        require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
