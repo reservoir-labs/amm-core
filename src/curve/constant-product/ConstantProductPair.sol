@@ -28,7 +28,7 @@ contract ConstantProductPair is ReservoirPair {
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
-    {}
+    {} // solhint-disable-line no-empty-blocks
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
