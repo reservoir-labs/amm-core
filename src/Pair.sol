@@ -14,15 +14,15 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    bytes4 private constant SELECTOR        = bytes4(keccak256("transfer(address,uint256)"));
-    uint256 public constant MINIMUM_LIQUIDITY  = 10**3;
-    string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
-    string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
-    string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
+    string  internal    constant PLATFORM_FEE_TO_NAME   = "Shared::platformFeeTo";
+    string  private     constant PLATFORM_FEE_NAME      = "Shared::platformFee";
+    string  private     constant RECOVERER_NAME         = "Shared::defaultRecoverer";
+    bytes4  private     constant SELECTOR               = bytes4(keccak256("transfer(address,uint256)"));
 
-    uint256 public constant FEE_ACCURACY  = 1_000_000;  // 100%
-    uint256 public constant MAX_PLATFORM_FEE = 500_000; //  50%
-    uint256 public constant MAX_SWAP_FEE     = 20_000;  //   2%
+    uint256 public constant MINIMUM_LIQUIDITY   = 10**3;
+    uint256 public constant FEE_ACCURACY        = 1_000_000;  // 100%
+    uint256 public constant MAX_PLATFORM_FEE    = 500_000;    //  50%
+    uint256 public constant MAX_SWAP_FEE        = 20_000;     //   2%
 
     GenericFactory public immutable factory;
     address public immutable token0;
