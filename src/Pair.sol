@@ -123,10 +123,10 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         _safeTransfer(token, _recoverer, _amountToRecover);
     }
 
-    function _safeTransfer(address token, address to, uint value) internal {
+    function _safeTransfer(address token, address to, uint value) internal returns (bool) {
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "P: TRANSFER_FAILED");
+        return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
     function _update(uint256 aTotalToken0, uint256 aTotalToken1, uint112 aReserve0, uint112 aReserve1) internal virtual;

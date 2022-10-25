@@ -393,6 +393,42 @@ contract AaveIntegrationTest is BaseTest
         _manager.afterLiquidityEvent();
     }
 
+    function testSwap_ReturnAsset() public allNetworks allPairs
+    {
+        // arrange
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        // manage half
+        _manager.adjustManagement(
+            _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
+        );
+
+        // sanity
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT / 2);
+
+        // act - request more than what is available in the pair
+        MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
+        vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (USDC, 10)));
+        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, -10)));
+        _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
+
+        // assert
+        assertEq(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT / 2 + 10);
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), 0);
+        assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2 - 10, 1);
+    }
+
+    function testSwap_ReturnAsset_AavePaused() public
+    {
+
+    }
+
+    // the amount requested is within the balance of the pair, no need to return asset
+    function testSwap_NoReturnAsset() public
+    {
+
+    }
+
     function testSetUpperThreshold_BreachMaximum() public allNetworks
     {
         // act & assert

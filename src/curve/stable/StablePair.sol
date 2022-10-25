@@ -241,8 +241,18 @@ contract StablePair is ReservoirPair {
             }
         }
 
-        // optimistically transfers tokens
-        _safeTransfer(tokenOut, to, amountOut);
+        // if transfer fails for whatever reason
+        if(_safeTransfer(tokenOut, to, amountOut) == false) {
+            uint256 tokenOutManaged = tokenOut == token0 ? token0Managed : token1Managed;
+            uint256 reserveOut = tokenOut == token0 ? _reserve0 : _reserve1;
+            if (reserveOut - tokenOutManaged < amountOut) {
+                assetManager.returnAsset(tokenOut, amountOut - (reserveOut - tokenOutManaged));
+                require(_safeTransfer(tokenOut, to, amountOut), "SP: TRANSFER_FAILED");
+            }
+            else {
+                revert("SP: TRANSFER_FAILED");
+            }
+        }
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(

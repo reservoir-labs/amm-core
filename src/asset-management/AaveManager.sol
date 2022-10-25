@@ -70,11 +70,11 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IAssetManagedPair aPair,
         int256 aAmount0Change,
         int256 aAmount1Change
-    ) external nonReentrant onlyOwner {
+    ) external onlyOwner {
         _adjustManagement(aPair, aAmount0Change, aAmount1Change);
     }
 
-    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change) private {
+    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change) nonReentrant private {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
             "AM: CAST_WOULD_OVERFLOW"
@@ -165,6 +165,15 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed);
         int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed);
 
+        _adjustManagement(lPair, lAmount0Change, lAmount1Change);
+    }
+
+    function returnAsset(address aToken, uint256 aAmount) external {
+        require(aAmount > 0, "AM: ZERO_AMOUNT_REQUESTED");
+        IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
+        int256 lAmount0Change = -int256(aToken == lPair.token0() ? aAmount : 0);
+        int256 lAmount1Change = -int256(lAmount0Change == 0 ? aAmount: 0);
+        assert(lAmount0Change <= 0 && lAmount1Change <= 0);
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 

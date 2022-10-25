@@ -128,11 +128,11 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
 
-        _update(
-            _totalToken0(),
-            _totalToken1(),
-            reserve0,
-            reserve1
-        );
+//        _update(
+//            _totalToken0(),
+//            _totalToken1(),
+//            reserve0,
+//            reserve1
+//        );
     }
 }
