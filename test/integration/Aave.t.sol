@@ -169,6 +169,11 @@ contract AaveIntegrationTest is BaseTest
         _increaseManagementOneToken();
     }
 
+    function testAdjustManagement_IncreaseManagementOneToken_Frozen() public
+    {
+
+    }
+
     function testAdjustManagement_DecreaseManagementOneToken() public allNetworks allPairs
     {
         // arrange
@@ -413,11 +418,15 @@ contract AaveIntegrationTest is BaseTest
         _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
 
         // assert
+        (lReserve0 , lReserve1, ) = _pair.getReserves();
+        lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT / 2 + 10);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), 0);
+        assertEq(lReserveUSDC, MINT_AMOUNT / 2 - 10);
         assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2 - 10, 1);
     }
 
+    // when the pool is paused, attempts to withdraw should fail
     function testSwap_ReturnAsset_AavePaused() public
     {
 
