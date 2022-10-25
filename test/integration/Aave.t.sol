@@ -424,8 +424,18 @@ contract AaveIntegrationTest is BaseTest
     }
 
     // the amount requested is within the balance of the pair, no need to return asset
-    function testSwap_NoReturnAsset() public
+    function testSwap_NoReturnAsset() public allNetworks allPairs
     {
+        // arrange
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        // manage half
+        _manager.adjustManagement(
+            _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
+        );
+
+        // sanity
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT / 2);
 
         // act - request exactly what is available in the pair
         MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
