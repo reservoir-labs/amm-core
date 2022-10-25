@@ -427,6 +427,14 @@ contract AaveIntegrationTest is BaseTest
     function testSwap_NoReturnAsset() public
     {
 
+        // act - request exactly what is available in the pair
+        MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
+        _pair.swap(-int256(MINT_AMOUNT / 2), false, address(this), bytes(""));
+
+        // assert
+        assertEq(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT / 2);
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), 0);
+        assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2, 1);
     }
 
     function testSetUpperThreshold_BreachMaximum() public allNetworks
