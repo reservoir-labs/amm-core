@@ -442,9 +442,37 @@ contract AaveIntegrationTest is BaseTest
         _pair.swap(-int256(MINT_AMOUNT / 2), false, address(this), bytes(""));
 
         // assert
+        (lReserve0 , lReserve1, ) = _pair.getReserves();
+        lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT / 2);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), 0);
+        assertEq(lReserveUSDC, MINT_AMOUNT / 2);
         assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2, 1);
+    }
+
+    function testBurn_ReturnAsset() public allNetworks allPairs
+    {
+        // arrange
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        // manage half
+        _manager.adjustManagement(
+            _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
+        );
+
+        // sanity
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT / 2);
+
+        // act
+        vm.startPrank(_alice);
+        _pair.transfer(address(_pair), _pair.balanceOf(_alice));
+        vm.expectCall(address(_manager), bytes(""));
+        vm.expectCall(address(_pair), bytes(""));
+        _pair.burn(address(this));
+        vm.stopPrank();
+
+        // assert - range due to slight diff in liq between CP and SP
+        assertApproxEqRel(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT, 0.000000001e18);
     }
 
     function testSetUpperThreshold_BreachMaximum() public allNetworks

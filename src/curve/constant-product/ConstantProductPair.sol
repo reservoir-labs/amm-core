@@ -167,8 +167,28 @@ contract ConstantProductPair is ReservoirPair {
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
-        _safeTransfer(_token0, to, amount0);
-        _safeTransfer(_token1, to, amount1);
+
+        if(_safeTransfer(_token0, to, amount0) == false) {
+            uint256 _token0Managed = token0Managed; // gas savings
+            if (_reserve0 - _token0Managed < amount0) {
+                assetManager.returnAsset(_token0, amount0 - (_reserve0 - _token0Managed));
+                require(_safeTransfer(_token0, to, amount0), "CP: TRANSFER_FAILED");
+            }
+            else {
+                revert("CP: TRANSFER_FAILED");
+            }
+        }
+        if(_safeTransfer(_token1, to, amount1) == false) {
+            uint256 _token1Managed = token1Managed; // gas savings
+            if (_reserve1 - _token1Managed < amount1) {
+                assetManager.returnAsset(_token1, amount1 - (_reserve1 - _token1Managed));
+                require(_safeTransfer(_token1, to, amount1), "CP: TRANSFER_FAILED");
+            }
+            else {
+                revert("CP: TRANSFER_FAILED");
+            }
+        }
+
         balance0 = _totalToken0();
         balance1 = _totalToken1();
 

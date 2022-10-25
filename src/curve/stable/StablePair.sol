@@ -188,8 +188,27 @@ contract StablePair is ReservoirPair {
         amount1 = (liquidity * _reserve1) / _totalSupply;
 
         _burn(address(this), liquidity);
-        _safeTransfer(token0, to, amount0);
-        _safeTransfer(token1, to, amount1);
+
+        if(_safeTransfer(token0, to, amount0) == false) {
+            uint256 _token0Managed = token0Managed; // gas savings
+            if (_reserve0 - _token0Managed < amount0) {
+                assetManager.returnAsset(token0, amount0 - (_reserve0 - _token0Managed));
+                require(_safeTransfer(token0, to, amount0), "CP: TRANSFER_FAILED");
+            }
+            else {
+                revert("CP: TRANSFER_FAILED");
+            }
+        }
+        if(_safeTransfer(token1, to, amount1) == false) {
+            uint256 _token1Managed = token1Managed; // gas savings
+            if (_reserve1 - _token1Managed < amount1) {
+                assetManager.returnAsset(token1, amount1 - (_reserve1 - _token1Managed));
+                require(_safeTransfer(token1, to, amount1), "CP: TRANSFER_FAILED");
+            }
+            else {
+                revert("CP: TRANSFER_FAILED");
+            }
+        }
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
