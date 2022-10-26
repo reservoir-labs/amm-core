@@ -126,8 +126,8 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function _doDivest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private returns (uint256 rActualWithdrawn) {
-        uint256 lShares = _updateShares(aPair, address(aToken), aAmount, false);
         try pool.withdraw(address(aToken), aAmount, address(this)) returns (uint256 rAmountWithdrawn) {
+            uint256 lShares = _updateShares(aPair, address(aToken), aAmount, false);
             emit FundsDivested(aPair, aToken, lShares);
             aToken.approve(address(aPair), aAmount);
             rActualWithdrawn = rAmountWithdrawn;
@@ -142,9 +142,9 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     function _doInvest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private returns (bool rFail) {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
 
-        uint256 lShares = _updateShares(aPair, address(aToken), aAmount, true);
         aToken.approve(address(pool), aAmount);
         try pool.supply(address(aToken), aAmount, address(this), 0) {
+            uint256 lShares = _updateShares(aPair, address(aToken), aAmount, true);
             emit FundsInvested(aPair, aToken, lShares);
             rFail = false;
         }
