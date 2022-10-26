@@ -189,7 +189,7 @@ contract StablePair is ReservoirPair {
 
         _burn(address(this), liquidity);
 
-        if(_safeTransfer(token0, to, amount0) == false) {
+        if(!_safeTransfer(token0, to, amount0)) {
             uint256 _token0Managed = token0Managed; // gas savings
             if (_reserve0 - _token0Managed < amount0) {
                 assetManager.returnAsset(token0, amount0 - (_reserve0 - _token0Managed));
@@ -199,7 +199,7 @@ contract StablePair is ReservoirPair {
                 revert("CP: TRANSFER_FAILED");
             }
         }
-        if(_safeTransfer(token1, to, amount1) == false) {
+        if(!_safeTransfer(token1, to, amount1)) {
             uint256 _token1Managed = token1Managed; // gas savings
             if (_reserve1 - _token1Managed < amount1) {
                 assetManager.returnAsset(token1, amount1 - (_reserve1 - _token1Managed));
@@ -261,7 +261,7 @@ contract StablePair is ReservoirPair {
         }
 
         // if transfer fails for whatever reason
-        if(_safeTransfer(tokenOut, to, amountOut) == false) {
+        if(!_safeTransfer(tokenOut, to, amountOut)) {
             uint256 tokenOutManaged = tokenOut == token0 ? token0Managed : token1Managed;
             uint256 reserveOut = tokenOut == token0 ? _reserve0 : _reserve1;
             if (reserveOut - tokenOutManaged < amountOut) {
