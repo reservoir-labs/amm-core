@@ -118,7 +118,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
             lInvestFail0 = _doInvest(aPair, lToken0, lToken0AToken, uint256(aAmount0Change));
         }
         if (aAmount1Change > 0) {
-            lInvestFail1 =_doInvest(aPair, lToken1, lToken1AToken, uint256(aAmount1Change));
+            lInvestFail1 = _doInvest(aPair, lToken1, lToken1AToken, uint256(aAmount1Change));
         }
 
         // invest failed, put the money back in the pair
