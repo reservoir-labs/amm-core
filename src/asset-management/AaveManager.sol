@@ -95,39 +95,66 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
         // withdraw from the market
         if (aAmount0Change < 0) {
-            _doDivest(aPair, lToken0, uint256(-aAmount0Change));
+            if (_doDivest(aPair, lToken0, uint256(-aAmount0Change)) == 0) {
+                aAmount0Change = 0;
+            }
         }
         if (aAmount1Change < 0) {
-            _doDivest(aPair, lToken1, uint256(-aAmount1Change));
+            if (_doDivest(aPair, lToken1, uint256(-aAmount1Change)) == 0) {
+                aAmount1Change = 0;
+            }
         }
 
         // transfer tokens to/from the pair
         aPair.adjustManagement(aAmount0Change, aAmount1Change);
 
+        bool lInvestFail0;
+        bool lInvestFail1;
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            _doInvest(aPair, lToken0, uint256(aAmount0Change));
+            lInvestFail0 = _doInvest(aPair, lToken0, uint256(aAmount0Change));
         }
         if (aAmount1Change > 0) {
-            _doInvest(aPair, lToken1, uint256(aAmount1Change));
+            lInvestFail1 =_doInvest(aPair, lToken1, uint256(aAmount1Change));
+        }
+
+        // invest failed, put the money back in the pair
+        if (lInvestFail0 || lInvestFail1) {
+            // update the pair about the updated amount
+            aPair.adjustManagement(-int256(lInvestFail0 ? aAmount0Change : int256(0)), -int256(lInvestFail1 ? aAmount1Change : int256(0)));
         }
     }
 
-    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private {
+    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private returns (uint256 rActualWithdrawn) {
         uint256 lShares = _updateShares(aPair, address(aToken), aAmount, false);
-        pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, address(aToken), lShares);
-
-        aToken.approve(address(aPair), aAmount);
+        try pool.withdraw(address(aToken), aAmount, address(this)) returns (uint256 rAmountWithdrawn) {
+            emit FundsDivested(aPair, aToken, lShares);
+            aToken.approve(address(aPair), aAmount);
+            rActualWithdrawn = rAmountWithdrawn;
+            // might take this out in the future
+            assert(rActualWithdrawn == aAmount);
+        }
+        catch {
+            rActualWithdrawn = 0;
+        }
     }
 
-    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private {
+    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private returns (bool rFail) {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
 
         uint256 lShares = _updateShares(aPair, address(aToken), aAmount, true);
         aToken.approve(address(pool), aAmount);
-        pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, address(aToken), lShares);
+        try pool.supply(address(aToken), aAmount, address(this), 0) {
+            emit FundsInvested(aPair, aToken, lShares);
+            rFail = false;
+        }
+        // if the supply fails for whatever reason
+        // pool could be frozen, paused, reached its supply limit etc
+        catch {
+            // approve the token for returning to the pair
+            aToken.approve(address(aPair), aAmount);
+            rFail = true;
+        }
     }
 
     function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
@@ -173,7 +200,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
         int256 lAmount0Change = -int256(aToken == lPair.token0() ? aAmount : 0);
         int256 lAmount1Change = -int256(lAmount0Change == 0 ? aAmount: 0);
-        assert(lAmount0Change <= 0 && lAmount1Change <= 0);
+        assert(lAmount0Change < 0 || lAmount1Change < 0);
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 
