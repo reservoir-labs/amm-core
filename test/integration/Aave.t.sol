@@ -301,6 +301,7 @@ contract AaveIntegrationTest is BaseTest
         _poolConfigurator.setReserveFreeze(USDC, true);
 
         // act
+        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, lAmountToManage)));
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert
@@ -308,7 +309,7 @@ contract AaveIntegrationTest is BaseTest
         assertEq(_pair.token0Managed(), 0);
         assertEq(_pair.token1Managed(), 0);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT);
-        assertEq(IERC20(lAaveToken).balanceOf(address(this)), 0);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 0);
         assertEq(_manager.shares(_pair, address(USDC)), 0);
         assertEq(_manager.totalShares(lAaveToken), 0);
     }
@@ -523,10 +524,23 @@ contract AaveIntegrationTest is BaseTest
         assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2 - 10, 1);
     }
 
-    // when the pool is paused, attempts to withdraw should fail
-    function testSwap_ReturnAsset_AavePaused() public
+    // when the pool is paused, attempts to withdraw should fail and the swap should fail too
+    function testSwap_ReturnAsset_PausedFail() public allNetworks allPairs
     {
+        // arrange
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        // manage half
+        _manager.adjustManagement(
+            _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
+        );
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReservePause(USDC, true);
 
+        // act & assert
+        MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
+        vm.expectRevert();
+        _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
     }
 
     // the amount requested is within the balance of the pair, no need to return asset
@@ -579,6 +593,26 @@ contract AaveIntegrationTest is BaseTest
 
         // assert - range due to slight diff in liq between CP and SP
         assertApproxEqRel(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT, 0.000000001e18);
+    }
+
+    function testBurn_ReturnAsset_PausedFail() public allNetworks allPairs
+    {
+        // arrange
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        // manage half
+        _manager.adjustManagement(
+            _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
+        );
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReservePause(USDC, true);
+
+        // act & assert
+        vm.startPrank(_alice);
+        _pair.transfer(address(_pair), _pair.balanceOf(_alice));
+        vm.expectRevert();
+        _pair.burn(address(this));
+        vm.stopPrank();
     }
 
     function testSetUpperThreshold_BreachMaximum() public allNetworks
