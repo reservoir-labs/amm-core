@@ -98,12 +98,12 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
         // withdraw from the market
         if (aAmount0Change < 0) {
-            if (_doDivest(aPair, lToken0, uint256(-aAmount0Change)) == 0) {
+            if (_doDivest(aPair, lToken0, lToken0AToken, uint256(-aAmount0Change)) == 0) {
                 aAmount0Change = 0;
             }
         }
         if (aAmount1Change < 0) {
-            if (_doDivest(aPair, lToken1, uint256(-aAmount1Change)) == 0) {
+            if (_doDivest(aPair, lToken1, lToken1AToken, uint256(-aAmount1Change)) == 0) {
                 aAmount1Change = 0;
             }
         }
@@ -115,10 +115,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         bool lInvestFail1;
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            lInvestFail0 = _doInvest(aPair, lToken0, uint256(aAmount0Change));
+            lInvestFail0 = _doInvest(aPair, lToken0, lToken0AToken, uint256(aAmount0Change));
         }
         if (aAmount1Change > 0) {
-            lInvestFail1 =_doInvest(aPair, lToken1, uint256(aAmount1Change));
+            lInvestFail1 =_doInvest(aPair, lToken1, lToken1AToken, uint256(aAmount1Change));
         }
 
         // invest failed, put the money back in the pair
@@ -128,9 +128,9 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
     }
 
-    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private returns (uint256 rActualWithdrawn) {
+    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private returns (uint256 rActualWithdrawn) {
+        uint256 lShares = _updateShares(aPair, address(aToken), aAaveToken, aAmount, false);
         try pool.withdraw(address(aToken), aAmount, address(this)) returns (uint256 rAmountWithdrawn) {
-            uint256 lShares = _updateShares(aPair, address(aToken), aAmount, false);
             emit FundsDivested(aPair, aToken, lShares);
             aToken.approve(address(aPair), aAmount);
             rActualWithdrawn = rAmountWithdrawn;
@@ -139,15 +139,18 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         }
         catch {
             rActualWithdrawn = 0;
+            // undo the shares change
+            shares[aPair][address(aToken)] += lShares;
+            totalShares[aAaveToken] += lShares;
         }
     }
 
-    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private returns (bool rFail) {
+    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private returns (bool rFail) {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
-
+        uint256 lShares = _updateShares(aPair, address(aToken), aAaveToken, aAmount, true);
         aToken.approve(address(pool), aAmount);
+
         try pool.supply(address(aToken), aAmount, address(this), 0) {
-            uint256 lShares = _updateShares(aPair, address(aToken), aAmount, true);
             emit FundsInvested(aPair, aToken, lShares);
             rFail = false;
         }
@@ -157,6 +160,9 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
             // approve the token for returning to the pair
             aToken.approve(address(aPair), aAmount);
             rFail = true;
+            // undo shares change
+            shares[aPair][address(aToken)] -= lShares;
+            totalShares[aAaveToken] -= lShares;
         }
     }
 
@@ -236,16 +242,17 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         rExchangeRate = lBalance.divWadDown(totalShares[aAaveToken]);
     }
 
-    function _updateShares(IAssetManagedPair aPair, address aToken, uint256 aAmount, bool increase) private returns (uint256 rShares) {
-        address lAaveToken = _getATokenAddress(aToken);
-        rShares = aAmount.divWadDown(_getExchangeRate(lAaveToken));
+    function _updateShares(
+        IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount, bool increase
+    ) private returns (uint256 rShares) {
+        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
         if (increase) {
             shares[aPair][aToken] += rShares;
-            totalShares[lAaveToken] += rShares;
+            totalShares[aAaveToken] += rShares;
         }
         else {
             shares[aPair][aToken] -= rShares;
-            totalShares[lAaveToken] -= rShares;
+            totalShares[aAaveToken] -= rShares;
         }
     }
 

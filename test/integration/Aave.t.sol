@@ -570,7 +570,7 @@ contract AaveIntegrationTest is BaseTest
         assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2, 1);
     }
 
-    function testBurn_ReturnAsset() public allNetworks allPairs
+    function testBurn__ReturnAsset() public allNetworks allPairs
     {
         // arrange
         (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
@@ -581,7 +581,9 @@ contract AaveIntegrationTest is BaseTest
         );
 
         // sanity
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT / 2);
+        assertEq(_manager.totalShares(lAaveToken), lReserveUSDC / 2);
 
         // act
         vm.startPrank(_alice);
