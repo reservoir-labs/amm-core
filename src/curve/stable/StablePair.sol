@@ -193,20 +193,20 @@ contract StablePair is ReservoirPair {
             uint256 _token0Managed = token0Managed; // gas savings
             if (_reserve0 - _token0Managed < amount0) {
                 assetManager.returnAsset(token0, amount0 - (_reserve0 - _token0Managed));
-                require(_safeTransfer(token0, to, amount0), "CP: TRANSFER_FAILED");
+                require(_safeTransfer(token0, to, amount0), "SP: TRANSFER_FAILED");
             }
             else {
-                revert("CP: TRANSFER_FAILED");
+                revert("SP: TRANSFER_FAILED");
             }
         }
         if (!_safeTransfer(token1, to, amount1)) {
             uint256 _token1Managed = token1Managed; // gas savings
             if (_reserve1 - _token1Managed < amount1) {
                 assetManager.returnAsset(token1, amount1 - (_reserve1 - _token1Managed));
-                require(_safeTransfer(token1, to, amount1), "CP: TRANSFER_FAILED");
+                require(_safeTransfer(token1, to, amount1), "SP: TRANSFER_FAILED");
             }
             else {
-                revert("CP: TRANSFER_FAILED");
+                revert("SP: TRANSFER_FAILED");
             }
         }
 
