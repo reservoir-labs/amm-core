@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 import { ReentrancyGuard } from "@openzeppelin/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
@@ -12,6 +13,8 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
+    using FixedPointMathLib for uint256;
+
     event FundsInvested(IAssetManagedPair pair, IERC20 token, uint256 shares);
     event FundsDivested(IAssetManagedPair pair, IERC20 token, uint256 shares);
 
@@ -226,15 +229,16 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     /// @dev expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18
     function _getExchangeRate(address aAaveToken) private view returns (uint256 rExchangeRate) {
         uint256 lTotalShares = totalShares[aAaveToken];
-        if (lTotalShares == 0) {
+        uint256 lBalance = IERC20(aAaveToken).balanceOf(address(this));
+        if (lTotalShares == 0 || lBalance == 0) {
             return 1e18;
         }
-        rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)) * 1e18 / totalShares[aAaveToken];
+        rExchangeRate = lBalance.divWadDown(totalShares[aAaveToken]);
     }
 
     function _updateShares(IAssetManagedPair aPair, address aToken, uint256 aAmount, bool increase) private returns (uint256 rShares) {
         address lAaveToken = _getATokenAddress(aToken);
-        rShares = aAmount * 1e18 / _getExchangeRate(lAaveToken);
+        rShares = aAmount.divWadDown(_getExchangeRate(lAaveToken));
         if (increase) {
             shares[aPair][aToken] += rShares;
             totalShares[lAaveToken] += rShares;

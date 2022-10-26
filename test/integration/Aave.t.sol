@@ -174,8 +174,7 @@ contract AaveIntegrationTest is BaseTest
         _increaseManagementOneToken(lAmountToManage);
 
         // assert
-        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
-        (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(USDC);
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
 
         assertEq(_pair.token0Managed(), uint256(lAmountToManage0));
         assertEq(_pair.token1Managed(), uint256(lAmountToManage1));
@@ -237,13 +236,12 @@ contract AaveIntegrationTest is BaseTest
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert
-        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
-        (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(USDC);
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
 
         assertEq(_pair.token0Managed(), 0);
         assertEq(_pair.token1Managed(), 0);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT);
-        assertEq(IERC20(lAaveToken).balanceOf(address(this)), 0);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 0);
         assertEq(_manager.shares(_pair, address(USDC)), 0);
         assertEq(_manager.totalShares(lAaveToken), 0);
     }
@@ -264,6 +262,55 @@ contract AaveIntegrationTest is BaseTest
         // act & assert
         vm.expectRevert(stdError.arithmeticError);
         _manager.adjustManagement(lOtherPair, -lAmountToManage-1, 0);
+    }
+
+    function testAdjustManagement_DecreaseManagement_ReservePaused() public allNetworks allPairs
+    {
+        // arrange
+        int256 lAmountToManage = -500e6;
+        int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
+        int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
+        _increaseManagementOneToken(500e6);
+        _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
+
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReservePause(USDC, false);
+
+        // act
+        _manager.adjustManagement(_pair, -lAmountToManage0, -lAmountToManage1);
+
+        // assert
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        uint256 lUsdcManaged = _pair.token0() == USDC ? _pair.token0Managed(): _pair.token1Managed();
+        assertEq(lUsdcManaged, 500e6);
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT - 500e6);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 500e6);
+        assertEq(_manager.shares(_pair, address(USDC)), 500e6);
+        assertEq(_manager.totalShares(lAaveToken), 500e6);
+    }
+
+    function testAdjustManagement_DecreaseManagement_SucceedEvenWhenFrozen() public allNetworks allPairs
+    {
+        // arrange
+        int256 lAmountToManage = -500e6;
+        int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
+        int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
+        _increaseManagementOneToken(500e6);
+
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReserveFreeze(USDC, true);
+
+        // act
+        _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
+
+        // assert
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT);
+        assertEq(IERC20(lAaveToken).balanceOf(address(this)), 0);
+        assertEq(_manager.shares(_pair, address(USDC)), 0);
+        assertEq(_manager.totalShares(lAaveToken), 0);
     }
 
     function testGetBalance(uint256 aAmountToManage) public allNetworks allPairs
@@ -336,7 +383,7 @@ contract AaveIntegrationTest is BaseTest
     {
         // assume
         ConstantProductPair lOtherPair = _createOtherPair();
-        (address lAaveToken, , ) = _manager.dataProvider().getReserveTokensAddresses(USDC);
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
         (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1, lReserveUSDC));
@@ -379,8 +426,7 @@ contract AaveIntegrationTest is BaseTest
         int256 lAmountToManage = int256(bound(aAmountToManage, 0, lReserveUSDC));
 
         // arrange
-        IAaveProtocolDataProvider lDataProvider = _manager.dataProvider();
-        (address lAaveToken, , ) = lDataProvider.getReserveTokensAddresses(USDC);
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
         int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
         int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
 
