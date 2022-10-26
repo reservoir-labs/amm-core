@@ -74,7 +74,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         _adjustManagement(aPair, aAmount0Change, aAmount1Change);
     }
 
-    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change) nonReentrant private {
+    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change) private nonReentrant {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
             "AM: CAST_WOULD_OVERFLOW"
