@@ -12,9 +12,8 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
-    // TODO: Use IERC20 token instead of address token for better type-safety
-    event FundsInvested(IAssetManagedPair pair, address token, uint256 shares);
-    event FundsDivested(IAssetManagedPair pair, address token, uint256 shares);
+    event FundsInvested(IAssetManagedPair pair, IERC20 token, uint256 shares);
+    event FundsDivested(IAssetManagedPair pair, IERC20 token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(IAssetManagedPair => mapping(address => uint256)) public shares;
