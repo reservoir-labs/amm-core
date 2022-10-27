@@ -149,8 +149,8 @@ contract ConstantProductPair is ReservoirPair {
         require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
 
-        _returnAndTransfer(_token0, to, amount0, _reserve0, _reserve1);
-        _returnAndTransfer(_token1, to, amount1, _reserve0, _reserve1);
+        _checkedTransfer(_token0, to, amount0, _reserve0, _reserve1);
+        _checkedTransfer(_token1, to, amount1, _reserve0, _reserve1);
 
         balance0 = _totalToken0();
         balance1 = _totalToken1();
@@ -203,7 +203,7 @@ contract ConstantProductPair is ReservoirPair {
         }
 
         // optimistically transfers tokens
-        _returnAndTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
+        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(

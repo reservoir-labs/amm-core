@@ -189,8 +189,8 @@ contract StablePair is ReservoirPair {
 
         _burn(address(this), liquidity);
 
-        _returnAndTransfer(token0, to, amount0, _reserve0, _reserve1);
-        _returnAndTransfer(token1, to, amount1, _reserve0, _reserve1);
+        _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
+        _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
@@ -242,7 +242,7 @@ contract StablePair is ReservoirPair {
             }
         }
 
-        _returnAndTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
+        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(

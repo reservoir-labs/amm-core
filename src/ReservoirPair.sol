@@ -16,11 +16,11 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         uint256 _reserve0 = reserve0; // gas savings
         uint256 _reserve1 = reserve1;
 
-        _returnAndTransfer(token0, to, _totalToken0() - _reserve0, _reserve0, _reserve1);
-        _returnAndTransfer(token1, to, _totalToken1() - _reserve1, _reserve0, _reserve1);
+        _checkedTransfer(token0, to, _totalToken0() - _reserve0, _reserve0, _reserve1);
+        _checkedTransfer(token1, to, _totalToken1() - _reserve1, _reserve0, _reserve1);
     }
 
-    function _returnAndTransfer(
+    function _checkedTransfer(
         address aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1
     ) internal {
         // if transfer fails for whatever reason
