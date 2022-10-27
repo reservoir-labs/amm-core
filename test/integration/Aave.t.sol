@@ -93,6 +93,7 @@ contract AaveIntegrationTest is BaseTest
         _aaveAdmin = _poolAddressesProvider.getACLAdmin();
         _dataProvider = IAaveProtocolDataProvider(_poolAddressesProvider.getPoolDataProvider());
         _poolConfigurator = IPoolConfigurator(_poolAddressesProvider.getPoolConfigurator());
+
         deal(USDC, address(this), MINT_AMOUNT, true);
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), USDC, 0));
         IERC20(USDC).transfer(address(_constantProductPair), MINT_AMOUNT);
@@ -130,7 +131,8 @@ contract AaveIntegrationTest is BaseTest
     {
         rOtherPair = ConstantProductPair(_createPair(address(_tokenB), USDC, 0));
         _tokenB.mint(address(rOtherPair), MINT_AMOUNT);
-        deal(USDC, address(rOtherPair), MINT_AMOUNT, true);
+        deal(USDC, address(this), MINT_AMOUNT, true);
+        IERC20(USDC).transfer(address(rOtherPair), MINT_AMOUNT);
         rOtherPair.mint(_alice);
         vm.prank(address(_factory));
         rOtherPair.setManager(_manager);
@@ -489,24 +491,136 @@ contract AaveIntegrationTest is BaseTest
         assertTrue(MathUtils.within1(lNewAmount, lReserveUSDCAfter * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100));
     }
 
-    function testAfterLiquidityEvent_Mint_NoRevertEvenIfAaveFrozen() public allNetworks allPairs
+    // Not enough assets being managed, the AM would want to put some assets into AAVE
+    // but that fails because AAVE is frozen. But the mint should still succeed
+    function testAfterLiquidityEvent_Mint_SucceedEvenIfFrozen() public allNetworks allPairs
     {
+        // arrange
+        uint256 lMintAmt = 100e6;
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReserveFreeze(USDC, true);
 
+        // act
+        deal(USDC, address(this), lMintAmt, true);
+        IERC20(USDC).transfer(address(_pair), lMintAmt);
+        _tokenA.mint(address(_pair), lMintAmt);
+        _pair.mint(address(this));
+
+        // assert - mint succeeds but no assets should have been moved
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        assertGt(_pair.balanceOf(address(this)), 0);
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT + lMintAmt);
     }
 
-    function testAfterLiquidityEvent_Mint_NoRevertEvenIfAavePaused() public allNetworks allPairs
+    function testAfterLiquidityEvent_Mint_SucceedEvenIfPaused() public allNetworks allPairs
     {
+        // arrange
+        uint256 lMintAmt = 100e6;
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReservePause(USDC, true);
 
+        // act
+        deal(USDC, address(this), lMintAmt, true);
+        IERC20(USDC).transfer(address(_pair), lMintAmt);
+        _tokenA.mint(address(_pair), lMintAmt);
+        _pair.mint(address(this));
+
+        // assert
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        assertGt(_pair.balanceOf(address(this)), 0);
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT + lMintAmt);
     }
 
-    function testAfterLiquidityEvent_Burn_NoRevertEvenIfAaveFrozen() public allNetworks allPairs
+    function testAfterLiquidityEvent_Burn_SucceedEvenIfFrozen() public allNetworks allPairs
     {
+        // arrange
+        uint256 lAmtToBurn = _pair.balanceOf(_alice) / 2;
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReserveFreeze(USDC, true);
 
+        // act
+        vm.prank(_alice);
+        _pair.transfer(address(_pair), lAmtToBurn);
+        _pair.burn(address(this));
+
+        // assert - burn succeeds but no assets should have been moved
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+
+        assertGt(IERC20(USDC).balanceOf(address(this)), 0);
+        assertGt(_tokenA.balanceOf(address(this)), 0);
+        assertEq(lReserveUSDC, IERC20(USDC).balanceOf(address(_pair)));
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 0);
     }
 
-    function testAfterLiquidityEvent_Burn_NoRevertEvenIfAavePaused() public allNetworks allPairs
+    function testAfterLiquidityEvent_Burn_SucceedEvenIfPaused() public allNetworks allPairs
     {
+        // arrange
+        uint256 lAmtToBurn = _pair.balanceOf(_alice) / 2;
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReservePause(USDC, true);
 
+        // act
+        vm.prank(_alice);
+        _pair.transfer(address(_pair), lAmtToBurn);
+        _pair.burn(address(this));
+
+        // assert
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+
+        assertGt(IERC20(USDC).balanceOf(address(this)), 0);
+        assertGt(_tokenA.balanceOf(address(this)), 0);
+        assertEq(lReserveUSDC, IERC20(USDC).balanceOf(address(_pair)));
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), 0);
+    }
+
+    // Having too much assets managed, the asset manager would want to
+    // divest some and put it back into the pair. But if AAVE is paused,
+    // the withdrawal from AAVE will fail but the burn should still succeed
+    function testAfterLiquidityEvent_SucceedEvenIfWithdrawFailed() public allNetworks allPairs
+    {
+        // arrange
+        uint256 lAmtToBurn = _pair.balanceOf(_alice) / 10;
+        int256 lAmtToManage = int256(MINT_AMOUNT * 8 / 10); // put 80% of USDC under management, above the upper threshold
+        _increaseManagementOneToken(lAmtToManage);
+        uint256 lUsdcManagedBefore = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        uint256 lSharesBefore = _manager.shares(_pair, USDC);
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        uint256 lAaveTokenBefore = IERC20(lAaveToken).balanceOf(address(_manager));
+
+        vm.prank(_aaveAdmin);
+        _poolConfigurator.setReservePause(USDC, true);
+
+        // act
+        vm.prank(_alice);
+        _pair.transfer(address(_pair), lAmtToBurn);
+        vm.expectCall(_poolAddressesProvider.getPool(), bytes(""));
+        _pair.burn(address(this));
+
+        // assert - burn succeeded but managed assets have not been moved
+        uint256 lUsdcManagedAfter = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        assertEq(lUsdcManagedBefore, lUsdcManagedAfter);
+        assertGt(IERC20(USDC).balanceOf(address(this)), 0);
+        assertGt(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_manager.shares(_pair, USDC), lSharesBefore);
+        assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), lAaveTokenBefore);
     }
 
     function testCallback_ShouldFailIfNotPair() public allNetworks

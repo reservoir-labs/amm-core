@@ -25,7 +25,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     mapping(address => uint256) public totalShares;
 
     /// @dev percentage of the pool's assets, above and below which
-    /// the manager will invest the excess and divest the shortfall
+    /// the manager will divest the shortfall and invest the excess
     uint256 public upperThreshold = 70;
     uint256 public lowerThreshold = 30;
 
@@ -154,6 +154,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
                                 CALLBACKS FROM PAIR
     //////////////////////////////////////////////////////////////////////////*/
 
+    // PERF: Check gas savings by specifying both token addresses
     function afterLiquidityEvent() external {
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
         address lToken0 = lPair.token0();
