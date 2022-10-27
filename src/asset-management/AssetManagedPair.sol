@@ -89,8 +89,8 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
             return;
         }
         // supplying to / withdrawing from 3rd party markets might fail
-        try assetManager.afterLiquidityEvent() {}
-        catch {}
+        try assetManager.afterLiquidityEvent() {} // solhint-disable-line no-empty-blocks
+        catch {}                                  // solhint-disable-line no-empty-blocks
     }
 
     function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
