@@ -30,25 +30,6 @@ contract ConstantProductPair is ReservoirPair {
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
     {} // solhint-disable-line no-empty-blocks
 
-    // update reserves and, on the first call per block, price accumulators
-    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
-        // solhint-disable-next-line not-rely-on-time
-        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed;
-        unchecked {
-            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
-        }
-
-        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
-        }
-        reserve0 = uint112(balance0);
-        reserve1 = uint112(balance1);
-        blockTimestampLast = blockTimestamp;
-        emit Sync(reserve0, reserve1);
-    }
-
     function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountOut) {
         require(amountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");

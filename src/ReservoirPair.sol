@@ -37,5 +37,22 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         }
     }
 
-    // todo: may want to implement _update() in this class
+    // update reserves and, on the first call per block, price and liq accumulators
+    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
+        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
+
+        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+        uint32 timeElapsed;
+        unchecked {
+            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        }
+
+        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
+        }
+        reserve0 = uint112(balance0);
+        reserve1 = uint112(balance1);
+        blockTimestampLast = blockTimestamp;
+        emit Sync(reserve0, reserve1);
+    }
 }

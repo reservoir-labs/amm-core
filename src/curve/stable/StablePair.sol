@@ -271,29 +271,6 @@ contract StablePair is ReservoirPair {
         return _mintFee(_reserve0, _reserve1);
     }
 
-    function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
-        require(totalToken0 <= type(uint112).max && totalToken1 <= type(uint112).max, "SP: OVERFLOW");
-
-        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed;
-        unchecked {
-            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
-        }
-
-        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(
-                uint256(_reserve0),
-                uint256(_reserve1),
-                timeElapsed,
-                blockTimestampLast
-            );
-        }
-        reserve0 = uint112(totalToken0);
-        reserve1 = uint112(totalToken1);
-        blockTimestampLast = blockTimestamp;
-        emit Sync(reserve0, reserve1);
-    }
-
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
         balance0 = _totalToken0();
         balance1 = _totalToken1();
