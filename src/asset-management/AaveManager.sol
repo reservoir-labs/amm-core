@@ -202,11 +202,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     /// @dev expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18
     function _getExchangeRate(address aAaveToken) private view returns (uint256 rExchangeRate) {
         uint256 lTotalShares = totalShares[aAaveToken];
-        uint256 lBalance = IERC20(aAaveToken).balanceOf(address(this));
-        if (lTotalShares == 0 || lBalance == 0) {
+        if (lTotalShares == 0) {
             return 1e18;
         }
-        rExchangeRate = lBalance.divWadDown(totalShares[aAaveToken]);
+        rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
     }
 
     function _updateShares(
