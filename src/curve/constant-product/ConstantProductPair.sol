@@ -168,26 +168,8 @@ contract ConstantProductPair is ReservoirPair {
         require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
 
-        if (!_safeTransfer(_token0, to, amount0)) {
-            uint256 _token0Managed = token0Managed; // gas savings
-            if (_reserve0 - _token0Managed < amount0) {
-                assetManager.returnAsset(_token0, amount0 - (_reserve0 - _token0Managed));
-                require(_safeTransfer(_token0, to, amount0), "CP: TRANSFER_FAILED");
-            }
-            else {
-                revert("CP: TRANSFER_FAILED");
-            }
-        }
-        if (!_safeTransfer(_token1, to, amount1)) {
-            uint256 _token1Managed = token1Managed; // gas savings
-            if (_reserve1 - _token1Managed < amount1) {
-                assetManager.returnAsset(_token1, amount1 - (_reserve1 - _token1Managed));
-                require(_safeTransfer(_token1, to, amount1), "CP: TRANSFER_FAILED");
-            }
-            else {
-                revert("CP: TRANSFER_FAILED");
-            }
-        }
+        _returnAndTransfer(_token0, to, amount0, _reserve0, _reserve1);
+        _returnAndTransfer(_token1, to, amount1, _reserve0, _reserve1);
 
         balance0 = _totalToken0();
         balance1 = _totalToken1();
@@ -239,18 +221,8 @@ contract ConstantProductPair is ReservoirPair {
             }
         }
 
-        // if transfer fails for whatever reason
-        if (!_safeTransfer(tokenOut, to, amountOut)) {
-            uint256 tokenOutManaged = tokenOut == token0 ? token0Managed : token1Managed;
-            uint256 reserveOut = tokenOut == token0 ? _reserve0 : _reserve1;
-            if (reserveOut - tokenOutManaged < amountOut) {
-                assetManager.returnAsset(tokenOut, amountOut - (reserveOut - tokenOutManaged));
-                require(_safeTransfer(tokenOut, to, amountOut), "CP: TRANSFER_FAILED");
-            }
-            else {
-                revert("CP: TRANSFER_FAILED");
-            }
-        }
+        // optimistically transfers tokens
+        _returnAndTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -272,14 +244,6 @@ contract ConstantProductPair is ReservoirPair {
 
         _update(balance0, balance1, _reserve0, _reserve1);
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
-    }
-
-    // force balances to match reserves
-    function skim(address to) external nonReentrant {
-        address _token0 = token0; // gas savings
-        address _token1 = token1; // gas savings
-        _safeTransfer(_token0, to, _totalToken0() - reserve0);
-        _safeTransfer(_token1, to, _totalToken1() - reserve1);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

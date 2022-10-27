@@ -189,26 +189,8 @@ contract StablePair is ReservoirPair {
 
         _burn(address(this), liquidity);
 
-        if (!_safeTransfer(token0, to, amount0)) {
-            uint256 _token0Managed = token0Managed; // gas savings
-            if (_reserve0 - _token0Managed < amount0) {
-                assetManager.returnAsset(token0, amount0 - (_reserve0 - _token0Managed));
-                require(_safeTransfer(token0, to, amount0), "SP: TRANSFER_FAILED");
-            }
-            else {
-                revert("SP: TRANSFER_FAILED");
-            }
-        }
-        if (!_safeTransfer(token1, to, amount1)) {
-            uint256 _token1Managed = token1Managed; // gas savings
-            if (_reserve1 - _token1Managed < amount1) {
-                assetManager.returnAsset(token1, amount1 - (_reserve1 - _token1Managed));
-                require(_safeTransfer(token1, to, amount1), "SP: TRANSFER_FAILED");
-            }
-            else {
-                revert("SP: TRANSFER_FAILED");
-            }
-        }
+        _returnAndTransfer(token0, to, amount0, _reserve0, _reserve1);
+        _returnAndTransfer(token1, to, amount1, _reserve0, _reserve1);
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
@@ -260,18 +242,7 @@ contract StablePair is ReservoirPair {
             }
         }
 
-        // if transfer fails for whatever reason
-        if (!_safeTransfer(tokenOut, to, amountOut)) {
-            uint256 tokenOutManaged = tokenOut == token0 ? token0Managed : token1Managed;
-            uint256 reserveOut = tokenOut == token0 ? _reserve0 : _reserve1;
-            if (reserveOut - tokenOutManaged < amountOut) {
-                assetManager.returnAsset(tokenOut, amountOut - (reserveOut - tokenOutManaged));
-                require(_safeTransfer(tokenOut, to, amountOut), "SP: TRANSFER_FAILED");
-            }
-            else {
-                revert("SP: TRANSFER_FAILED");
-            }
-        }
+        _returnAndTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -455,10 +426,6 @@ contract StablePair is ReservoirPair {
         (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
-    }
-
-    function skim(address to) external nonReentrant {
-        // todo: implement this
     }
 
     /*//////////////////////////////////////////////////////////////////////////
