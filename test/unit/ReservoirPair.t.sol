@@ -27,8 +27,8 @@ contract ReservoirPairTest is BaseTest
     function testSkim(uint256 aAmountA, uint256 aAmountB) external allPairs
     {
         // assume
-        uint256 lAmountA = bound(aAmountA, 1, type(uint112).max);
-        uint256 lAmountB = bound(aAmountB, 1, type(uint112).max);
+        uint256 lAmountA = bound(aAmountA, 1, type(uint256).max - INITIAL_MINT_AMOUNT);
+        uint256 lAmountB = bound(aAmountB, 1, type(uint256).max - INITIAL_MINT_AMOUNT);
 
         // arrange
         _tokenA.mint(address(_pair), lAmountA);
