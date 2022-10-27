@@ -40,9 +40,9 @@ contract AaveIntegrationTest is BaseTest
     IAssetManagedPair[] internal _pairs;
     IAssetManagedPair   internal _pair;
 
-    // network + chain specific variables
     Network[] private _networks;
     mapping(string => Fork) private _forks;
+    // network specific variables
     address private USDC;
     address private _aaveAdmin;
     IPoolAddressesProvider private _poolAddressesProvider;
