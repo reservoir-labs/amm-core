@@ -189,9 +189,12 @@ contract AaveIntegrationTest is BaseTest
         int256 lAmountToManage = 500e6;
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReserveFreeze(USDC, true);
+        int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
+        int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
 
         // act
-        _increaseManagementOneToken(lAmountToManage);
+        vm.expectRevert();
+        _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert - nothing should have moved as USDC market is frozen
         (address lAaveToken, ,) = _dataProvider.getReserveTokensAddresses(USDC);
@@ -209,9 +212,12 @@ contract AaveIntegrationTest is BaseTest
         int256 lAmountToManage = 500e6;
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReservePause(USDC, true);
+        int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
+        int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
 
         // act
-        _increaseManagementOneToken(lAmountToManage);
+        vm.expectRevert();
+        _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert - nothing should have moved as USDC market is paused
         (address lAaveToken, ,) = _dataProvider.getReserveTokensAddresses(USDC);
@@ -270,12 +276,12 @@ contract AaveIntegrationTest is BaseTest
         int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
         int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
         _increaseManagementOneToken(500e6);
-        _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         vm.prank(_aaveAdmin);
-        _poolConfigurator.setReservePause(USDC, false);
+        _poolConfigurator.setReservePause(USDC, true);
 
-        // act
+        // act - withdraw should fail when reserve is paused
+        vm.expectRevert();
         _manager.adjustManagement(_pair, -lAmountToManage0, -lAmountToManage1);
 
         // assert
@@ -299,7 +305,7 @@ contract AaveIntegrationTest is BaseTest
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReserveFreeze(USDC, true);
 
-        // act
+        // act - withdraw should still succeed when reserve is frozen
         vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, lAmountToManage)));
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
@@ -442,7 +448,7 @@ contract AaveIntegrationTest is BaseTest
         assertEq(lTotalShares, uint256(lAmountToManage));
     }
 
-    function testCallback_IncreaseInvestmentAfterMint() public allNetworks allPairs
+    function testAfterLiquidityEvent_IncreaseInvestmentAfterMint() public allNetworks allPairs
     {
         // sanity
         uint256 lAmountManaged = _manager.getBalance(_pair, USDC);
@@ -461,7 +467,7 @@ contract AaveIntegrationTest is BaseTest
         assertEq(lNewAmount, lReserveUSDC * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100);
     }
 
-    function testCallback_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs
+    function testAfterLiquidityEvent_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs
     {
         // assume
         (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
@@ -481,6 +487,26 @@ contract AaveIntegrationTest is BaseTest
         (uint256 lReserve0After, uint256 lReserve1After, ) = _pair.getReserves();
         uint256 lReserveUSDCAfter = _pair.token0() == USDC ? lReserve0After : lReserve1After;
         assertTrue(MathUtils.within1(lNewAmount, lReserveUSDCAfter * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100));
+    }
+
+    function testAfterLiquidityEvent_Mint_NoRevertEvenIfAaveFrozen() public allNetworks allPairs
+    {
+
+    }
+
+    function testAfterLiquidityEvent_Mint_NoRevertEvenIfAavePaused() public allNetworks allPairs
+    {
+
+    }
+
+    function testAfterLiquidityEvent_Burn_NoRevertEvenIfAaveFrozen() public allNetworks allPairs
+    {
+
+    }
+
+    function testAfterLiquidityEvent_Burn_NoRevertEvenIfAavePaused() public allNetworks allPairs
+    {
+
     }
 
     function testCallback_ShouldFailIfNotPair() public allNetworks
