@@ -98,72 +98,38 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
         // withdraw from the market
         if (aAmount0Change < 0) {
-            if (_doDivest(aPair, lToken0, lToken0AToken, uint256(-aAmount0Change)) == 0) {
-                aAmount0Change = 0;
-            }
+            _doDivest(aPair, lToken0, lToken0AToken, uint256(-aAmount0Change));
         }
         if (aAmount1Change < 0) {
-            if (_doDivest(aPair, lToken1, lToken1AToken, uint256(-aAmount1Change)) == 0) {
-                aAmount1Change = 0;
-            }
+            _doDivest(aPair, lToken1, lToken1AToken, uint256(-aAmount1Change));
         }
 
         // transfer tokens to/from the pair
         aPair.adjustManagement(aAmount0Change, aAmount1Change);
 
-        bool lInvestFail0;
-        bool lInvestFail1;
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            lInvestFail0 = _doInvest(aPair, lToken0, lToken0AToken, uint256(aAmount0Change));
+            _doInvest(aPair, lToken0, lToken0AToken, uint256(aAmount0Change));
         }
         if (aAmount1Change > 0) {
-            lInvestFail1 = _doInvest(aPair, lToken1, lToken1AToken, uint256(aAmount1Change));
-        }
-
-        // invest failed, put the money back in the pair
-        if (lInvestFail0 || lInvestFail1) {
-            // update the pair about the updated amount
-            aPair.adjustManagement(-int256(lInvestFail0 ? aAmount0Change : int256(0)), -int256(lInvestFail1 ? aAmount1Change : int256(0)));
+            _doInvest(aPair, lToken1, lToken1AToken, uint256(aAmount1Change));
         }
     }
 
-    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private returns (uint256 rActualWithdrawn) {
+    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
         uint256 lShares = _updateShares(aPair, address(aToken), aAaveToken, aAmount, false);
-        try pool.withdraw(address(aToken), aAmount, address(this)) returns (uint256 rAmountWithdrawn) {
-            emit FundsDivested(aPair, aToken, lShares);
-            aToken.approve(address(aPair), aAmount);
-            rActualWithdrawn = rAmountWithdrawn;
-            // might take this out in the future
-            assert(rActualWithdrawn == aAmount);
-        }
-        catch {
-            rActualWithdrawn = 0;
-            // undo the shares change
-            shares[aPair][address(aToken)] += lShares;
-            totalShares[aAaveToken] += lShares;
-        }
+        pool.withdraw(address(aToken), aAmount, address(this));
+        emit FundsDivested(aPair, aToken, lShares);
+        aToken.approve(address(aPair), aAmount);
     }
 
-    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private returns (bool rFail) {
+    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
         uint256 lShares = _updateShares(aPair, address(aToken), aAaveToken, aAmount, true);
         aToken.approve(address(pool), aAmount);
 
-        try pool.supply(address(aToken), aAmount, address(this), 0) {
-            emit FundsInvested(aPair, aToken, lShares);
-            rFail = false;
-        }
-        // if the supply fails for whatever reason
-        // pool could be frozen, paused, reached its supply limit etc
-        catch {
-            // approve the token for returning to the pair
-            aToken.approve(address(aPair), aAmount);
-            rFail = true;
-            // undo shares change
-            shares[aPair][address(aToken)] -= lShares;
-            totalShares[aAaveToken] -= lShares;
-        }
+        pool.supply(address(aToken), aAmount, address(this), 0);
+        emit FundsInvested(aPair, aToken, lShares);
     }
 
     function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
