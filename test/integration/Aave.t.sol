@@ -1,6 +1,7 @@
 pragma solidity 0.8.13;
 
 import "test/__fixtures/BaseTest.sol";
+import { Errors } from "test/integration/AaveErrors.sol";
 
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 
@@ -195,7 +196,7 @@ contract AaveIntegrationTest is BaseTest
         int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
 
         // act
-        vm.expectRevert();
+        vm.expectRevert(bytes(Errors.RESERVE_FROZEN));
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert - nothing should have moved as USDC market is frozen
@@ -218,7 +219,7 @@ contract AaveIntegrationTest is BaseTest
         int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
 
         // act
-        vm.expectRevert();
+        vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert - nothing should have moved as USDC market is paused
@@ -283,7 +284,7 @@ contract AaveIntegrationTest is BaseTest
         _poolConfigurator.setReservePause(USDC, true);
 
         // act - withdraw should fail when reserve is paused
-        vm.expectRevert();
+        vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
         _manager.adjustManagement(_pair, -lAmountToManage0, -lAmountToManage1);
 
         // assert
@@ -681,7 +682,7 @@ contract AaveIntegrationTest is BaseTest
 
         // act & assert
         MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
-        vm.expectRevert();
+        vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
         _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
 
         // assert
@@ -758,7 +759,7 @@ contract AaveIntegrationTest is BaseTest
         // act & assert
         vm.startPrank(_alice);
         _pair.transfer(address(_pair), _pair.balanceOf(_alice));
-        vm.expectRevert();
+        vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
         _pair.burn(address(this));
         vm.stopPrank();
 
