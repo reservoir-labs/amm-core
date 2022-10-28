@@ -117,7 +117,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     }
 
     function _doDivest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
-        uint256 lShares = _updateShares(aPair, address(aToken), aAaveToken, aAmount, false);
+        uint256 lShares = _decreaseShares(aPair, address(aToken), aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
         emit FundsDivested(aPair, aToken, lShares);
         aToken.approve(address(aPair), aAmount);
@@ -125,7 +125,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
     function _doInvest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
-        uint256 lShares = _updateShares(aPair, address(aToken), aAaveToken, aAmount, true);
+        uint256 lShares = _increaseShares(aPair, address(aToken), aAaveToken, aAmount);
         aToken.approve(address(pool), aAmount);
 
         pool.supply(address(aToken), aAmount, address(this), 0);
@@ -208,18 +208,20 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
     }
 
-    function _updateShares(
-        IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount, bool increase
+    function _increaseShares(
+        IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount
     ) private returns (uint256 rShares) {
         rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
-        if (increase) {
-            shares[aPair][aToken] += rShares;
-            totalShares[aAaveToken] += rShares;
-        }
-        else {
-            shares[aPair][aToken] -= rShares;
-            totalShares[aAaveToken] -= rShares;
-        }
+        shares[aPair][aToken] += rShares;
+        totalShares[aAaveToken] += rShares;
+    }
+
+    function _decreaseShares(
+        IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount
+    ) private returns (uint256 rShares) {
+        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        shares[aPair][aToken] -= rShares;
+        totalShares[aAaveToken] -= rShares;
     }
 
     /// @notice returns the address of the AAVE token.
