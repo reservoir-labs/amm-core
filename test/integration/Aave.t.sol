@@ -623,7 +623,7 @@ contract AaveIntegrationTest is BaseTest
         assertEq(IERC20(lAaveToken).balanceOf(address(_manager)), lAaveTokenBefore);
     }
 
-    function testCallback_ShouldFailIfNotPair() public allNetworks
+    function testAfterLiquidityEvent_ShouldFailIfNotPair() public allNetworks
     {
         // act & assert
         vm.expectRevert();

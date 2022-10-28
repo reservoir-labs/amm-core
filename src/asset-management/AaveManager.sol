@@ -154,7 +154,6 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
                                 CALLBACKS FROM PAIR
     //////////////////////////////////////////////////////////////////////////*/
 
-    // PERF: Check gas savings by specifying both token addresses
     function afterLiquidityEvent() external {
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
         address lToken0 = lPair.token0();
