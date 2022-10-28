@@ -1,6 +1,7 @@
 pragma solidity 0.8.13;
 
 import "src/libraries/MathUtils.sol";
+import { stdMath } from "forge-std/Test.sol";
 
 library StableMath {
     using MathUtils for uint256;
@@ -88,10 +89,10 @@ library StableMath {
         uint256 N_A        // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256) {
         uint256 s = xp0 + xp1;
-
         if (s == 0) {
             return 0;
         }
+
         uint256 prevD;
         // solhint-disable-next-line var-name-mixedcase
         uint256 D = s;
@@ -103,6 +104,13 @@ library StableMath {
                 return D;
             }
         }
+        /// @dev sometimes the iteration gets stuck in repeating loop
+        /// so if it is close enough we return it anyway
+        uint256 percentDelta = stdMath.percentDelta(D, prevD);
+        if (percentDelta <= 0.0000000000004e18) {
+            return (D + prevD) / 2;
+        }
+
         revert("SM: COMPUTE_DID_NOT_CONVERGE");
     }
 
