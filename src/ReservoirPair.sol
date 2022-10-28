@@ -28,7 +28,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
             uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
             uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
             if (reserveOut - tokenOutManaged < aAmount) {
-                assetManager.returnAsset(aToken, aAmount - (reserveOut - tokenOutManaged));
+                assetManager.returnAsset(aToken == token0, aAmount - (reserveOut - tokenOutManaged));
                 require(_safeTransfer(aToken, aDestination, aAmount), "RP: TRANSFER_FAILED");
             }
             else {

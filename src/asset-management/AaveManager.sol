@@ -170,12 +170,11 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 
-    // PERF: Check gas savings by specifying `address aToken, bool aToken0, uint256 aAmount`
-    function returnAsset(address aToken, uint256 aAmount) external {
+    function returnAsset(bool aToken0, uint256 aAmount) external {
         require(aAmount > 0, "AM: ZERO_AMOUNT_REQUESTED");
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
-        int256 lAmount0Change = -int256(aToken == lPair.token0() ? aAmount : 0);
-        int256 lAmount1Change = -int256(lAmount0Change == 0 ? aAmount: 0);
+        int256 lAmount0Change = -int256(aToken0 ? aAmount : 0);
+        int256 lAmount1Change = -int256(aToken0 ? 0 : aAmount);
         assert(lAmount0Change < 0 || lAmount1Change < 0);
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }

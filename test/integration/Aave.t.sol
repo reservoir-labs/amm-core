@@ -650,7 +650,7 @@ contract AaveIntegrationTest is BaseTest
 
         // act - request more than what is available in the pair
         MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
-        vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (USDC, 10)));
+        vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (false, 10)));
         vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, -10)));
         _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
 
