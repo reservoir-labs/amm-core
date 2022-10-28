@@ -30,25 +30,6 @@ contract ConstantProductPair is ReservoirPair {
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
     {} // solhint-disable-line no-empty-blocks
 
-    // update reserves and, on the first call per block, price accumulators
-    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
-        // solhint-disable-next-line not-rely-on-time
-        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed;
-        unchecked {
-            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
-        }
-
-        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
-        }
-        reserve0 = uint112(balance0);
-        reserve1 = uint112(balance1);
-        blockTimestampLast = blockTimestamp;
-        emit Sync(reserve0, reserve1);
-    }
-
     function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountOut) {
         require(amountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
@@ -167,8 +148,10 @@ contract ConstantProductPair is ReservoirPair {
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
-        _safeTransfer(_token0, to, amount0);
-        _safeTransfer(_token1, to, amount1);
+
+        _checkedTransfer(_token0, to, amount0, _reserve0, _reserve1);
+        _checkedTransfer(_token1, to, amount1, _reserve0, _reserve1);
+
         balance0 = _totalToken0();
         balance1 = _totalToken1();
 
@@ -219,8 +202,8 @@ contract ConstantProductPair is ReservoirPair {
             }
         }
 
-        // optimistically transfers token
-        _safeTransfer(tokenOut, to, amountOut);
+        // optimistically transfers tokens
+        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -242,14 +225,6 @@ contract ConstantProductPair is ReservoirPair {
 
         _update(balance0, balance1, _reserve0, _reserve1);
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
-    }
-
-    // force balances to match reserves
-    function skim(address to) external nonReentrant {
-        address _token0 = token0; // gas savings
-        address _token1 = token1; // gas savings
-        _safeTransfer(_token0, to, _totalToken0() - reserve0);
-        _safeTransfer(_token1, to, _totalToken1() - reserve1);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

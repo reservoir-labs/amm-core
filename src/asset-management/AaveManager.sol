@@ -3,6 +3,7 @@ pragma solidity 0.8.13;
 import { ReentrancyGuard } from "@openzeppelin/security/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
@@ -12,9 +13,10 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 
 contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 {
-    // TODO: Use IERC20 token instead of address token for better type-safety
-    event FundsInvested(IAssetManagedPair pair, address token, uint256 shares);
-    event FundsDivested(IAssetManagedPair pair, address token, uint256 shares);
+    using FixedPointMathLib for uint256;
+
+    event FundsInvested(IAssetManagedPair pair, IERC20 token, uint256 shares);
+    event FundsDivested(IAssetManagedPair pair, IERC20 token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(IAssetManagedPair => mapping(address => uint256)) public shares;
@@ -23,7 +25,7 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
     mapping(address => uint256) public totalShares;
 
     /// @dev percentage of the pool's assets, above and below which
-    /// the manager will invest the excess and divest the shortfall
+    /// the manager will divest the shortfall and invest the excess
     uint256 public upperThreshold = 70;
     uint256 public lowerThreshold = 30;
 
@@ -70,11 +72,11 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         IAssetManagedPair aPair,
         int256 aAmount0Change,
         int256 aAmount1Change
-    ) external nonReentrant onlyOwner {
+    ) external onlyOwner {
         _adjustManagement(aPair, aAmount0Change, aAmount1Change);
     }
 
-    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change) private {
+    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change) private nonReentrant {
         require(
             aAmount0Change != type(int256).min && aAmount1Change != type(int256).min,
             "AM: CAST_WOULD_OVERFLOW"
@@ -96,10 +98,10 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
         // withdraw from the market
         if (aAmount0Change < 0) {
-            _doDivest(aPair, lToken0, uint256(-aAmount0Change));
+            _doDivest(aPair, lToken0, lToken0AToken, uint256(-aAmount0Change));
         }
         if (aAmount1Change < 0) {
-            _doDivest(aPair, lToken1, uint256(-aAmount1Change));
+            _doDivest(aPair, lToken1, lToken1AToken, uint256(-aAmount1Change));
         }
 
         // transfer tokens to/from the pair
@@ -107,28 +109,27 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
 
         // transfer the managed tokens to the destination
         if (aAmount0Change > 0) {
-            _doInvest(aPair, lToken0, uint256(aAmount0Change));
+            _doInvest(aPair, lToken0, lToken0AToken, uint256(aAmount0Change));
         }
         if (aAmount1Change > 0) {
-            _doInvest(aPair, lToken1, uint256(aAmount1Change));
+            _doInvest(aPair, lToken1, lToken1AToken, uint256(aAmount1Change));
         }
     }
 
-    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private {
-        uint256 lShares = _updateShares(aPair, address(aToken), aAmount, false);
+    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
+        uint256 lShares = _decreaseShares(aPair, address(aToken), aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, address(aToken), lShares);
-
+        emit FundsDivested(aPair, aToken, lShares);
         aToken.approve(address(aPair), aAmount);
     }
 
-    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, uint256 aAmount) private {
+    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
-
-        uint256 lShares = _updateShares(aPair, address(aToken), aAmount, true);
+        uint256 lShares = _increaseShares(aPair, address(aToken), aAaveToken, aAmount);
         aToken.approve(address(pool), aAmount);
+
         pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, address(aToken), lShares);
+        emit FundsInvested(aPair, aToken, lShares);
     }
 
     function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
@@ -168,6 +169,15 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 
+    function returnAsset(bool aToken0, uint256 aAmount) external {
+        require(aAmount > 0, "AM: ZERO_AMOUNT_REQUESTED");
+        IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
+        int256 lAmount0Change = -int256(aToken0 ? aAmount : 0);
+        int256 lAmount1Change = -int256(aToken0 ? 0 : aAmount);
+        assert(lAmount0Change < 0 || lAmount1Change < 0);
+        _adjustManagement(lPair, lAmount0Change, lAmount1Change);
+    }
+
     function _calculateChangeAmount(
         uint256 aReserve,
         uint256 aManaged
@@ -193,20 +203,23 @@ contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
         if (lTotalShares == 0) {
             return 1e18;
         }
-        rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)) * 1e18 / totalShares[aAaveToken];
+        rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
     }
 
-    function _updateShares(IAssetManagedPair aPair, address aToken, uint256 aAmount, bool increase) private returns (uint256 rShares) {
-        address lAaveToken = _getATokenAddress(aToken);
-        rShares = aAmount * 1e18 / _getExchangeRate(lAaveToken);
-        if (increase) {
-            shares[aPair][aToken] += rShares;
-            totalShares[lAaveToken] += rShares;
-        }
-        else {
-            shares[aPair][aToken] -= rShares;
-            totalShares[lAaveToken] -= rShares;
-        }
+    function _increaseShares(
+        IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount
+    ) private returns (uint256 rShares) {
+        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        shares[aPair][aToken] += rShares;
+        totalShares[aAaveToken] += rShares;
+    }
+
+    function _decreaseShares(
+        IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount
+    ) private returns (uint256 rShares) {
+        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        shares[aPair][aToken] -= rShares;
+        totalShares[aAaveToken] -= rShares;
     }
 
     /// @notice returns the address of the AAVE token.

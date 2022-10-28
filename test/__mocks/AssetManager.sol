@@ -48,4 +48,7 @@ contract AssetManager is IAssetManager
 
     // solhint-disable-next-line no-empty-blocks
     function afterLiquidityEvent() external {}
+
+    // solhint-disable-next-line no-empty-blocks
+    function returnAsset(bool aToken0, uint256 aAmount) external {}
 }
