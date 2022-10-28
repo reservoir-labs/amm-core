@@ -46,10 +46,10 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         unchecked {
             timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         }
-
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
             _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
         }
+
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         blockTimestampLast = blockTimestamp;
