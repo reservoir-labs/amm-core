@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 
-import { ERC20 } from "@openzeppelin/token/ERC20/ERC20.sol";
 import { Math } from "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
@@ -20,13 +19,12 @@ struct AmplificationData {
     uint64 initialA;
     /// @dev futureA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 futureA;
-    /// @dev initialATime is a unix timestamp and will only overflow in the year 2554
+    /// @dev initialATime is a unix timestamp and will only overflow every 584 billion years
     uint64 initialATime;
-    /// @dev futureATime is a unix timestamp and will only overflow in the year 2554
+    /// @dev futureATime is a unix timestamp and will only overflow every 584 billion years
     uint64 futureATime;
 }
 
-/// @notice Trident exchange pool template with hybrid like-kind formula for swapping between an ERC-20 token pair.
 contract StablePair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
@@ -48,18 +46,13 @@ contract StablePair is ReservoirPair {
     {
         ampData.initialA    = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA     = ampData.initialA;
-        // perf: check if intermediate variable is cheaper than two casts (optimizer might already catch it)
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
-        // @dev Factory ensures that the tokens are sorted.
-        require(token0 != address(0), "SP: ZERO_ADDRESS");
-        require(token0 != token1, "SP: IDENTICAL_ADDRESSES");
         require(
-            // perf: check if an immutable/constant var is cheaper than always casting
             ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
             && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
-            "INVALID_A"
+            "SP: INVALID_A"
         );
     }
 
@@ -98,11 +91,11 @@ contract StablePair is ReservoirPair {
 
         ampData.initialA = currentAPrecise;
         ampData.futureA = currentAPrecise;
-        // perf: check performance of using intermediate variable instead of struct property
-        ampData.initialATime =  uint64(block.timestamp);
-        ampData.futureATime = ampData.initialATime;
+        uint64 timestamp = uint64(block.timestamp);
+        ampData.initialATime =  timestamp;
+        ampData.futureATime = timestamp;
 
-        emit StopRampA(currentAPrecise, ampData.initialATime);
+        emit StopRampA(currentAPrecise, timestamp);
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.

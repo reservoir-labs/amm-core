@@ -32,6 +32,46 @@ contract GenericFactoryTest is BaseTest
         _createPair(address(_tokenE), address(_tokenA), lCurveId);
     }
 
+    function testCreatePair_ZeroAddress(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
+        // act & assert
+        vm.expectRevert("FACTORY: ZERO_ADDRESS");
+        _createPair(address(0), address(_tokenA), lCurveId);
+    }
+
+    function testCreatePair_CurveDoesNotExist(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 2, type(uint256).max);
+
+        // act & assert
+        vm.expectRevert(stdError.indexOOBError);
+        _createPair(address(_tokenB), address(_tokenD), lCurveId);
+    }
+
+    function testCreatePair_IdenticalAddress(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
+        // act & assert
+        vm.expectRevert("FACTORY: IDENTICAL_ADDRESSES");
+        _createPair(address(_tokenD), address(_tokenD), lCurveId);
+    }
+
+    function testCreatePair_PairAlreadyExists(uint256 aCurveId) public
+    {
+        // assume
+        uint256 lCurveId = bound(aCurveId, 0, 1);
+
+        // act & assert
+        vm.expectRevert("FACTORY: PAIR_EXISTS");
+        _createPair(address(_tokenA), address(_tokenB), lCurveId);
+    }
+
     function testAllPairs() public
     {
         // arrange
@@ -47,5 +87,34 @@ contract GenericFactoryTest is BaseTest
         assertEq(lAllPairs[1], address(_stablePair));
         assertEq(lAllPairs[2], lPair3);
         assertEq(lAllPairs[3], lPair4);
+    }
+
+    function testAddCurve() public
+    {
+        // arrange
+        bytes memory lInitCode = bytes("dummy bytes");
+
+        // act
+        uint256 lNewCurveId = _factory.addCurve(lInitCode);
+
+        // assert
+        assertEq(lNewCurveId, 2);
+    }
+
+    function testAddCurve_OnlyOwner() public
+    {
+        // arrange
+        vm.prank(_alice);
+
+        // act & assert
+        vm.expectRevert("Ownable: caller is not the owner");
+        _factory.addCurve(bytes("random bytes"));
+    }
+
+    function testGetPair() public
+    {
+        // assert - ensure double mapped
+        assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
+        assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
     }
 }

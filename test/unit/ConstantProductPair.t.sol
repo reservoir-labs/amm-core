@@ -9,7 +9,6 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { Math } from "src/libraries/Math.sol";
-import { LogExpMath } from "src/libraries/LogExpMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
@@ -374,14 +373,12 @@ contract ConstantProductPairTest is BaseTest
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
 
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _constantProductPair.getReserves();
         uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
         _stepTime(5);
 
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _constantProductPair.getReserves();
         uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
 

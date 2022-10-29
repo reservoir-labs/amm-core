@@ -13,7 +13,8 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 contract StablePairTest is BaseTest
 {
-    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTme);
+    event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTime);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
 
     function _calculateConstantProductOutput(
         uint256 aReserveIn,
@@ -28,6 +29,26 @@ contract StablePairTest is BaseTest
         uint256 lDenominator = aReserveIn * MAX_FEE + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
+    }
+
+    function testFactoryAmpTooLow() public
+    {
+        // arrange
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(StableMath.MIN_A - 1)));
+
+        // act & assert
+        vm.expectRevert("FACTORY: DEPLOY_FAILED");
+        _createPair(address(_tokenC), address(_tokenD), 1);
+    }
+
+    function testFactoryAmpTooHigh() public
+    {
+        // arrange
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(StableMath.MAX_A + 1)));
+
+        // act & assert
+        vm.expectRevert("FACTORY: DEPLOY_FAILED");
+        _createPair(address(_tokenC), address(_tokenD), 1);
     }
 
     function testMint() public
@@ -248,6 +269,61 @@ contract StablePairTest is BaseTest
         assertEq(lTotalSupply1, lTotalSupply2);
     }
 
+    function testMintFee_DiffPlatformFees(uint256 aPlatformFee) public
+    {
+        // assume
+        uint256 lPlatformFee = bound(aPlatformFee, 0, _stablePair.MAX_PLATFORM_FEE());
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        vm.prank(address(_factory));
+        lPair.setCustomPlatformFee(lPlatformFee);
+        _tokenC.mint(address(lPair), 100_000_000e18);
+        _tokenD.mint(address(lPair), 120_000_000e6);
+        lPair.mint(address(this));
+        uint256 lOldLiq = StableMath._computeLiquidityFromAdjustedBalances(
+            120_000_000e6 * 1e12, 100_000_000e18, 2 * lPair.getCurrentAPrecise()
+        );
+
+        uint256 lCSwapAmt = 11_301_493e18;
+        uint256 lDSwapAmt = 10_402_183e6;
+
+        // sanity
+        assertEq(lPair.platformFee(), lPlatformFee);
+
+        // increase liq by swapping back and forth
+        for (uint i; i < 20; ++i) {
+            _tokenD.mint(address(lPair), lDSwapAmt);
+            lPair.swap(int256(lDSwapAmt), true, address(this), bytes(""));
+
+            _tokenC.mint(address(lPair), lCSwapAmt);
+            lPair.swap(-int256(lCSwapAmt), true, address(this), bytes(""));
+        }
+
+        (uint256 lReserve0, uint256 lReserve1, ) = lPair.getReserves();
+        uint256 lTotalSupply = lPair.totalSupply();
+
+        // act
+        lPair.transfer(address(lPair), 1e18);
+        lPair.burn(address(this));
+
+        // assert
+        uint256 lNewLiq = StableMath._computeLiquidityFromAdjustedBalances(
+            lReserve0 * 1e12,
+            lReserve1,
+            2 * lPair.getCurrentAPrecise()
+        );
+        uint256 lGrowthInLiq = lNewLiq - lOldLiq;
+        uint256 lExpectedPlatformFee =
+            lTotalSupply * lGrowthInLiq * lPlatformFee
+            / ((lPair.FEE_ACCURACY() - lPlatformFee ) * lNewLiq + lPlatformFee * lOldLiq);
+
+        assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
+        assertApproxEqRel(
+            lExpectedPlatformFee * 1e18 / lGrowthInLiq, lPlatformFee * 1e18 / lPair.FEE_ACCURACY(), 0.006e18
+        );
+    }
+
     function testSwap() public
     {
         // act
@@ -352,6 +428,164 @@ contract StablePairTest is BaseTest
         assertGt(lStablePairOutput, lConstantProductOutput);
     }
 
+    function testSwap_VerySmallLiquidity(uint256 aAmtBToMint, uint256 aAmtCToMint, uint256 aSwapAmt) public
+    {
+        // assume
+        uint256 lMinLiq = _stablePair.MINIMUM_LIQUIDITY();
+        uint256 lAmtBToMint = bound(aAmtBToMint, lMinLiq / 2 + 1, lMinLiq);
+        uint256 lAmtCToMint = bound(aAmtCToMint, lMinLiq / 2 + 1, lMinLiq);
+        uint256 lSwapAmt = bound(aSwapAmt, 1, type(uint112).max - lAmtBToMint);
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), lAmtBToMint);
+        _tokenC.mint(address(lPair), lAmtCToMint);
+        lPair.mint(address(this));
+
+        // sanity
+        assertGe(lPair.balanceOf(address(this)), 2);
+
+        // act
+        _tokenB.mint(address(lPair), lSwapAmt);
+        uint256 lAmtOut = lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // assert
+        uint256 lExpectedAmountOut = StableMath._getAmountOut(
+            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+        );
+        assertEq(lAmtOut, lExpectedAmountOut);
+    }
+
+    function testSwap_VeryLargeLiquidity(uint256 aSwapAmt) public
+    {
+        // assume
+        uint256 lSwapAmt = bound(aSwapAmt, 1, 10e18);
+        uint256 lAmtBToMint = type(uint112).max;
+        uint256 lAmtCToMint = type(uint112).max - lSwapAmt;
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), lAmtBToMint);
+        _tokenC.mint(address(lPair), lAmtCToMint);
+        lPair.mint(address(this));
+
+        // act
+        _tokenC.mint(address(lPair), lSwapAmt);
+        uint256 lAmtOut = lPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        // assert
+        uint256 lExpectedAmountOut = StableMath._getAmountOut(
+            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+        );
+        assertEq(lAmtOut, lExpectedAmountOut);
+    }
+
+    function testSwap_DiffSwapFees(uint256 aSwapFee) public
+    {
+        // assume
+        uint256 lSwapFee = bound(aSwapFee, 0, _stablePair.MAX_SWAP_FEE());
+
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        vm.prank(address(_factory));
+        lPair.setCustomSwapFee(lSwapFee);
+        _tokenC.mint(address(lPair), 100_000_000e18);
+        _tokenD.mint(address(lPair), 120_000_000e6);
+        lPair.mint(address(this));
+
+        uint256 lSwapAmt = 10_000_000e6;
+        _tokenD.mint(address(lPair), lSwapAmt);
+
+        // act - tokenD is token0
+        uint256 lAmtOut = lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        uint256 lExpectedAmtOut = StableMath._getAmountOut(
+            lSwapAmt, 120_000_000e6, 100_000_000e18, 1e12, 1, true, lSwapFee, 2 * lPair.getCurrentAPrecise()
+        );
+
+        // assert
+        assertEq(lAmtOut, lExpectedAmtOut);
+    }
+
+    function testSwap_IncreasingSwapFees(uint256 aSwapFee0, uint256 aSwapFee1, uint256 aSwapFee2) public
+    {
+        // assume
+        uint256 lSwapFee0 = bound(aSwapFee0, 0, _stablePair.MAX_SWAP_FEE() / 4); // between 0 - 0.5%
+        uint256 lSwapFee1 = bound(aSwapFee1, _stablePair.MAX_SWAP_FEE() / 4 + 1, _stablePair.MAX_SWAP_FEE() / 2); // between 0.5 - 1%
+        uint256 lSwapFee2 = bound(aSwapFee2, _stablePair.MAX_SWAP_FEE() / 2 + 1, _stablePair.MAX_SWAP_FEE()); // between 1 - 2%
+
+        // sanity
+        assertGt(lSwapFee1, lSwapFee0);
+        assertGt(lSwapFee2, lSwapFee1);
+
+        // arrange
+        uint256 lSwapAmt = 10e18;
+        (uint256 lReserve0, uint256 lReserve1, ) = _stablePair.getReserves();
+
+        // act
+        vm.prank(address(_factory));
+        _stablePair.setCustomSwapFee(lSwapFee0);
+        uint256 lBefore = vm.snapshot();
+
+        uint256 lExpectedOut0 = StableMath._getAmountOut(lSwapAmt, lReserve0, lReserve1, 1, 1, true, lSwapFee0, 2 * _stablePair.getCurrentAPrecise());
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        uint256 lActualOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        assertEq(lExpectedOut0, lActualOut);
+
+        vm.revertTo(lBefore);
+        vm.prank(address(_factory));
+        _stablePair.setCustomSwapFee(lSwapFee1);
+        lBefore = vm.snapshot();
+
+        uint256 lExpectedOut1 = StableMath._getAmountOut(lSwapAmt, lReserve0, lReserve1, 1, 1, true, lSwapFee1, 2 * _stablePair.getCurrentAPrecise());
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        lActualOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        assertEq(lExpectedOut1, lActualOut);
+
+        vm.revertTo(lBefore);
+        vm.prank(address(_factory));
+        _stablePair.setCustomSwapFee(lSwapFee2);
+
+        uint256 lExpectedOut2 = StableMath._getAmountOut(lSwapAmt, lReserve0, lReserve1, 1, 1, true, lSwapFee2, 2 * _stablePair.getCurrentAPrecise());
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        lActualOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        assertEq(lExpectedOut2, lActualOut);
+
+        // assert
+        assertLt(lExpectedOut1, lExpectedOut0);
+        assertLt(lExpectedOut2, lExpectedOut1);
+    }
+
+    function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintAmt) public
+    {
+        // assume
+        uint256 lAmpCoeff = bound(aAmpCoeff, StableMath.MIN_A, StableMath.MAX_A);
+        uint256 lSwapAmt = bound(aSwapAmt, 1e3, type(uint112).max / 2);
+        uint256 lCMintAmt = bound(aMintAmt, 1e18, 10_000_000_000e18);
+        uint256 lDMintAmt = bound(lCMintAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
+
+        // arrange
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(lAmpCoeff)));
+        StablePair lPair = StablePair(_createPair(address(_tokenD), address(_tokenC), 1));
+
+        // sanity
+        assertEq(lPair.getCurrentA(), lAmpCoeff);
+
+        _tokenC.mint(address(lPair), lCMintAmt);
+        _tokenD.mint(address(lPair), lDMintAmt);
+        lPair.mint(address(this));
+
+        // act
+        _tokenD.mint(address(lPair), lSwapAmt);
+        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // assert
+        uint256 lExpectedOutput = StableMath._getAmountOut(
+            lSwapAmt, lDMintAmt, lCMintAmt, 1e12, 1, true, lPair.swapFee(), 2 * lPair.getCurrentAPrecise()
+        );
+        assertEq(_tokenC.balanceOf(address(this)), lExpectedOutput);
+    }
+
     function testBurn() public
     {
         // arrange
@@ -383,6 +617,51 @@ contract StablePairTest is BaseTest
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
     }
 
+    function testBurn_Zero() public
+    {
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit Burn(address(this), 0, 0);
+        _stablePair.burn(address(this));
+
+        // assert
+        assertEq(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_tokenB.balanceOf(address(this)), 0);
+        assertEq(_tokenA.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+    }
+
+    function testBurn_SucceedEvenIfMintFeeReverts() public
+    {
+        // arrange - change some values to make iterative function algorithm not converge
+        // I have tried changing the reserves, but no matter how extreme the values are,
+        // StableMath._computeLiquidityFromAdjustedBalances would still converge
+        // which is good for our contracts but not good for my attempt to break it
+        uint192 lLastInvariant = 200e18;
+        uint64 lLastInvariantAmp = 0;
+        bytes32 lEncoded = bytes32(abi.encodePacked(lLastInvariantAmp, lLastInvariant));
+        // hardcoding the slot for now as there is no way to access it publicly
+        // this will break when we change the storage layout
+        vm.store(address(_stablePair), bytes32(uint256(65551)), lEncoded);
+
+        // ensure that the iterative function that _mintFee calls reverts with the adulterated values
+        vm.prank(address(_stablePair));
+        vm.expectRevert(stdError.arithmeticError);
+        _stablePair.mintFee(100e18, 100e18);
+
+        // act
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), 1e18);
+        // mintFee indeed reverted but burn still succeeded - this can be seen by examining the callstack
+        (uint256 lAmount0, uint256 lAmount1) = _stablePair.burn(address(this)); // mintFee would fail in this call
+
+        // assert
+        assertEq(lAmount0, 0.5e18);
+        assertEq(lAmount0, lAmount1);
+        assertEq(_tokenA.balanceOf(address(this)), lAmount0);
+        assertEq(_tokenB.balanceOf(address(this)), lAmount1);
+    }
+
     function testRampA() public
     {
         // arrange
@@ -406,6 +685,13 @@ contract StablePairTest is BaseTest
         assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, block.timestamp);
         assertEq(lFutureATime, lFutureATimestamp);
+    }
+
+    function testRampA_OnlyFactory() public
+    {
+        // act && assert
+        vm.expectRevert("P: FORBIDDEN");
+        _stablePair.rampA(100, uint64(block.timestamp + 10 days));
     }
 
     function testRampA_SetAtMinimum() public
@@ -543,8 +829,78 @@ contract StablePairTest is BaseTest
         assertEq(lFutureATime, lFutureATimestamp);
     }
 
-    // todo: testStopRampA_Early
-    // todo: testStopRampA_Late
+    function testStopRampA_OnlyFactory() public
+    {
+        // act & assert
+        vm.expectRevert("P: FORBIDDEN");
+        _stablePair.stopRampA();
+    }
+
+    function testStopRampA_Early(uint256 aFutureA) public
+    {
+        // assume
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, StableMath.MAX_A));
+
+        // arrange
+        uint64 lInitialA = _stablePair.getCurrentA();
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1000 days;
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        _stepTime(lFutureATimestamp / 2);
+
+        // act
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("stopRampA()"),
+            0
+        );
+
+        // assert
+        uint256 lTotalADiff = lFutureAToSet > lInitialA ? lFutureAToSet - lInitialA : lInitialA - lFutureAToSet;
+        uint256 lActualADiff = lFutureAToSet > lInitialA ? _stablePair.getCurrentA() - lInitialA : lInitialA - _stablePair.getCurrentA();
+        assertApproxEqAbs(lActualADiff, lTotalADiff / 2, 1);
+        (uint64 lNewInitialA, uint64 lNewFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
+        assertEq(lNewInitialA, lNewFutureA);
+        assertEq(lInitialATime, block.timestamp);
+        assertEq(lFutureATime, block.timestamp);
+    }
+
+    function testStopRampA_Late(uint256 aFutureA) public
+    {
+        // assume
+        uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, StableMath.MAX_A));
+
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1000 days;
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
+            0
+        );
+
+        _stepTime(lFutureATimestamp + 10 days);
+
+        // act
+        _factory.rawCall(
+            address(_stablePair),
+            abi.encodeWithSignature("stopRampA()"),
+            0
+        );
+
+        // assert
+        assertEq(_stablePair.getCurrentA(), lFutureAToSet);
+        (uint64 lNewInitialA, uint64 lNewFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
+        assertEq(_stablePair.getCurrentA(), lNewInitialA / StableMath.A_PRECISION);
+        assertEq(lNewInitialA, lNewFutureA);
+        assertEq(lInitialATime, block.timestamp);
+        assertEq(lFutureATime, block.timestamp);
+    }
 
     function testGetCurrentA() public
     {
@@ -660,6 +1016,92 @@ contract StablePairTest is BaseTest
         assertTrue(lAmountOutT2 <= lAmountOutT1         || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 <= lAmountOutT2         || MathUtils.within1(lAmountOutT3, lAmountOutT2));
         assertTrue(lAmountOutT4 <= lAmountOutT3         || MathUtils.within1(lAmountOutT4, lAmountOutT3));
+    }
+
+    // inspired from saddle's test case, which is testing for this vulnerability
+    // https://medium.com/@peter_4205/curve-vulnerability-report-a1d7630140ec
+    function testAttackWhileRampingDown_ShortInterval() public
+    {
+        // arrange
+        uint64 lNewA = 400;
+        vm.startPrank(address(_factory));
+        _stablePair.rampA(lNewA, uint64(block.timestamp + 4 days));
+        _stablePair.setCustomSwapFee(100); // 1 bp
+        vm.stopPrank();
+
+        // swap 70e18 of tokenA to tokenB to cause a large imbalance
+        uint256 lSwapAmt = 70e18;
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        uint256 lAmtOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        assertEq(lAmtOut, 69897580651885320277);
+        assertEq(_tokenB.balanceOf(address(this)), 69897580651885320277);
+
+        // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
+        // tokenA balance in the pool  : 170e18
+        // tokenB balance in the pool : 30.10e18
+        (uint112 lReserve0, uint112 lReserve1, )  = _stablePair.getReserves();
+        assertEq(lReserve0, 170e18);
+        assertEq(lReserve1, 30102419348114679723);
+
+        _stepTime(20 minutes);
+        assertEq(_stablePair.getCurrentA(), 997);
+
+        // act - now attacker swaps from tokenB to tokenA
+        _tokenB.transfer(address(_stablePair), 69897580651885320277);
+        _stablePair.swap(-69897580651885320277, true, address(this), bytes(""));
+
+        // assert
+        // the attacker did not get more than what he started with
+        assertLt(_tokenA.balanceOf(address(this)), lSwapAmt);
+        // the pool was not worse off
+        (lReserve0, lReserve1, ) = _stablePair.getReserves();
+        assertGt(lReserve0, INITIAL_MINT_AMOUNT);
+        assertEq(lReserve1, INITIAL_MINT_AMOUNT);
+    }
+
+    // this is to simulate a sudden large A change, without trades having taken place in between
+    // this will not happen in our case as A is changed gently over a period not suddenly
+    function testAttackWhileRampingDown_LongInterval() public
+    {
+        // arrange
+        uint64 lNewA = 400;
+        vm.startPrank(address(_factory));
+        _stablePair.rampA(lNewA, uint64(block.timestamp + 4 days));
+        _stablePair.setCustomSwapFee(100); // 1 bp
+        vm.stopPrank();
+
+        // swap 70e18 of tokenA to tokenB to cause a large imbalance
+        uint256 lSwapAmt = 70e18;
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        uint256 lAmtOut = _stablePair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        assertEq(lAmtOut, 69897580651885320277);
+        assertEq(_tokenB.balanceOf(address(this)), 69897580651885320277);
+
+        // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
+        // tokenA balance in the pool  : 170e18
+        // tokenB balance in the pool : 30.10e18
+        (uint112 lReserve0, uint112 lReserve1, )  = _stablePair.getReserves();
+        assertEq(lReserve0, 170e18);
+        assertEq(lReserve1, 30102419348114679723);
+
+        // to simulate that no trades have taken place throughout the process of ramping down
+        // or rapid A change
+        _stepTime(4 days);
+        assertEq(_stablePair.getCurrentA(), 400);
+
+        // act - now attacker swaps from tokenB to tokenA
+        _tokenB.transfer(address(_stablePair), 69897580651885320277);
+        _stablePair.swap(-69897580651885320277, true, address(this), bytes(""));
+
+        // assert - the attack was successful
+        // the attacker got more than what he started with
+        assertGt(_tokenA.balanceOf(address(this)), lSwapAmt);
+        // the pool is worse off by 0.13%
+        (lReserve0, lReserve1, ) = _stablePair.getReserves();
+        assertEq(lReserve0, 99871702539906228887);
+        assertEq(lReserve1, INITIAL_MINT_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -803,14 +1245,12 @@ contract StablePairTest is BaseTest
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
 
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
         (uint256 lPrice1, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(5);
 
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
         (uint256 lPrice2, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
 
@@ -850,7 +1290,6 @@ contract StablePairTest is BaseTest
         // price = 0.4944
         _tokenA.mint(address(_stablePair), 100e18);
         _stablePair.swap(100e18, true, _bob, "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
         (uint256 lSpotPrice1, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(10);
@@ -858,7 +1297,6 @@ contract StablePairTest is BaseTest
         // price = 0.0000936563
         _tokenA.mint(address(_stablePair), 200e18);
         _stablePair.swap(200e18, true, _bob, "");
-        // solhint-disable-next-line var-name-mixedcase
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
         (uint256 lSpotPrice2, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);

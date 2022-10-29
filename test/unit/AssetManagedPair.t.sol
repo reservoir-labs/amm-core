@@ -91,7 +91,6 @@ contract AssetManagedPairTest is BaseTest
 
         _manager.adjustManagement(_pair, 20e18, 20e18);
 
-        //solhint-disable-next-line var-name-mixedcase
         (uint112 lReserve0_1, uint112 lReserve1_1, ) = _pair.getReserves();
         uint256 lBal0After = IERC20(lToken0).balanceOf(address(_pair));
         uint256 lBal1After = IERC20(lToken1).balanceOf(address(_pair));
@@ -109,7 +108,6 @@ contract AssetManagedPairTest is BaseTest
         // act
         _manager.adjustManagement(_pair, -10e18, -10e18);
 
-        //solhint-disable-next-line var-name-mixedcase
         (uint112 lReserve0_2, uint112 lReserve1_2, ) = _pair.getReserves();
 
         // assert

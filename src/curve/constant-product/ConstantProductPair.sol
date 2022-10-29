@@ -1,7 +1,6 @@
 pragma solidity 0.8.13;
 
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
-import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { Math } from "src/libraries/Math.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
