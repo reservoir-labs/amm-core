@@ -153,9 +153,9 @@ contract StablePairTest is BaseTest
 
     function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public
     {
-        // assume - for ramping up or down from 1000
-        uint64 lFutureAToSet = uint64(bound(aFutureA, 500, 5000));
-        vm.assume(lFutureAToSet != 1000);
+        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
+        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
 
         // arrange
         StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
@@ -181,7 +181,7 @@ contract StablePairTest is BaseTest
 
         // we change A for _stablePair but not for lOtherPair
         uint64 lCurrentTimestamp = uint64(block.timestamp);
-        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureATimestamp = lCurrentTimestamp + 5 days;
 
         _factory.rawCall(
             address(_stablePair),
@@ -215,9 +215,9 @@ contract StablePairTest is BaseTest
 
     function testMintFee_WhenRampingA_PoolUnbalanced(uint256 aFutureA) public
     {
-        // assume - for ramping up or down from 1000
-        uint64 lFutureAToSet = uint64(bound(aFutureA, 500, 5000));
-        vm.assume(lFutureAToSet != 1000);
+        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
+        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
 
         // arrange
         StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
@@ -237,7 +237,7 @@ contract StablePairTest is BaseTest
 
         // we change A for _stablePair but not for lOtherPair
         uint64 lCurrentTimestamp = uint64(block.timestamp);
-        uint64 lFutureATimestamp = lCurrentTimestamp + 3 days;
+        uint64 lFutureATimestamp = lCurrentTimestamp + 5 days;
 
         _factory.rawCall(
             address(_stablePair),
@@ -348,9 +348,10 @@ contract StablePairTest is BaseTest
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
-        uint256 lSwapFee = 3_000; // 0.3%
         (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
-        uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, true, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
+        uint256 lAmountIn = StableMath._getAmountIn(
+            lAmountOut, lReserve0, lReserve1, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+        );
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
         assertGt(lAmountIn, lAmountOut);
@@ -360,7 +361,9 @@ contract StablePairTest is BaseTest
         uint256 lActualOut = _stablePair.swap(int256(lAmountOut), false, address(this), bytes(""));
 
         // assert
-        uint256 inverse = StableMath._getAmountOut(lAmountIn, lReserve0, lReserve1, 1, 1, false, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
+        uint256 inverse = StableMath._getAmountOut(
+            lAmountIn, lReserve0, lReserve1, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+        );
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
         assertEq(lActualOut, lAmountOut);
@@ -372,9 +375,10 @@ contract StablePairTest is BaseTest
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
-        uint256 lSwapFee = 3_000;
         (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
-        uint256 lAmountIn = StableMath._getAmountIn(lAmountOut, lReserve0, lReserve1, 1, 1, false, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
+        uint256 lAmountIn = StableMath._getAmountIn(
+            lAmountOut, lReserve0, lReserve1, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+        );
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
         assertGt(lAmountIn, lAmountOut);
@@ -384,7 +388,9 @@ contract StablePairTest is BaseTest
         uint256 lActualOut = _stablePair.swap(-int256(lAmountOut), false, address(this), bytes(""));
 
         // assert
-        uint256 inverse = StableMath._getAmountOut(lAmountIn, lReserve0, lReserve1, 1, 1, true, lSwapFee, 2 * _stablePair.getCurrentAPrecise());
+        uint256 inverse = StableMath._getAmountOut(
+            lAmountIn, lReserve0, lReserve1, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+        );
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
         assertEq(lActualOut, lAmountOut);
@@ -665,7 +671,7 @@ contract StablePairTest is BaseTest
 
         // act
         vm.expectEmit(true, true, true, true);
-        emit RampA(1000 * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
+        emit RampA(uint64(DEFAULT_AMP_COEFF) * uint64(StableMath.A_PRECISION), lFutureAToSet * uint64(StableMath.A_PRECISION), lCurrentTimestamp, lFutureATimestamp);
         _factory.rawCall(
             address(_stablePair),
             abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp),
@@ -674,8 +680,8 @@ contract StablePairTest is BaseTest
 
         // assert
         (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
-        assertEq(lInitialA, 1000 * uint64(StableMath.A_PRECISION));
-        assertEq(_stablePair.getCurrentA(), 1000);
+        assertEq(lInitialA, DEFAULT_AMP_COEFF * uint64(StableMath.A_PRECISION));
+        assertEq(_stablePair.getCurrentA(), DEFAULT_AMP_COEFF);
         assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, block.timestamp);
         assertEq(lFutureATime, lFutureATimestamp);
@@ -911,11 +917,11 @@ contract StablePairTest is BaseTest
         );
 
         // assert
-        assertEq(_stablePair.getCurrentA(), 1000);
+        assertEq(_stablePair.getCurrentA(), DEFAULT_AMP_COEFF);
 
         // warp to the midpoint between the initialATime and futureATime
         vm.warp((lFutureATimestamp + block.timestamp) / 2);
-        assertEq(_stablePair.getCurrentA(), (1000 + lFutureAToSet) / 2);
+        assertEq(_stablePair.getCurrentA(), (DEFAULT_AMP_COEFF + lFutureAToSet) / 2);
 
         // warp to the end
         vm.warp(lFutureATimestamp);

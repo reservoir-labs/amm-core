@@ -1,15 +1,20 @@
 pragma solidity 0.8.13;
 
-import "@openzeppelin/utils/math/SafeCast.sol";
+import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
-import "src/libraries/Math.sol";
-import "src/libraries/ConstantProductOracleMath.sol";
-import "src/interfaces/IReservoirCallee.sol";
+import { Math } from "src/libraries/Math.sol";
+import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
+import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IPair, Pair } from "src/Pair.sol";
 
 contract ConstantProductPair is ReservoirPair {
+    using FactoryStoreLib for GenericFactory;
+    using Bytes32Lib for bytes32;
     using SafeCast for uint256;
 
     // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
@@ -17,29 +22,12 @@ contract ConstantProductPair is ReservoirPair {
     // Accuracy: 100_000_000_000_000_000_000_000_000_000_000_000_000
     uint256 public constant ACCURACY         = 1e38;
 
+    string private constant PAIR_SWAP_FEE_NAME = "CP::swapFee";
+
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
     {} // solhint-disable-line no-empty-blocks
-
-    // update reserves and, on the first call per block, price accumulators
-    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
-        // solhint-disable-next-line not-rely-on-time
-        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed;
-        unchecked {
-            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
-        }
-
-        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
-        }
-        reserve0 = uint112(balance0);
-        reserve1 = uint112(balance1);
-        blockTimestampLast = blockTimestamp;
-        emit Sync(reserve0, reserve1);
-    }
 
     function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 swapFee) internal pure returns (uint256 amountOut) {
         require(amountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
@@ -105,7 +93,7 @@ contract ConstantProductPair is ReservoirPair {
                 if (_sqrtNewK > _sqrtOldK) {
                     uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = address(uint160(uint256(factory.get(keccak256("ConstantProductPair::platformFeeTo")))));
+                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
                 }
             }
@@ -159,8 +147,10 @@ contract ConstantProductPair is ReservoirPair {
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
-        _safeTransfer(_token0, to, amount0);
-        _safeTransfer(_token1, to, amount1);
+
+        _checkedTransfer(_token0, to, amount0, _reserve0, _reserve1);
+        _checkedTransfer(_token1, to, amount1, _reserve0, _reserve1);
+
         balance0 = _totalToken0();
         balance1 = _totalToken1();
 
@@ -211,8 +201,8 @@ contract ConstantProductPair is ReservoirPair {
             }
         }
 
-        // optimistically transfers token
-        _safeTransfer(tokenOut, to, amountOut);
+        // optimistically transfers tokens
+        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -234,14 +224,6 @@ contract ConstantProductPair is ReservoirPair {
 
         _update(balance0, balance1, _reserve0, _reserve1);
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
-    }
-
-    // force balances to match reserves
-    function skim(address to) external nonReentrant {
-        address _token0 = token0; // gas savings
-        address _token1 = token1; // gas savings
-        _safeTransfer(_token0, to, _totalToken0() - reserve0);
-        _safeTransfer(_token1, to, _totalToken1() - reserve1);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

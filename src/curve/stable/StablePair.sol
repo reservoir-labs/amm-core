@@ -29,6 +29,9 @@ contract StablePair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
+    string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
+    string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
+
     event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
     event StopRampA(uint64 currentAPrecise, uint64 time);
 
@@ -39,10 +42,10 @@ contract StablePair is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1)
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME)
     {
-        ampData.initialA        = factory.read("ConstantProductPair::amplificationCoefficient").toUint64() * uint64(StableMath.A_PRECISION);
-        ampData.futureA         = ampData.initialA;
+        ampData.initialA    = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
+        ampData.futureA     = ampData.initialA;
         ampData.initialATime    = uint64(block.timestamp);
         ampData.futureATime     = uint64(block.timestamp);
 
@@ -178,8 +181,9 @@ contract StablePair is ReservoirPair {
         amount1 = (liquidity * _reserve1) / _totalSupply;
 
         _burn(address(this), liquidity);
-        _safeTransfer(token0, to, amount0);
-        _safeTransfer(token1, to, amount1);
+
+        _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
+        _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
 
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
 
@@ -231,8 +235,7 @@ contract StablePair is ReservoirPair {
             }
         }
 
-        // optimistically transfers tokens
-        _safeTransfer(tokenOut, to, amountOut);
+        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -259,29 +262,6 @@ contract StablePair is ReservoirPair {
     function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
         require(msg.sender == address(this), "SP: NOT_SELF");
         return _mintFee(_reserve0, _reserve1);
-    }
-
-    function _update(uint256 totalToken0, uint256 totalToken1, uint112 _reserve0, uint112 _reserve1) internal override {
-        require(totalToken0 <= type(uint112).max && totalToken1 <= type(uint112).max, "SP: OVERFLOW");
-
-        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
-        uint32 timeElapsed;
-        unchecked {
-            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
-        }
-
-        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(
-                uint256(_reserve0),
-                uint256(_reserve1),
-                timeElapsed,
-                blockTimestampLast
-            );
-        }
-        reserve0 = uint112(totalToken0);
-        reserve1 = uint112(totalToken1);
-        blockTimestampLast = blockTimestamp;
-        emit Sync(reserve0, reserve1);
     }
 
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
@@ -354,7 +334,7 @@ contract StablePair is ReservoirPair {
                 uint256 liquidity = numerator / denominator;
 
                 if (liquidity != 0) {
-                    address platformFeeTo = factory.read("ConstantProductPair::platformFeeTo").toAddress();
+                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
 
                     _mint(platformFeeTo, liquidity);
                     _totalSupply += liquidity;
@@ -416,10 +396,6 @@ contract StablePair is ReservoirPair {
         (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 d = _computeLiquidity(_reserve0, _reserve1);
         virtualPrice = (d * (uint256(10)**decimals)) / totalSupply;
-    }
-
-    function skim(address to) external nonReentrant {
-        // todo: implement this
     }
 
     /*//////////////////////////////////////////////////////////////////////////

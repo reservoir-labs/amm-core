@@ -88,7 +88,9 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         if (address(assetManager) == address(0)) {
             return;
         }
-        assetManager.afterLiquidityEvent();
+        // supplying to / withdrawing from 3rd party markets might fail
+        try assetManager.afterLiquidityEvent() {} // solhint-disable-line no-empty-blocks
+        catch {}                                  // solhint-disable-line no-empty-blocks
     }
 
     function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
@@ -127,12 +129,5 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
             IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
         }
-
-        _update(
-            _totalToken0(),
-            _totalToken1(),
-            reserve0,
-            reserve1
-        );
     }
 }
