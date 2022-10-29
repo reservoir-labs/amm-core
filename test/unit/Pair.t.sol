@@ -41,7 +41,7 @@ contract PairTest is BaseTest
         assertEq(_stablePair.swapFee(), DEFAULT_SWAP_FEE_SP);
     }
 
-    function testCustomSwapFee_OffByDefault() public parameterizedTest
+    function testCustomSwapFee_OffByDefault() public allPairs
     {
         // assert
         assertEq(_pair.customSwapFee(), type(uint).max);

@@ -34,7 +34,7 @@ contract StablePairTest is BaseTest
     function testFactoryAmpTooLow() public
     {
         // arrange
-        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(StableMath.MIN_A - 1)));
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(StableMath.MIN_A - 1)));
 
         // act & assert
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
@@ -44,7 +44,7 @@ contract StablePairTest is BaseTest
     function testFactoryAmpTooHigh() public
     {
         // arrange
-        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(StableMath.MAX_A + 1)));
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(StableMath.MAX_A + 1)));
 
         // act & assert
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
@@ -451,7 +451,7 @@ contract StablePairTest is BaseTest
 
         // assert
         uint256 lExpectedAmountOut = StableMath._getAmountOut(
-            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, true, 3000, 2 * _stablePair.getCurrentAPrecise()
+            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
         );
         assertEq(lAmtOut, lExpectedAmountOut);
     }
@@ -475,7 +475,7 @@ contract StablePairTest is BaseTest
 
         // assert
         uint256 lExpectedAmountOut = StableMath._getAmountOut(
-            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, false, 3000, 2 * _stablePair.getCurrentAPrecise()
+            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
         );
         assertEq(lAmtOut, lExpectedAmountOut);
     }
@@ -565,7 +565,7 @@ contract StablePairTest is BaseTest
         uint256 lDMintAmt = bound(lCMintAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
 
         // arrange
-        _factory.set(keccak256("ConstantProductPair::amplificationCoefficient"), bytes32(uint256(lAmpCoeff)));
+        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(lAmpCoeff)));
         StablePair lPair = StablePair(_createPair(address(_tokenD), address(_tokenC), 1));
 
         // sanity
