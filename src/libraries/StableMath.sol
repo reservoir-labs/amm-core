@@ -104,8 +104,8 @@ library StableMath {
                 return D;
             }
         }
-        /// @dev sometimes the iteration gets stuck in repeating loop
-        /// so if it is close enough we return it anyway
+        // sometimes the iteration gets stuck in an oscillating loop
+        // so if it is close enough we return it anyway
         uint256 percentDelta = stdMath.percentDelta(D, prevD);
         if (percentDelta <= 0.0000000000004e18) {
             return (D + prevD) / 2;
