@@ -19,6 +19,8 @@ contract ConstantProductPairTest is BaseTest
 {
     using stdStorage for StdStorage;
 
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
+
     AssetManager private _manager = new AssetManager();
 
     function _calculateOutput(
@@ -231,6 +233,20 @@ contract ConstantProductPairTest is BaseTest
         (address lToken0, address lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
         assertEq(ConstantProductPair(lToken0).balanceOf(_alice), lLpTokenBalance * lReserve0 / lLpTokenTotalSupply);
         assertEq(ConstantProductPair(lToken1).balanceOf(_alice), lLpTokenBalance * lReserve1 / lLpTokenTotalSupply);
+    }
+
+    function testBurn_Zero() public
+    {
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit Burn(address(this), 0, 0);
+        _constantProductPair.burn(address(this));
+
+        // assert
+        assertEq(_tokenA.balanceOf(address(this)), 0);
+        assertEq(_tokenB.balanceOf(address(this)), 0);
+        assertEq(_tokenA.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertEq(_tokenB.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
