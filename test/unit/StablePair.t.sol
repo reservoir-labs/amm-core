@@ -608,6 +608,31 @@ contract StablePairTest is BaseTest
         assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
     }
 
+    function testBurn_DiffDecimalPlaces(uint256 aAmtToBurn) public
+    {
+        // assume
+        uint256 lAmtToBurn = bound(aAmtToBurn, 2, 2e12 - 1);
+
+        // arrange - tokenD has 6 decimal places, simulating USDC / USDT
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+
+        _tokenC.mint(address(lPair), INITIAL_MINT_AMOUNT);
+        _tokenD.mint(address(lPair), INITIAL_MINT_AMOUNT / 1e12);
+
+        lPair.mint(address(this));
+
+        // sanity
+        assertEq(lPair.balanceOf(address(this)), 2 * INITIAL_MINT_AMOUNT - lPair.MINIMUM_LIQUIDITY());
+
+        // act
+        lPair.transfer(address(lPair), lAmtToBurn);
+        (uint256 lAmt0, uint256 lAmt1) = lPair.burn(address(this));
+
+        // assert
+        assertEq(lAmt0, 0);
+        assertGt(lAmt1, 0);
+    }
+
     function testRampA() public
     {
         // arrange
