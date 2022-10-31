@@ -135,8 +135,6 @@ contract ConstantProductPair is ReservoirPair {
         _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        address _token0 = token0;                                // gas savings
-        address _token1 = token1;                                // gas savings
         uint balance0 = _totalToken0();
         uint balance1 = _totalToken1();
         uint liquidity = balanceOf[address(this)];
@@ -145,11 +143,10 @@ contract ConstantProductPair is ReservoirPair {
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, "CP: INSUFFICIENT_LIQ_BURNED");
         _burn(address(this), liquidity);
 
-        _checkedTransfer(_token0, to, amount0, _reserve0, _reserve1);
-        _checkedTransfer(_token1, to, amount1, _reserve0, _reserve1);
+        _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
+        _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
 
         balance0 = _totalToken0();
         balance1 = _totalToken1();
@@ -213,6 +210,7 @@ contract ConstantProductPair is ReservoirPair {
             );
         }
 
+        // perf: investigate if it is possible/safe to only do one call instead of two
         uint256 balance0 = _totalToken0();
         uint256 balance1 = _totalToken1();
 

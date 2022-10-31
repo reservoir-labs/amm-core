@@ -132,25 +132,6 @@ contract StablePairTest is BaseTest
         assertLt(lBurnOutputA, lSwapOutputA + lAmountAToMint);
     }
 
-    function testMintFee_CallableBySelf() public
-    {
-        // arrange
-        vm.prank(address(_stablePair));
-
-        // act
-        (uint256 lTotalSupply, ) = _stablePair.mintFee(0, 0);
-
-        // assert
-        assertEq(lTotalSupply, _stablePair.totalSupply());
-    }
-
-    function testMintFee_NotCallableByOthers() public
-    {
-        // act & assert
-        vm.expectRevert("SP: NOT_SELF");
-        _stablePair.mintFee(0, 0);
-    }
-
     function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public
     {
         // assume - for ramping up or down from DEFAULT_AMP_COEFF
@@ -203,10 +184,8 @@ contract StablePairTest is BaseTest
         assertEq(lReserve0_S, lReserve0_O);
         assertEq(lReserve1_S, lReserve1_O);
 
-        vm.prank(address(_stablePair));
-        (uint256 lTotalSupply1, ) = _stablePair.mintFee(lReserve0_S, lReserve1_S);
-        vm.prank(address(lOtherPair));
-        (uint256 lTotalSupply2, ) = lOtherPair.mintFee(lReserve0_O, lReserve1_O);
+        (uint256 lTotalSupply1, ) = _stablePair.burn(address(this));
+        (uint256 lTotalSupply2, ) = lOtherPair.burn(address(this));
 
         // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
         assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
@@ -259,10 +238,8 @@ contract StablePairTest is BaseTest
         assertEq(lReserve0_S, lReserve0_O);
         assertEq(lReserve1_S, lReserve1_O);
 
-        vm.prank(address(_stablePair));
-        (uint256 lTotalSupply1, ) = _stablePair.mintFee(lReserve0_S, lReserve1_S);
-        vm.prank(address(lOtherPair));
-        (uint256 lTotalSupply2, ) = lOtherPair.mintFee(lReserve0_O, lReserve1_O);
+        (uint256 lTotalSupply1, ) = _stablePair.burn(address(this));
+        (uint256 lTotalSupply2, ) = lOtherPair.burn(address(this));
 
         // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
         assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
@@ -631,35 +608,29 @@ contract StablePairTest is BaseTest
         assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
     }
 
-    function testBurn_SucceedEvenIfMintFeeReverts() public
+    function testBurn_DiffDecimalPlaces(uint256 aAmtToBurn) public
     {
-        // arrange - change some values to make iterative function algorithm not converge
-        // I have tried changing the reserves, but no matter how extreme the values are,
-        // StableMath._computeLiquidityFromAdjustedBalances would still converge
-        // which is good for our contracts but not good for my attempt to break it
-        uint192 lLastInvariant = 200e18;
-        uint64 lLastInvariantAmp = 0;
-        bytes32 lEncoded = bytes32(abi.encodePacked(lLastInvariantAmp, lLastInvariant));
-        // hardcoding the slot for now as there is no way to access it publicly
-        // this will break when we change the storage layout
-        vm.store(address(_stablePair), bytes32(uint256(65551)), lEncoded);
+        // assume
+        uint256 lAmtToBurn = bound(aAmtToBurn, 2, 2e12 - 1);
 
-        // ensure that the iterative function that _mintFee calls reverts with the adulterated values
-        vm.prank(address(_stablePair));
-        vm.expectRevert(stdError.arithmeticError);
-        _stablePair.mintFee(100e18, 100e18);
+        // arrange - tokenD has 6 decimal places, simulating USDC / USDT
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+
+        _tokenC.mint(address(lPair), INITIAL_MINT_AMOUNT);
+        _tokenD.mint(address(lPair), INITIAL_MINT_AMOUNT / 1e12);
+
+        lPair.mint(address(this));
+
+        // sanity
+        assertEq(lPair.balanceOf(address(this)), 2 * INITIAL_MINT_AMOUNT - lPair.MINIMUM_LIQUIDITY());
 
         // act
-        vm.prank(_alice);
-        _stablePair.transfer(address(_stablePair), 1e18);
-        // mintFee indeed reverted but burn still succeeded - this can be seen by examining the callstack
-        (uint256 lAmount0, uint256 lAmount1) = _stablePair.burn(address(this)); // mintFee would fail in this call
+        lPair.transfer(address(lPair), lAmtToBurn);
+        (uint256 lAmt0, uint256 lAmt1) = lPair.burn(address(this));
 
         // assert
-        assertEq(lAmount0, 0.5e18);
-        assertEq(lAmount0, lAmount1);
-        assertEq(_tokenA.balanceOf(address(this)), lAmount0);
-        assertEq(_tokenB.balanceOf(address(this)), lAmount1);
+        assertEq(lAmt0, 0);
+        assertGt(lAmt1, 0);
     }
 
     function testRampA() public

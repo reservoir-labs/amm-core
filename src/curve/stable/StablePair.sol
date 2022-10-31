@@ -164,18 +164,7 @@ contract StablePair is ReservoirPair {
         (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
         uint256 liquidity = balanceOf[address(this)];
 
-        // this is a safety feature that prevents revert when removing liquidity
-        // i.e. removing liquidity should always succeed under all circumstances
-        // so if the iterative functions revert, we just have to forgo the platformFee calculations
-        // and use the current totalSupply of LP tokens for calculations since there is no new
-        // LP tokens minted for platformFee
-        uint256 _totalSupply;
-        try StablePair(this).mintFee(_reserve0, _reserve1) returns (uint256 rTotalSupply, uint256) {
-            _totalSupply = rTotalSupply;
-        }
-        catch {
-            _totalSupply = totalSupply;
-        }
+        (uint256 _totalSupply, ) = _mintFee(_reserve0, _reserve1);
 
         amount0 = (liquidity * _reserve0) / _totalSupply;
         amount1 = (liquidity * _reserve1) / _totalSupply;
@@ -257,11 +246,6 @@ contract StablePair is ReservoirPair {
 
         _update(balance0, balance1, _reserve0, _reserve1);
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
-    }
-
-    function mintFee(uint256 _reserve0, uint256 _reserve1) public returns (uint256 _totalSupply, uint256 d) {
-        require(msg.sender == address(this), "SP: NOT_SELF");
-        return _mintFee(_reserve0, _reserve1);
     }
 
     function _balance() internal view returns (uint256 balance0, uint256 balance1) {
