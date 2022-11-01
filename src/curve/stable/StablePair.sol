@@ -402,7 +402,7 @@ contract StablePair is ReservoirPair {
         unchecked {
             int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(timeElapsed)));
             int56 logAccClampedPrice = previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
+            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
             index += 1;
             observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
         }

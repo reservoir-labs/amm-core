@@ -1137,6 +1137,7 @@ contract StablePairTest is BaseTest
 
         (int112 lLogRawPriceAcc, int56 lLogClampedPriceAcc, int56 lLogLiqAcc, uint32 lTimestamp) = _stablePair.observations(0);
         assertTrue(lLogRawPriceAcc == 0);
+        assertTrue(lLogClampedPriceAcc == 0);
         assertTrue(lLogLiqAcc != 0);
         assertTrue(lTimestamp != 0);
 
@@ -1152,8 +1153,8 @@ contract StablePairTest is BaseTest
         // assert
         (lLogRawPriceAcc, lLogClampedPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(0);
         assertEq(lLogRawPriceAcc, int112(1337));
-        assertEq(lLogClampedPriceAcc, int112(-1337));
-        assertEq(lLogLiqAcc, int112(-1337));
+        assertEq(lLogClampedPriceAcc, int56(-1337));
+        assertEq(lLogLiqAcc, int56(-1337));
         assertEq(lTimestamp, uint32(666));
 
         (lLogRawPriceAcc, lLogClampedPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(1);
