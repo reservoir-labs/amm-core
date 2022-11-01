@@ -231,18 +231,25 @@ contract ConstantProductPair is ReservoirPair {
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
-        int112 currLogPrice = ConstantProductOracleMath.calcLogPrice(
+        (uint256 currRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
             _reserve0 * token0PrecisionMultiplier,
             _reserve1 * token1PrecisionMultiplier
         );
+        (uint256 currClampedPrice, int112 currLogClampedPrice) = _calcClampedPrice(
+            currRawPrice,
+            prevClampedPrice,
+            timeElapsed
+        );
         int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(_reserve0, _reserve1);
+        prevClampedPrice = currClampedPrice;
 
         // overflow is okay
         unchecked {
-            int112 logAccPrice = previous.logAccPrice + currLogPrice * int112(int256(uint256(timeElapsed)));
-            int112 logAccLiq = previous.logAccLiquidity + currLogLiq * int112(int256(uint256(timeElapsed)));
+            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(timeElapsed)));
+            int56 logAccClampedPrice = previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
+            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
             index += 1;
-            observations[index] = Observation(logAccPrice, logAccLiq, timestampLast);
+            observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
         }
     }
 }

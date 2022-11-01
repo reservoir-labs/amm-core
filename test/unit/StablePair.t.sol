@@ -1135,27 +1135,30 @@ contract StablePairTest is BaseTest
         // sanity
         assertEq(_stablePair.index(), 1);
 
-        (int112 lLogPriceAcc, int112 lLogLiqAcc, uint32 lTimestamp) = _stablePair.observations(0);
-        assertTrue(lLogPriceAcc == 0);
+        (int112 lLogRawPriceAcc, int56 lLogClampedPriceAcc, int56 lLogLiqAcc, uint32 lTimestamp) = _stablePair.observations(0);
+        assertTrue(lLogRawPriceAcc == 0);
         assertTrue(lLogLiqAcc != 0);
         assertTrue(lTimestamp != 0);
 
-        (lLogPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(1);
-        assertTrue(lLogPriceAcc != 0);
+        (lLogRawPriceAcc, lLogClampedPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(1);
+        assertTrue(lLogRawPriceAcc != 0);
+        assertTrue(lLogClampedPriceAcc != 0);
         assertTrue(lLogLiqAcc != 0);
         assertTrue(lTimestamp != 0);
 
         // act
-        _writeObservation(_stablePair, 0, int112(1337), int112(-1337), uint32(666));
+        _writeObservation(_stablePair, 0, int112(1337), int56(-1337), int56(-1337), uint32(666));
 
         // assert
-        (lLogPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(0);
-        assertEq(lLogPriceAcc, int112(1337));
+        (lLogRawPriceAcc, lLogClampedPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(0);
+        assertEq(lLogRawPriceAcc, int112(1337));
+        assertEq(lLogClampedPriceAcc, int112(-1337));
         assertEq(lLogLiqAcc, int112(-1337));
         assertEq(lTimestamp, uint32(666));
 
-        (lLogPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(1);
-        assertTrue(lLogPriceAcc != 0);
+        (lLogRawPriceAcc, lLogClampedPriceAcc, lLogLiqAcc, lTimestamp) = _stablePair.observations(1);
+        assertTrue(lLogRawPriceAcc != 0);
+        assertTrue(lLogClampedPriceAcc != 0);
         assertTrue(lLogLiqAcc != 0);
         assertTrue(lTimestamp != 0);
     }
@@ -1167,10 +1170,11 @@ contract StablePairTest is BaseTest
             _stablePair,
             _stablePair.index(),
             type(int112).max,
+            type(int56).max,
             0,
             uint32(block.timestamp)
         );
-        (int112 lPrevAccPrice, , ) = _stablePair.observations(_stablePair.index());
+        (int112 lPrevAccPrice, , ,) = _stablePair.observations(_stablePair.index());
 
         // act
         uint256 lAmountToSwap = 5e18;
@@ -1181,7 +1185,7 @@ contract StablePairTest is BaseTest
         _stablePair.sync();
 
         // assert - when it overflows it goes from a very positive number to a very negative number
-        (int112 lCurrAccPrice, , ) = _stablePair.observations(_stablePair.index());
+        (int112 lCurrAccPrice, , ,) = _stablePair.observations(_stablePair.index());
         assertLt(lCurrAccPrice, lPrevAccPrice);
     }
 
@@ -1192,17 +1196,18 @@ contract StablePairTest is BaseTest
             _stablePair,
             _stablePair.index(),
             0,
-            type(int112).max,
+            0,
+            type(int56).max,
             uint32(block.timestamp)
         );
-        (, int112 lPrevAccLiq, ) = _stablePair.observations(_stablePair.index());
+        (, , int112 lPrevAccLiq, ) = _stablePair.observations(_stablePair.index());
 
         // act
         _stepTime(5);
         _stablePair.sync();
 
         // assert
-        (, int112 lCurrAccLiq, ) = _stablePair.observations(_stablePair.index());
+        (, , int112 lCurrAccLiq, ) = _stablePair.observations(_stablePair.index());
         assertLt(lCurrAccLiq, lPrevAccLiq);
     }
 
@@ -1229,9 +1234,9 @@ contract StablePairTest is BaseTest
         _stablePair.sync();
 
         // assert
-        (int lAccPrice1, , uint32 lTimestamp1) = _stablePair.observations(0);
-        (int lAccPrice2, , uint32 lTimestamp2) = _stablePair.observations(1);
-        (int lAccPrice3, , uint32 lTimestamp3) = _stablePair.observations(2);
+        (int lAccPrice1, , , uint32 lTimestamp1) = _stablePair.observations(0);
+        (int lAccPrice2, , , uint32 lTimestamp2) = _stablePair.observations(1);
+        (int lAccPrice3, , , uint32 lTimestamp3) = _stablePair.observations(2);
 
         assertApproxEqRel(
             LogCompression.fromLowResLog((lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1)),
@@ -1274,9 +1279,9 @@ contract StablePairTest is BaseTest
         _stablePair.sync();
 
         // assert
-        (int lAccPrice1, , uint32 lTimestamp1) = _stablePair.observations(0);
-        (int lAccPrice2, , uint32 lTimestamp2) = _stablePair.observations(1);
-        (int lAccPrice3, , uint32 lTimestamp3) = _stablePair.observations(2);
+        (int lAccPrice1, , , uint32 lTimestamp1) = _stablePair.observations(0);
+        (int lAccPrice2, , , uint32 lTimestamp2) = _stablePair.observations(1);
+        (int lAccPrice3, , , uint32 lTimestamp3) = _stablePair.observations(2);
 
         assertEq(lAccPrice1, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(lSpotPrice1) * 10, "2");
@@ -1320,7 +1325,7 @@ contract StablePairTest is BaseTest
         _stablePair.burn(address(this));
 
         // assert
-        (, int256 lAccLiq, ) = _stablePair.observations(_stablePair.index());
+        (, , int256 lAccLiq, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq = LogCompression.fromLowResLog(lAccLiq / 5);
         // we check that it is within 0.01% of accuracy
         assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT * 2, 0.0001e18);
@@ -1330,7 +1335,7 @@ contract StablePairTest is BaseTest
         _stablePair.sync();
 
         // assert
-        (, int256 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
+        (, , int256 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
         assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT * 2 - lAmountToBurn, 0.0001e18);
     }
@@ -1357,8 +1362,8 @@ contract StablePairTest is BaseTest
         uint256 lTotalSupply = _stablePair.totalSupply();
         assertEq(lTotalSupply, uint256(type(uint112).max) * 2);
 
-        (, int112 lAccLiq1, ) = _stablePair.observations(0);
-        (, int112 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
+        (, , int112 lAccLiq1, ) = _stablePair.observations(0);
+        (, , int112 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
         assertApproxEqRel(uint256(type(uint112).max) * 2, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
     }
 }

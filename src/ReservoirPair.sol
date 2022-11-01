@@ -55,4 +55,9 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         blockTimestampLast = blockTimestamp;
         emit Sync(reserve0, reserve1);
     }
+
+    function setMaxChangePerSecond(uint8 aChangePerSecond) external override onlyFactory {
+        require(0 <= aChangePerSecond && aChangePerSecond <= MAX_CHANGE_PER_SEC, "RP: INVALID_CHANGE_PER_SECOND");
+        allowedChangePerSecond = aChangePerSecond;
+    }
 }

@@ -87,12 +87,13 @@ abstract contract BaseTest is Test {
     function _writeObservation(
         ReservoirPair aPair,
         uint256 aIndex,
-        int112 aPrice,
-        int112 aLiq,
+        int112 aRawPrice,
+        int56 aClampedPrice,
+        int56 aLiq,
         uint32 aTime
     ) internal
     {
-        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aPrice));
+        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aClampedPrice, aRawPrice));
 
         vm.record();
         aPair.observations(aIndex);
