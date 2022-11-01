@@ -11,10 +11,10 @@ abstract contract OracleWriter is IOracleWriter {
     Observation[65536] public observations;
     uint16 public index = type(uint16).max;
 
-    // maximum number of basis points the price can change per second
+    // maximum allowed rate of change of price per second
     // for clamping the price
-    uint64 internal allowedChangePerSecond = 0.0005e18;
-    uint256 internal prevClampedPrice;
+    uint64 internal allowedChangePerSecond = 0.0005e18; // 5 bp
+    uint256 public prevClampedPrice;
 
     /**
      * @param _reserve0 in its native precision
@@ -28,7 +28,7 @@ abstract contract OracleWriter is IOracleWriter {
 
     function _calcClampedPrice(
         uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed
-    ) internal virtual returns (uint256 rClampedPrice , int112 rClampedLogPrice) {
+    ) internal virtual returns (uint256 rClampedPrice, int112 rClampedLogPrice) {
         if (aPrevClampedPrice == 0) {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
         }
@@ -36,11 +36,11 @@ abstract contract OracleWriter is IOracleWriter {
         if (_calcPercentageDiff(aCurrRawPrice, aPrevClampedPrice) > allowedChangePerSecond * aTimeElapsed) {
             // clamp the price
             if (aCurrRawPrice > aPrevClampedPrice) {
-                rClampedPrice = aPrevClampedPrice * (1e18 + (allowedChangePerSecond * aTimeElapsed));
+                rClampedPrice = aPrevClampedPrice * (1e18 + (allowedChangePerSecond * aTimeElapsed)) / 1e18;
             }
             else {
                 assert(aPrevClampedPrice > aCurrRawPrice);
-                rClampedPrice = aPrevClampedPrice * (1e18 - (allowedChangePerSecond * aTimeElapsed));
+                rClampedPrice = aPrevClampedPrice * (1e18 - (allowedChangePerSecond * aTimeElapsed)) / 1e18;
             }
             rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
         }

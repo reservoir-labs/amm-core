@@ -553,4 +553,58 @@ contract ConstantProductPairTest is BaseTest
         (, , int112 lAccLiq2, ) = _constantProductPair.observations(_constantProductPair.index());
         assertApproxEqRel(type(uint112).max, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
     }
+
+    function testOracle_ClampedPrice() public
+    {
+        // arrange
+        _stepTime(5);
+        uint256 lSwapAmt = 100e18;
+        _tokenB.mint(address(_constantProductPair), lSwapAmt);
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        // sanity
+        assertEq(_constantProductPair.prevClampedPrice(), 1e18);
+
+        // act
+        _stepTime(5);
+        _constantProductPair.sync();
+
+        // sanity
+        assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
+
+        // assert
+        (int112 lAccRawLogPrice0, int56 lAccClampedLogPrice0, , uint32 lTimestamp0) = _constantProductPair.observations(0);
+        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
+
+        // act
+        _stepTime(5);
+        _constantProductPair.sync();
+
+        // assert - make sure that the prevClampedPrice is keeping up
+        (int112 lAccRawLogPrice2, int56 lAccClampedLogPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(2);
+        assertEq(_constantProductPair.prevClampedPrice(), 1.00500625e18);
+        assertApproxEqRel(LogCompression.fromLowResLog((lAccClampedLogPrice2 - lAccClampedLogPrice1) / 5), 1.00500625e18, 0.0001e18);
+    }
+
+    function testOracle_ClampedPrice_NoDiffWithinLimit() external
+    {
+        // arrange
+        _stepTime(5);
+        uint256 lSwapAmt = 0.12e18;
+        _tokenB.mint(address(_constantProductPair), lSwapAmt);
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        // sanity
+        assertEq(_constantProductPair.prevClampedPrice(), 1e18);
+
+        // act
+        _stepTime(5);
+        _constantProductPair.sync();
+
+        // assert
+        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
+        // no diff between raw and clamped prices
+        assertEq(lAccClampedLogPrice1, lAccRawLogPrice1);
+        assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
+    }
 }
