@@ -558,7 +558,7 @@ contract ConstantProductPairTest is BaseTest
 
 
     ///     ORACLE ATTACK TEST CASES
-    function testOracleAttack5Blocks() public
+    function testOracleAttack_5Blocks_1hrWindow() public
     {
         // Create a ETH-USDC pair
         MintableERC20 lWEth = new MintableERC20("WETH", "WETH", 18);
@@ -621,5 +621,200 @@ contract ConstantProductPairTest is BaseTest
         (int112 lAccPrice2, , uint32 timestamp2) = lPair.observations(3);
 
         console.log("avg price over that 60 minutes", LogCompression.fromLowResLog((lAccPrice2 - 0) / int32(uint32(block.timestamp) - timestamp)));
+    }
+
+    function testOracleAttack_10Blocks_1hrWindow() public
+    {
+        // Create a ETH-USDC pair
+        MintableERC20 lWEth = new MintableERC20("WETH", "WETH", 18);
+        MintableERC20 lUSDC = new MintableERC20("USDC", "USDC", 18);
+
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(lWEth), address(lUSDC), 0));
+
+        // 1 WETH == 1500 USDC
+        // total of 3M in the pool
+        lWEth.mint(address(lPair), 1000e18);
+        lUSDC.mint(address(lPair), 1_500_000e18);
+        lPair.mint(address(this));
+
+        assertGt(lPair.balanceOf(address(this)), 0);
+
+        // let 30 min elapse - assume price has been stable for that time
+        _stepTime(30 minutes);
+
+        // block N - attack the pool -
+        // we assume that the attacker has 10% of the circulating supply of ETH (120M / 10 = 12M)
+        uint256 lSwapAmt = 12_000_000e18;
+        lWEth.mint(address(lPair), lSwapAmt);
+        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // now the price is around 1 WETH to 0.0000104 USDC
+        (uint256 lR0, uint256 lR1, ) = lPair.getReserves();
+        assertApproxEqRel(lR1.divWadDown(lR0), 0.0000104e18, 0.01e18);
+        // block N ends - assume ETH blocktime
+        _stepTime(12);
+
+        // another 8 blocks pass (N + 1 -> N + 8) and the price holds
+        _stepTime(96);
+
+        // block N + 9 - attacker arbs the price back to 1 WETH for 1500 USDC
+        uint256 lUSDCBalance = lUSDC.balanceOf(address(this));
+        uint256 lExtraUSDC = lUSDCBalance * 3 / 1000 ; // 0.3% more
+        lUSDC.mint(address(lPair), lUSDCBalance + lExtraUSDC);
+        lPair.swap(-int256(lUSDCBalance + lExtraUSDC), true, address(this), bytes(""));
+
+        uint256 lEndingWEthBalance = lWEth.balanceOf(address(this));
+        console.log("WETH Cost of attack", lSwapAmt - lEndingWEthBalance);
+        console.log("USDC Cost of attack", lExtraUSDC);
+        (lR0, lR1 , ) = lPair.getReserves();
+        console.log("Price of WETH/USDC after arb", lR1.divWadDown(lR0));
+
+        // block N + 9 ends
+        _stepTime(12);
+
+        // another 28m passes with the original price
+        _stepTime(28 minutes);
+
+        // write to oracle
+        lPair.sync();
+
+        _stepTime(12);
+        lPair.sync();
+
+        // calculate geometric TWAP price
+        (int112 lAccPrice, , uint32 timestamp) = lPair.observations(0);
+        (int112 lAccPrice2, , uint32 timestamp2) = lPair.observations(3);
+
+        console.log("avg price over that 60 minutes", LogCompression.fromLowResLog((lAccPrice2 - 0) / int32(uint32(block.timestamp) - timestamp)));
+    }
+
+    function testOracleAttack_5Blocks_15minWindow() public
+    {
+        // Create a ETH-USDC pair
+        MintableERC20 lWEth = new MintableERC20("WETH", "WETH", 18);
+        MintableERC20 lUSDC = new MintableERC20("USDC", "USDC", 18);
+
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(lWEth), address(lUSDC), 0));
+
+        // 1 WETH == 1500 USDC
+        // total of 3M in the pool
+        lWEth.mint(address(lPair), 1000e18);
+        lUSDC.mint(address(lPair), 1_500_000e18);
+        lPair.mint(address(this));
+
+        assertGt(lPair.balanceOf(address(this)), 0);
+
+        // let 7 min elapse - assume price has been stable for that time
+        _stepTime(7 minutes);
+
+        // block N - attack the pool -
+        // we assume that the attacker has 10% of the circulating supply of ETH (120M / 10 = 12M)
+        uint256 lSwapAmt = 12_000_000e18;
+        lWEth.mint(address(lPair), lSwapAmt);
+        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // now the price is around 1 WETH to 0.0000104 USDC
+        (uint256 lR0, uint256 lR1, ) = lPair.getReserves();
+        assertApproxEqRel(lR1.divWadDown(lR0), 0.0000104e18, 0.01e18);
+        // block N ends - assume ETH blocktime
+        _stepTime(12);
+
+        // another 3 blocks pass (N + 1 -> N + 3) and the price holds
+        _stepTime(36);
+
+        // block N + 4 - attacker arbs the price back to 1 WETH for 1500 USDC
+        uint256 lUSDCBalance = lUSDC.balanceOf(address(this));
+        uint256 lExtraUSDC = lUSDCBalance * 3 / 1000 ; // 0.3% more
+        lUSDC.mint(address(lPair), lUSDCBalance + lExtraUSDC);
+        lPair.swap(-int256(lUSDCBalance + lExtraUSDC), true, address(this), bytes(""));
+
+        uint256 lEndingWEthBalance = lWEth.balanceOf(address(this));
+        console.log("WETH Cost of attack", lSwapAmt - lEndingWEthBalance);
+        console.log("USDC Cost of attack", lExtraUSDC);
+        (lR0, lR1 , ) = lPair.getReserves();
+        console.log("Price of WETH/USDC after arb", lR1.divWadDown(lR0));
+
+        // block N + 4 ends
+        _stepTime(12);
+
+        // another 7m passes with the original price
+        _stepTime(7 minutes);
+
+        // write to oracle
+        lPair.sync();
+
+        _stepTime(12);
+        lPair.sync();
+
+        // calculate geometric TWAP price
+        (int112 lAccPrice, , uint32 timestamp) = lPair.observations(0);
+        (int112 lAccPrice2, , uint32 timestamp2) = lPair.observations(3);
+
+        console.log("avg price over that 15 minutes", LogCompression.fromLowResLog((lAccPrice2 - 0) / int32(uint32(block.timestamp) - timestamp)));
+    }
+
+    function testOracleAttack_10Blocks_15minWindow() public
+    {
+        // Create a ETH-USDC pair
+        MintableERC20 lWEth = new MintableERC20("WETH", "WETH", 18);
+        MintableERC20 lUSDC = new MintableERC20("USDC", "USDC", 18);
+
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(lWEth), address(lUSDC), 0));
+
+        // 1 WETH == 1500 USDC
+        // total of 3M in the pool
+        lWEth.mint(address(lPair), 1000e18);
+        lUSDC.mint(address(lPair), 1_500_000e18);
+        lPair.mint(address(this));
+
+        assertGt(lPair.balanceOf(address(this)), 0);
+
+        // let 7 min elapse - assume price has been stable for that time
+        _stepTime(7 minutes);
+
+        // block N - attack the pool -
+        // we assume that the attacker has 10% of the circulating supply of ETH (120M / 10 = 12M)
+        uint256 lSwapAmt = 12_000_000e18;
+        lWEth.mint(address(lPair), lSwapAmt);
+        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+
+        // now the price is around 1 WETH to 0.0000104 USDC
+        (uint256 lR0, uint256 lR1, ) = lPair.getReserves();
+        assertApproxEqRel(lR1.divWadDown(lR0), 0.0000104e18, 0.01e18);
+        // block N ends - assume ETH blocktime
+        _stepTime(12);
+
+        // another 8 blocks pass (N + 1 -> N + 8) and the price holds
+        _stepTime(96);
+
+        // block N + 4 - attacker arbs the price back to 1 WETH for 1500 USDC
+        uint256 lUSDCBalance = lUSDC.balanceOf(address(this));
+        uint256 lExtraUSDC = lUSDCBalance * 3 / 1000 ; // 0.3% more
+        lUSDC.mint(address(lPair), lUSDCBalance + lExtraUSDC);
+        lPair.swap(-int256(lUSDCBalance + lExtraUSDC), true, address(this), bytes(""));
+
+        uint256 lEndingWEthBalance = lWEth.balanceOf(address(this));
+        console.log("WETH Cost of attack", lSwapAmt - lEndingWEthBalance);
+        console.log("USDC Cost of attack", lExtraUSDC);
+        (lR0, lR1 , ) = lPair.getReserves();
+        console.log("Price of WETH/USDC after arb", lR1.divWadDown(lR0));
+
+        // block N + 4 ends
+        _stepTime(12);
+
+        // another 6m passes with the original price
+        _stepTime(6 minutes);
+
+        // write to oracle
+        lPair.sync();
+
+        _stepTime(12);
+        lPair.sync();
+
+        // calculate geometric TWAP price
+        (int112 lAccPrice, , uint32 timestamp) = lPair.observations(0);
+        (int112 lAccPrice2, , uint32 timestamp2) = lPair.observations(3);
+
+        console.log("avg price over that 15 minutes", LogCompression.fromLowResLog((lAccPrice2 - 0) / int32(uint32(block.timestamp) - timestamp)));
     }
 }
