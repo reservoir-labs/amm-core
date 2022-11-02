@@ -16,5 +16,5 @@ interface IOracleWriter {
 
     function observations(uint256 index) external view returns (int112, int56, int56, uint32);
     function index() external returns (uint16);
-    function setMaxChangePerSecond(uint8) external;
+    function setMaxChangePerSecond(uint64) external;
 }

@@ -24,7 +24,7 @@ abstract contract OracleWriter is IOracleWriter {
      */
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal virtual;
 
-    function setMaxChangePerSecond(uint8 aChangePerSecond) external virtual;
+    function setMaxChangePerSecond(uint64 aChangePerSecond) external virtual;
 
     function _calcClampedPrice(
         uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed
