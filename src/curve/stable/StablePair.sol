@@ -13,7 +13,7 @@ import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IPair, Pair } from "src/Pair.sol";
-
+import "forge-std/console.sol";
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 initialA;
@@ -394,6 +394,7 @@ contract StablePair is ReservoirPair {
             _reserve0 * token0PrecisionMultiplier,
             _reserve1 * token1PrecisionMultiplier
         );
+        console.log(currRawPrice);
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) = _calcClampedPrice(
