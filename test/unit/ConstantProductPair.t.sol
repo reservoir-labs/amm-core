@@ -583,6 +583,7 @@ contract ConstantProductPairTest is BaseTest
         // assert - make sure that the prevClampedPrice is keeping up
         (int112 lAccRawLogPrice2, int56 lAccClampedLogPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(2);
         assertEq(_constantProductPair.prevClampedPrice(), 1.00500625e18);
+        assertApproxEqRel(LogCompression.fromLowResLog((lAccRawLogPrice2 - lAccRawLogPrice1) / 5), 3.994e18, 0.0001e18);
         assertApproxEqRel(LogCompression.fromLowResLog((lAccClampedLogPrice2 - lAccClampedLogPrice1) / 5), 1.00500625e18, 0.0001e18);
     }
 
