@@ -652,4 +652,90 @@ contract ConstantProductPairTest is BaseTest
         assertGt(lAccRawLogPrice1, lAccClampedLogPrice1);
         assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
+
+
+
+    function testOracle_CompareLiquidityTwoCurves_Balanced() external
+    {
+        // arrange
+        _stepTime(12);
+        _constantProductPair.sync();
+        _stablePair.sync();
+
+        // assert
+        (, int112 lAccLogLiqCP, ) = _constantProductPair.observations(0);
+        (, int112 lAccLogLiqSP, ) = _stablePair.observations(0);
+
+        console.logInt(lAccLogLiqCP);
+        console.logInt(lAccLogLiqSP);
+
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
+
+        console.log("un CP", lUncompressedLiqCP);
+        console.log("un SP / 2", lUncompressedLiqSP / 2);
+        console.log("% difference", stdMath.percentDelta(lUncompressedLiqCP, lUncompressedLiqSP / 2));
+    }
+
+    function testOracle_CompareLiquidityTwoCurves_UnBalancedDiffPrice_SameDecimals() external
+    {
+        // arrange
+        ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
+        StablePair lSP          = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+
+        _tokenB.mint(address(lCP), 100e18);
+        _tokenC.mint(address(lCP), 10e18);
+        lCP.mint(address(this));
+
+        _tokenB.mint(address(lSP), 100e18);
+        _tokenC.mint(address(lSP), 10e18);
+        lSP.mint(address(this));
+
+        // act
+        _stepTime(12);
+        lCP.sync();
+        lSP.sync();
+
+        //
+        (, int112 lAccLogLiqCP, ) = lCP.observations(0);
+        (, int112 lAccLogLiqSP, ) = lSP.observations(0);
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
+
+        console.log(lUncompressedLiqCP);
+        console.log(lUncompressedLiqSP);
+        console.log("un CP", lUncompressedLiqCP);
+        console.log("un SP / 2", lUncompressedLiqSP / 2);
+
+    }
+
+    function testOracle_CompareLiquidityTwoCurves_UnBalancedDiffPrice_DiffDecimals() external
+    {
+        // arrange
+        ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenD), 0));
+        StablePair lSP          = StablePair(_createPair(address(_tokenB), address(_tokenD), 1));
+
+        _tokenB.mint(address(lCP), 100e18);
+        _tokenD.mint(address(lCP), 10e6);
+        lCP.mint(address(this));
+
+        _tokenB.mint(address(lSP), 100e18);
+        _tokenD.mint(address(lSP), 10e6);
+        lSP.mint(address(this));
+
+        // act
+        _stepTime(12);
+        lCP.sync();
+        lSP.sync();
+
+        //
+        (, int112 lAccLogLiqCP, ) = lCP.observations(0);
+        (, int112 lAccLogLiqSP, ) = lSP.observations(0);
+
+        console.log(lCP.balanceOf(address(this)));
+        console.log(lSP.balanceOf(address(this)));
+
+        console.logInt(lAccLogLiqCP);
+        console.logInt(lAccLogLiqSP);
+    }
 }
