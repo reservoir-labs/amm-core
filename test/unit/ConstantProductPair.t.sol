@@ -704,9 +704,8 @@ contract ConstantProductPairTest is BaseTest
 
         console.log(lUncompressedLiqCP);
         console.log(lUncompressedLiqSP);
-        console.log("un CP", lUncompressedLiqCP);
-        console.log("un SP / 2", lUncompressedLiqSP / 2);
-
+        console.log("un CP  ", lUncompressedLiqCP);
+        console.log("un SP/2", lUncompressedLiqSP / 2);
     }
 
     function testOracle_CompareLiquidityTwoCurves_UnBalancedDiffPrice_DiffDecimals() external
@@ -731,11 +730,12 @@ contract ConstantProductPairTest is BaseTest
         //
         (, int112 lAccLogLiqCP, ) = lCP.observations(0);
         (, int112 lAccLogLiqSP, ) = lSP.observations(0);
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
 
-        console.log(lCP.balanceOf(address(this)));
-        console.log(lSP.balanceOf(address(this)));
-
-        console.logInt(lAccLogLiqCP);
-        console.logInt(lAccLogLiqSP);
+        console.log(lUncompressedLiqCP);
+        console.log(lUncompressedLiqSP);
+        console.log("un CP  ", lUncompressedLiqCP);
+        console.log("un SP/2", lUncompressedLiqSP / 2);
     }
 }
