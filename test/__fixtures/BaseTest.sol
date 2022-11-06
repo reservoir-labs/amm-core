@@ -40,7 +40,7 @@ abstract contract BaseTest is Test {
         _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(DEFAULT_PLATFORM_FEE))); // 25%
         _factory.set(keccak256("Shared::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
         _factory.set(keccak256("Shared::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
-        _factory.set(keccak256("Shared::allowedChangePerSecond"), bytes32(uint256(uint160(DEFAULT_ALLOWED_CHANGE_PER_SECOND))));
+        _factory.set(keccak256("Shared::allowedChangePerSecond"), bytes32(DEFAULT_ALLOWED_CHANGE_PER_SECOND));
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
