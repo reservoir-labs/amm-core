@@ -95,7 +95,14 @@ abstract contract BaseTest is Test {
         uint32 aTime
     ) internal
     {
-        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aClampedPrice, aRawPrice));
+        bytes32 lEncoded = bytes32(
+            bytes.concat(
+                bytes4(aTime),
+                bytes7(uint56(aLiq)),
+                bytes7(uint56(aClampedPrice)),
+                bytes14(uint112(aRawPrice))
+            )
+        );
 
         vm.record();
         aPair.observations(aIndex);
