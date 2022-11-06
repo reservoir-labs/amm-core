@@ -84,6 +84,7 @@ contract AaveIntegrationTest is BaseTest
         _factory.set(keccak256("CP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_CP)));
         _factory.set(keccak256("SP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_SP)));
         _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(DEFAULT_PLATFORM_FEE)));
+        _factory.set(keccak256("Shared::allowedChangePerSecond"), bytes32(uint256(uint160(DEFAULT_ALLOWED_CHANGE_PER_SECOND))));
         _factory.addCurve(type(ConstantProductPair).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
         _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(DEFAULT_AMP_COEFF)));
