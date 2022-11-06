@@ -30,14 +30,6 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         allowedChangePerSecond = lAllowedChangePerSecond;
     }
 
-    /**
-     * @param _reserve0 in its native precision
-     * @param _reserve1 in its native precision
-     * @param timeElapsed time since the last oracle observation
-     * @param timestampLast the time of the last activity on the pair
-     */
-    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal virtual;
-
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external onlyFactory {
         require(0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
         allowedChangePerSecond = aAllowedChangePerSecond;
@@ -70,4 +62,12 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     function _calcPercentageDiff(uint256 a, uint256 b) private pure returns (uint256) {
         return stdMath.percentDelta(a, b);
     }
+
+    /**
+     * @param _reserve0 in its native precision
+     * @param _reserve1 in its native precision
+     * @param timeElapsed time since the last oracle observation
+     * @param timestampLast the time of the last activity on the pair
+     */
+    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal virtual;
 }
