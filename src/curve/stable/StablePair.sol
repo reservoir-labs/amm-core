@@ -394,7 +394,6 @@ contract StablePair is ReservoirPair {
             _reserve0 * token0PrecisionMultiplier,
             _reserve1 * token1PrecisionMultiplier
         );
-        console.log(currRawPrice);
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) = _calcClampedPrice(

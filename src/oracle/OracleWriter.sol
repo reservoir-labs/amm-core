@@ -1,10 +1,18 @@
 pragma solidity 0.8.13;
 
-import { IOracleWriter } from "src/interfaces/IOracleWriter.sol";
-import { LogCompression } from "src/libraries/LogCompression.sol";
 import { stdMath } from "forge-std/Test.sol";
 
-abstract contract OracleWriter is IOracleWriter {
+import { IOracleWriter } from "src/interfaces/IOracleWriter.sol";
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+import { LogCompression } from "src/libraries/LogCompression.sol";
+import { Pair } from "src/Pair.sol";
+import { GenericFactory } from "src/GenericFactory.sol";
+
+abstract contract OracleWriter is Pair, IOracleWriter {
+    using FactoryStoreLib for GenericFactory;
+    using Bytes32Lib for bytes32;
+
     // 10 basis points per second which is 6% per minute and doubling of the price in 16 minutes
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.001e18;
 
@@ -12,9 +20,15 @@ abstract contract OracleWriter is IOracleWriter {
     uint16 public index = type(uint16).max;
 
     // maximum allowed rate of change of price per second
-    // for clamping the price
-    uint256 public allowedChangePerSecond = 0.0005e18; // 5 bp
+    // to mitigate oracle manipulation attacks in the face of post-merge ETH
+    uint256 public allowedChangePerSecond;
     uint256 public prevClampedPrice;
+
+    constructor() {
+        uint256 lAllowedChangePerSecond = factory.read("Shared::allowedChangePerSecond").toUint256();
+        require(0 < lAllowedChangePerSecond && lAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
+        allowedChangePerSecond = lAllowedChangePerSecond;
+    }
 
     /**
      * @param _reserve0 in its native precision
@@ -24,7 +38,10 @@ abstract contract OracleWriter is IOracleWriter {
      */
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal virtual;
 
-    function setMaxChangePerSecond(uint256 aChangePerSecond) external virtual;
+    function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external onlyFactory {
+        require(0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
+        allowedChangePerSecond = aAllowedChangePerSecond;
+    }
 
     function _calcClampedPrice(
         uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed
