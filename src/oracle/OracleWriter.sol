@@ -15,6 +15,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
 
     // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
+    string internal constant ALLOWED_CHANGE_NAME = "Shared::allowedChangePerSecond";
 
     Observation[65536] public observations;
     uint16 public index = type(uint16).max;
@@ -25,7 +26,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     uint256 public prevClampedPrice;
 
     constructor() {
-        uint256 lAllowedChangePerSecond = factory.read("Shared::allowedChangePerSecond").toUint256();
+        uint256 lAllowedChangePerSecond = factory.read(ALLOWED_CHANGE_NAME).toUint256();
         setAllowedChangePerSecond(lAllowedChangePerSecond);
     }
 
