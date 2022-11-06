@@ -14,7 +14,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     using Bytes32Lib for bytes32;
 
     // 10 basis points per second which is 6% per minute and doubling of the price in 16 minutes
-    uint256 internal constant MAX_CHANGE_PER_SEC = 0.001e18;
+    uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
 
     Observation[65536] public observations;
     uint16 public index = type(uint16).max;

@@ -43,11 +43,14 @@ contract OracleWriterTest is BaseTest
         _pair.setAllowedChangePerSecond(0);
     }
 
-    function testSetAllowedChangePerSecond_TooHigh() external allPairs
+    function testSetAllowedChangePerSecond_TooHigh(uint256 aAllowedChangePerSecond) external allPairs
     {
+        // assume
+        uint256 lAllowedChangePerSecond = bound(aAllowedChangePerSecond, 0.01e18 + 1, type(uint256).max);
+
         // act & assert
         vm.prank(address(_factory));
         vm.expectRevert("OW: INVALID_CHANGE_PER_SECOND");
-        _pair.setAllowedChangePerSecond(0.002e18);
+        _pair.setAllowedChangePerSecond(lAllowedChangePerSecond);
     }
 }
