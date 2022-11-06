@@ -13,7 +13,7 @@ abstract contract OracleWriter is IOracleWriter {
 
     // maximum allowed rate of change of price per second
     // for clamping the price
-    uint64 internal allowedChangePerSecond = 0.0005e18; // 5 bp
+    uint256 public allowedChangePerSecond = 0.0005e18; // 5 bp
     uint256 public prevClampedPrice;
 
     /**
