@@ -6,6 +6,8 @@ import { IPair } from "src/interfaces/IPair.sol";
 
 contract PairTest is BaseTest
 {
+    using FactoryStoreLib for GenericFactory;
+
     IPair[] internal _pairs;
     IPair   internal _pair;
 
@@ -157,17 +159,19 @@ contract PairTest is BaseTest
     function testUpdateDefaultFees() public allPairs
     {
         // arrange
-        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(200)));
-        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(200)));
-        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(5000)));
+        uint256 lNewDefaultSwapFee = 200;
+        uint256 lNewDefaultPlatformFee = 5000;
+        _factory.write("CP::swapFee", lNewDefaultSwapFee);
+        _factory.write("SP::swapFee", lNewDefaultSwapFee);
+        _factory.write("Shared::platformFee", lNewDefaultPlatformFee);
 
         // act
         _pair.updateSwapFee();
         _pair.updatePlatformFee();
 
         // assert
-        assertEq(_pair.swapFee(), 200);
-        assertEq(_pair.platformFee(), 5000);
+        assertEq(_pair.swapFee(), lNewDefaultSwapFee);
+        assertEq(_pair.platformFee(), lNewDefaultPlatformFee);
     }
 
     function testRecoverToken() public allPairs
