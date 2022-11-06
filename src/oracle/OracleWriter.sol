@@ -26,11 +26,10 @@ abstract contract OracleWriter is Pair, IOracleWriter {
 
     constructor() {
         uint256 lAllowedChangePerSecond = factory.read("Shared::allowedChangePerSecond").toUint256();
-        require(0 < lAllowedChangePerSecond && lAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
-        allowedChangePerSecond = lAllowedChangePerSecond;
+        setAllowedChangePerSecond(lAllowedChangePerSecond);
     }
 
-    function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external onlyFactory {
+    function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) public onlyFactory {
         require(0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
         emit AllowedChangePerSecondChanged(allowedChangePerSecond, aAllowedChangePerSecond);
         allowedChangePerSecond = aAllowedChangePerSecond;
