@@ -3,10 +3,6 @@ pragma solidity 0.8.13;
 
 library Bytes32Lib
 {
-    function toBytes32(bytes4 aValue) internal pure returns (bytes32) {
-        return bytes32(uint256(uint32(aValue)));
-    }
-
     function toBytes32(bool aValue) internal pure returns (bytes32) {
         return aValue ? bytes32(uint256(1)) : bytes32(uint256(0));
     }

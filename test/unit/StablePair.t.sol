@@ -13,6 +13,8 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 contract StablePairTest is BaseTest
 {
+    using FactoryStoreLib for GenericFactory;
+
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTime);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
 
@@ -34,7 +36,7 @@ contract StablePairTest is BaseTest
     function testFactoryAmpTooLow() public
     {
         // arrange
-        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(StableMath.MIN_A - 1)));
+        _factory.write("SP::amplificationCoefficient", StableMath.MIN_A - 1);
 
         // act & assert
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
@@ -44,7 +46,7 @@ contract StablePairTest is BaseTest
     function testFactoryAmpTooHigh() public
     {
         // arrange
-        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(StableMath.MAX_A + 1)));
+        _factory.write("SP::amplificationCoefficient", StableMath.MAX_A + 1);
 
         // act & assert
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
@@ -542,7 +544,7 @@ contract StablePairTest is BaseTest
         uint256 lDMintAmt = bound(lCMintAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
 
         // arrange
-        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(lAmpCoeff)));
+        _factory.write("SP::amplificationCoefficient", lAmpCoeff);
         StablePair lPair = StablePair(_createPair(address(_tokenD), address(_tokenC), 1));
 
         // sanity

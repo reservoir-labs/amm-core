@@ -8,13 +8,17 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-abstract contract BaseTest is Test {
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP = 3_000;
-    uint256 public constant DEFAULT_SWAP_FEE_SP = 100;
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000;
-    uint256 public constant DEFAULT_AMP_COEFF   = 1_000;
+abstract contract BaseTest is Test
+{
+    using FactoryStoreLib for GenericFactory;
+
+    uint256 public constant INITIAL_MINT_AMOUNT  = 100e18;
+    uint256 public constant DEFAULT_SWAP_FEE_CP  = 3_000;    // 0.3%
+    uint256 public constant DEFAULT_SWAP_FEE_SP  = 100;      // 0.01%
+    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000;  // 25%
+    uint256 public constant DEFAULT_AMP_COEFF    = 1_000;
     uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
     GenericFactory  internal _factory       = new GenericFactory();
@@ -37,19 +41,19 @@ abstract contract BaseTest is Test {
     constructor()
     {
         // set shared variables
-        _factory.set(keccak256("Shared::platformFee"), bytes32(uint256(DEFAULT_PLATFORM_FEE))); // 25%
-        _factory.set(keccak256("Shared::platformFeeTo"), bytes32(uint256(uint160(_platformFeeTo))));
-        _factory.set(keccak256("Shared::defaultRecoverer"), bytes32(uint256(uint160(_recoverer))));
+        _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
+        _factory.write("Shared::platformFeeTo", _platformFeeTo);
+        _factory.write("Shared::defaultRecoverer", _recoverer);
         _factory.set(keccak256("Shared::allowedChangePerSecond"), bytes32(DEFAULT_ALLOWED_CHANGE_PER_SECOND));
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.set(keccak256("CP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_CP))); // 0.3%
+        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
-        _factory.set(keccak256("SP::swapFee"), bytes32(uint256(DEFAULT_SWAP_FEE_SP))); // 0.01%
-        _factory.set(keccak256("SP::amplificationCoefficient"), bytes32(uint256(DEFAULT_AMP_COEFF)));
+        _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
+        _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
         // initial mint
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
