@@ -13,7 +13,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    // 10 basis points per second which is 6% per minute and doubling of the price in 16 minutes
+    // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
 
     Observation[65536] public observations;
@@ -32,6 +32,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
 
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external onlyFactory {
         require(0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
+        emit AllowedChangePerSecondChanged(allowedChangePerSecond, aAllowedChangePerSecond);
         allowedChangePerSecond = aAllowedChangePerSecond;
     }
 

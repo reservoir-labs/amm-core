@@ -6,6 +6,8 @@ import { IOracleWriter } from "src/interfaces/IOracleWriter.sol";
 
 contract OracleWriterTest is BaseTest
 {
+    event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
+
     IOracleWriter[] internal _pairs;
     IOracleWriter   internal _pair;
 
@@ -32,6 +34,8 @@ contract OracleWriterTest is BaseTest
         _pair.setAllowedChangePerSecond(1);
 
         vm.prank(address(_factory));
+        vm.expectEmit(true, true, false, false);
+        emit AllowedChangePerSecondChanged(0.01e18, 1);
         _pair.setAllowedChangePerSecond(1);
     }
 

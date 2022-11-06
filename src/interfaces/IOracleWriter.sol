@@ -26,4 +26,6 @@ interface IOracleWriter {
     );
     function index() external view returns (uint16 rIndex);
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external;
+
+    event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 }
