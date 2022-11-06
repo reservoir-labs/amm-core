@@ -17,7 +17,7 @@ abstract contract BaseTest is Test
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
     uint256 public constant DEFAULT_SWAP_FEE_CP = 3_000;    // 0.3%
     uint256 public constant DEFAULT_SWAP_FEE_SP = 100;      // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000;
+    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
     uint256 public constant DEFAULT_AMP_COEFF   = 1_000;
 
     GenericFactory  internal _factory       = new GenericFactory();
@@ -40,13 +40,13 @@ abstract contract BaseTest is Test
     constructor()
     {
         // set shared variables
-        _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE); // 25%
+        _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::platformFeeTo", _platformFeeTo);
         _factory.write("Shared::defaultRecoverer", _recoverer);
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP); // 0.3%
+        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
