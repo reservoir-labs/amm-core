@@ -608,4 +608,49 @@ contract ConstantProductPairTest is BaseTest
         assertEq(lAccClampedLogPrice1, lAccRawLogPrice1);
         assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
+
+    function testOracle_ClampedPrice_AtLimit() external
+    {
+        // arrange
+        _stepTime(5);
+        // this swap amount would be such that the resulting spot price would be right at the limit of the clamp
+        uint256 lSwapAmt = 0.125109637135501e18;
+        _tokenB.mint(address(_constantProductPair), lSwapAmt);
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        // sanity
+        assertEq(_constantProductPair.prevClampedPrice(), 1e18);
+
+        // act
+        _stepTime(5);
+        _constantProductPair.sync();
+        console.log(_constantProductPair.prevClampedPrice());
+        // assert
+        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
+        // no diff between raw and clamped prices
+        assertEq(lAccClampedLogPrice1, lAccRawLogPrice1);
+        assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
+    }
+
+    function testOracle_ClampedPrice_OverLimit() external
+    {
+        // arrange
+        _stepTime(5);
+        // this swap amount would be such that the resulting spot price would be just over the limit of the clamp
+        uint256 lSwapAmt = 0.125109637135502e18;
+        _tokenB.mint(address(_constantProductPair), lSwapAmt);
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+
+        // sanity
+        assertEq(_constantProductPair.prevClampedPrice(), 1e18);
+
+        // act
+        _stepTime(5);
+        _constantProductPair.sync();
+        console.log(_constantProductPair.prevClampedPrice());
+        // assert
+        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
+        // no diff between raw and clamped prices
+        assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
+    }
 }
