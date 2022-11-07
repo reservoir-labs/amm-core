@@ -25,6 +25,8 @@ interface IOracleWriter {
         uint32 rTimestamp
     );
     function index() external view returns (uint16 rIndex);
+
+    function allowedChangePerSecond() external returns (uint256 rAllowedChangePerSecond);
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external;
 
     event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);

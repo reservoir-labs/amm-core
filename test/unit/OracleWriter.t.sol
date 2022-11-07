@@ -27,6 +27,12 @@ contract OracleWriterTest is BaseTest
         }
     }
 
+    function testAllowedChangePerSecond_Default() external allPairs
+    {
+        // assert
+        assertEq(_pair.allowedChangePerSecond(), DEFAULT_ALLOWED_CHANGE_PER_SECOND);
+    }
+
     function testSetAllowedChangePerSecond_OnlyFactory() external allPairs
     {
         // act & assert
@@ -37,6 +43,7 @@ contract OracleWriterTest is BaseTest
         vm.expectEmit(true, true, false, false);
         emit AllowedChangePerSecondChanged(0.01e18, 1);
         _pair.setAllowedChangePerSecond(1);
+        assertEq(_pair.allowedChangePerSecond(), 1);
     }
 
     function testSetAllowedChangePerSecond_TooLow() external allPairs
