@@ -12,21 +12,16 @@ library StableOracleMath {
     /**
      * @dev Calculates the spot price of token1/token0 for the stable pair
      */
-    function calcLogPriceAndLiq(
+    function calcLogPrice(
         uint256 amplificationParameter,
         uint256 reserve0,
         uint256 reserve1
-    ) internal pure returns (uint256 spotPrice, int112 logSpotPrice, int112 logLiq) {
-        uint256 liq;
-        (spotPrice, liq) = calcSpotPrice(amplificationParameter, reserve0, reserve1);
+    ) internal pure returns (uint256 spotPrice, int112 logSpotPrice) {
+        spotPrice = calcSpotPrice(amplificationParameter, reserve0, reserve1);
 
         int256 rawLogSpotPrice = LogCompression.toLowResLog(spotPrice);
         assert(rawLogSpotPrice >= type(int112).min && rawLogSpotPrice <= type(int112).max);
         logSpotPrice = int112(rawLogSpotPrice);
-
-        int256 rawLogLiq = LogCompression.toLowResLog(liq);
-        assert(rawLogLiq >= type(int112).min && rawLogLiq <= type(int112).max);
-        logLiq = int112(rawLogLiq);
     }
 
     /**
@@ -36,7 +31,7 @@ library StableOracleMath {
         uint256 amplificationParameter,
         uint256 reserve0,
         uint256 reserve1
-    ) internal pure returns (uint256 spotPrice, uint256 invariant) {
+    ) internal pure returns (uint256 spotPrice) {
         /**************************************************************************************************************
         //                                                                                                           //
         //                             2.a.x.y + a.y^2 + b.y                                                         //
@@ -50,7 +45,7 @@ library StableOracleMath {
         // S = sum of balances but x,y = 0 since x  and y are the only tokens                                        //
         **************************************************************************************************************/
 
-        invariant = StableMath._computeLiquidityFromAdjustedBalances(reserve0, reserve1, 2 * amplificationParameter);
+        uint256 invariant = StableMath._computeLiquidityFromAdjustedBalances(reserve0, reserve1, 2 * amplificationParameter);
 
         uint256 a = (amplificationParameter * 2) / StableMath.A_PRECISION;
         uint256 b = (invariant * a) - invariant;
@@ -67,5 +62,18 @@ library StableOracleMath {
         // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
         spotPrice = derivativeX.divWadUp(derivativeY);
+    }
+
+    /// @param reserve0 amount in native precision
+    /// @param reserve1 amount in native precision
+    function calcLogLiq(
+        uint256 reserve0,
+        uint256 reserve1
+    ) internal pure returns (int112 logLiq) {
+        uint256 sqrtK = Math.sqrt(reserve0 * reserve1);
+
+        int256 rawResult = LogCompression.toLowResLog(sqrtK);
+        assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
+        logLiq = int112(rawResult);
     }
 }
