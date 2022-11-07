@@ -653,8 +653,6 @@ contract ConstantProductPairTest is BaseTest
         assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
 
-
-
     function testOracle_CompareLiquidityTwoCurves_Balanced() external
     {
         // arrange
@@ -663,8 +661,8 @@ contract ConstantProductPairTest is BaseTest
         _stablePair.sync();
 
         // assert
-        (, int112 lAccLogLiqCP, ) = _constantProductPair.observations(0);
-        (, int112 lAccLogLiqSP, ) = _stablePair.observations(0);
+        (, , int56 lAccLogLiqCP, ) = _constantProductPair.observations(0);
+        (, , int56 lAccLogLiqSP, ) = _stablePair.observations(0);
 
         console.logInt(lAccLogLiqCP);
         console.logInt(lAccLogLiqSP);
@@ -697,8 +695,8 @@ contract ConstantProductPairTest is BaseTest
         lSP.sync();
 
         //
-        (, int112 lAccLogLiqCP, ) = lCP.observations(0);
-        (, int112 lAccLogLiqSP, ) = lSP.observations(0);
+        (, , int56 lAccLogLiqCP, ) = lCP.observations(0);
+        (, , int56 lAccLogLiqSP, ) = lSP.observations(0);
         uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
         uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
 
@@ -728,8 +726,8 @@ contract ConstantProductPairTest is BaseTest
         lSP.sync();
 
         //
-        (, int112 lAccLogLiqCP, ) = lCP.observations(0);
-        (, int112 lAccLogLiqSP, ) = lSP.observations(0);
+        (, , int56 lAccLogLiqCP, ) = lCP.observations(0);
+        (, , int56 lAccLogLiqSP, ) = lSP.observations(0);
         uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
         uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
 
