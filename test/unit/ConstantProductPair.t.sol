@@ -623,7 +623,7 @@ contract ConstantProductPairTest is BaseTest
         // act
         _stepTime(5);
         _constantProductPair.sync();
-        console.log(_constantProductPair.prevClampedPrice());
+
         // assert
         (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
         // no diff between raw and clamped prices
@@ -646,7 +646,7 @@ contract ConstantProductPairTest is BaseTest
         // act
         _stepTime(5);
         _constantProductPair.sync();
-        console.log(_constantProductPair.prevClampedPrice());
+
         // assert
         (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
         assertGt(lAccRawLogPrice1, lAccClampedLogPrice1);
