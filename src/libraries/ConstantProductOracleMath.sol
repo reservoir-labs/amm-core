@@ -31,11 +31,11 @@ library ConstantProductOracleMath {
     function calcLogPrice(
         uint256 reserve0,
         uint256 reserve1
-    ) internal pure returns (int112 logSpotPrice) {
+    ) internal pure returns (uint256 spotPrice, int112 logSpotPrice) {
         // scaled by 1e18
         // spotPrice will never be zero as we do a divWadUp
         // the minimum price would be 1 wei (1e-18)
-        uint256 spotPrice = reserve1.divWadUp(reserve0);
+        spotPrice = reserve1.divWadUp(reserve0);
 
         int256 rawResult = LogCompression.toLowResLog(spotPrice);
         assert(rawResult >= type(int112).min && rawResult <= type(int112).max);

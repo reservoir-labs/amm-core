@@ -14,11 +14,12 @@ abstract contract BaseTest is Test
 {
     using FactoryStoreLib for GenericFactory;
 
-    uint256 public constant INITIAL_MINT_AMOUNT  = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP  = 3_000;    // 0.3%
-    uint256 public constant DEFAULT_SWAP_FEE_SP  = 100;      // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000;  // 25%
-    uint256 public constant DEFAULT_AMP_COEFF    = 1_000;
+    uint256 public constant INITIAL_MINT_AMOUNT               = 100e18;
+    uint256 public constant DEFAULT_SWAP_FEE_CP               = 3_000;    // 0.3%
+    uint256 public constant DEFAULT_SWAP_FEE_SP               = 100;      // 0.01%
+    uint256 public constant DEFAULT_PLATFORM_FEE              = 250_000;  // 25%
+    uint256 public constant DEFAULT_AMP_COEFF                 = 1_000;
+    uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
     GenericFactory  internal _factory       = new GenericFactory();
 
@@ -43,6 +44,7 @@ abstract contract BaseTest is Test
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::platformFeeTo", _platformFeeTo);
         _factory.write("Shared::defaultRecoverer", _recoverer);
+        _factory.write("Shared::allowedChangePerSecond", DEFAULT_ALLOWED_CHANGE_PER_SECOND);
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
@@ -91,12 +93,20 @@ abstract contract BaseTest is Test
     function _writeObservation(
         ReservoirPair aPair,
         uint256 aIndex,
-        int112 aPrice,
-        int112 aLiq,
+        int112 aRawPrice,
+        int56 aClampedPrice,
+        int56 aLiq,
         uint32 aTime
     ) internal
     {
-        bytes32 lEncoded = bytes32(abi.encodePacked(aTime, aLiq, aPrice));
+        bytes32 lEncoded = bytes32(
+            bytes.concat(
+                bytes4(aTime),
+                bytes7(uint56(aLiq)),
+                bytes7(uint56(aClampedPrice)),
+                bytes14(uint112(aRawPrice))
+            )
+        );
 
         vm.record();
         aPair.observations(aIndex);

@@ -16,8 +16,9 @@ library StableOracleMath {
         uint256 amplificationParameter,
         uint256 reserve0,
         uint256 reserve1
-    ) internal pure returns (int112 logSpotPrice, int112 logLiq) {
-        (uint256 spotPrice, uint256 liq) = calcSpotPrice(amplificationParameter, reserve0, reserve1);
+    ) internal pure returns (uint256 spotPrice, int112 logSpotPrice, int112 logLiq) {
+        uint256 liq;
+        (spotPrice, liq) = calcSpotPrice(amplificationParameter, reserve0, reserve1);
 
         int256 rawLogSpotPrice = LogCompression.toLowResLog(spotPrice);
         assert(rawLogSpotPrice >= type(int112).min && rawLogSpotPrice <= type(int112).max);
