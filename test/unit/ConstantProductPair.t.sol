@@ -573,7 +573,6 @@ contract ConstantProductPairTest is BaseTest
         assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
 
         // assert
-        (int112 lAccRawLogPrice0, int56 lAccClampedLogPrice0, , uint32 lTimestamp0) = _constantProductPair.observations(0);
         (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
 
         // act
