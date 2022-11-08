@@ -1331,7 +1331,8 @@ contract StablePairTest is BaseTest
         (, , int256 lAccLiq, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq = LogCompression.fromLowResLog(lAccLiq / 5);
         // we check that it is within 0.01% of accuracy
-        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT * 2, 0.0001e18);
+        // sqrt(INITIAL_MINT_AMOUNT * INITIAL_MINT_AMOUNT) == INITIAL_MINT_AMOUNT
+        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
         _stepTime(5);
@@ -1340,7 +1341,7 @@ contract StablePairTest is BaseTest
         // assert
         (, , int256 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
-        assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT * 2 - lAmountToBurn, 0.0001e18);
+        assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
     }
 
     function testOracle_LiquidityAtMaximum() external
@@ -1367,7 +1368,7 @@ contract StablePairTest is BaseTest
 
         (, , int112 lAccLiq1, ) = _stablePair.observations(0);
         (, , int112 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
-        assertApproxEqRel(uint256(type(uint112).max) * 2, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
+        assertApproxEqRel(uint256(type(uint112).max), LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
     }
 
     function testOracle_ClampedPrice() external
