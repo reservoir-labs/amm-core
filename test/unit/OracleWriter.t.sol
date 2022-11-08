@@ -84,7 +84,7 @@ contract OracleWriterTest is BaseTest
         assertEq(lAccRawPriceCP, lAccRawPriceSP);
     }
 
-    function testOracle_CompareLiquidityTwoCurves_UnBalancedDiffPrice() external
+    function testOracle_SameReservesDiffPrice() external
     {
         // arrange
         ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
@@ -104,16 +104,17 @@ contract OracleWriterTest is BaseTest
         lSP.sync();
 
         // assert
-        (, , int56 lAccLogLiqCP, ) = lCP.observations(0);
-        (, , int56 lAccLogLiqSP, ) = lSP.observations(0);
+        (int112 lAccRawPriceCP, , int56 lAccLogLiqCP, ) = lCP.observations(0);
+        (int112 lAccRawPriceSP, , int56 lAccLogLiqSP, ) = lSP.observations(0);
         uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
         uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
         assertEq(lUncompressedLiqCP, lUncompressedLiqSP);
+        assertGt(lAccLogLiqSP, lAccRawPriceCP);
     }
 
     // this test case shows how different reserves in respective curves can result in the same price
     // and that for an oracle consumer, it would choose CP as the more trustworthy source as it has greater liquidity
-    function testOracle_SamePriceDiffReserves() external
+    function testOracle_SamePriceDiffLiq() external
     {
         // arrange
         ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
