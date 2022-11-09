@@ -389,7 +389,7 @@ contract StablePair is ReservoirPair {
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
         Observation storage previous = observations[index];
 
-        (uint256 currRawPrice, int112 currLogRawPrice, int112 currLogLiq) = StableOracleMath.calcLogPriceAndLiq(
+        (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(),
             _reserve0 * token0PrecisionMultiplier,
             _reserve1 * token1PrecisionMultiplier
@@ -399,6 +399,7 @@ contract StablePair is ReservoirPair {
         (uint256 currClampedPrice, int112 currLogClampedPrice) = _calcClampedPrice(
             currRawPrice, prevClampedPrice, timeElapsed
         );
+        int112 currLogLiq = StableOracleMath.calcLogLiq(_reserve0, _reserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {
