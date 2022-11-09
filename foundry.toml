@@ -11,8 +11,8 @@ verbosity = 3
 [profile.integration]
 match_path = "test/integration/*.sol"
 
-[profile.ci]
-fuzz-runs = 10_000
+[profile.ci.fuzz]
+runs = 10_000
 
 [rpc_endpoints]
 avalanche = "https://api.avax.network/ext/bc/C/rpc"
