@@ -1225,13 +1225,13 @@ contract StablePairTest is BaseTest
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
 
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
-        (uint256 lPrice1, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
+        uint256 lPrice1 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(5);
 
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
-        (uint256 lPrice2, )= StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
+        uint256 lPrice2 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
 
         _stepTime(5);
         _stablePair.sync();
@@ -1270,14 +1270,14 @@ contract StablePairTest is BaseTest
         _tokenA.mint(address(_stablePair), 100e18);
         _stablePair.swap(100e18, true, _bob, "");
         (uint256 lReserve0_1, uint256 lReserve1_1, ) = _stablePair.getReserves();
-        (uint256 lSpotPrice1, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
+        uint256 lSpotPrice1 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(10);
 
         // price = 0.0000936563
         _tokenA.mint(address(_stablePair), 200e18);
         _stablePair.swap(200e18, true, _bob, "");
         (uint256 lReserve0_2, uint256 lReserve1_2, ) = _stablePair.getReserves();
-        (uint256 lSpotPrice2, ) = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
+        uint256 lSpotPrice2 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);
         _stablePair.sync();
 
@@ -1331,7 +1331,8 @@ contract StablePairTest is BaseTest
         (, , int256 lAccLiq, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq = LogCompression.fromLowResLog(lAccLiq / 5);
         // we check that it is within 0.01% of accuracy
-        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT * 2, 0.0001e18);
+        // sqrt(INITIAL_MINT_AMOUNT * INITIAL_MINT_AMOUNT) == INITIAL_MINT_AMOUNT
+        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
         _stepTime(5);
@@ -1340,7 +1341,7 @@ contract StablePairTest is BaseTest
         // assert
         (, , int256 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
-        assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT * 2 - lAmountToBurn, 0.0001e18);
+        assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
     }
 
     function testOracle_LiquidityAtMaximum() external
@@ -1367,7 +1368,7 @@ contract StablePairTest is BaseTest
 
         (, , int112 lAccLiq1, ) = _stablePair.observations(0);
         (, , int112 lAccLiq2, ) = _stablePair.observations(_stablePair.index());
-        assertApproxEqRel(uint256(type(uint112).max) * 2, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
+        assertApproxEqRel(uint256(type(uint112).max), LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
     }
 
     function testOracle_ClampedPrice() external
