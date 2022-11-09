@@ -8,6 +8,9 @@ contract PairTest is BaseTest
 {
     using FactoryStoreLib for GenericFactory;
 
+    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
+    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
+
     IPair[] internal _pairs;
     IPair   internal _pair;
 
@@ -34,6 +37,22 @@ contract PairTest is BaseTest
         // act & assert
         vm.expectRevert();
         lStablePair.transfer(1 ether);
+    }
+
+    function testEmitEventOnCreation() public
+    {
+        // act & assert
+        vm.expectEmit(true, true, false, false);
+        emit SwapFeeChanged(0, DEFAULT_SWAP_FEE_CP);
+        vm.expectEmit(true, true, false, false);
+        emit PlatformFeeChanged(0, DEFAULT_PLATFORM_FEE);
+        _createPair(address(_tokenC), address(_tokenD), 0);
+
+        vm.expectEmit(true, true, false, false);
+        emit SwapFeeChanged(0, DEFAULT_SWAP_FEE_SP);
+        vm.expectEmit(true, true, false, false);
+        emit PlatformFeeChanged(0, DEFAULT_PLATFORM_FEE);
+        _createPair(address(_tokenC), address(_tokenD), 1);
     }
 
     function testSwapFee_UseDefault() public
@@ -166,7 +185,15 @@ contract PairTest is BaseTest
         _factory.write("Shared::platformFee", lNewDefaultPlatformFee);
 
         // act
+        vm.expectEmit(true, true, false, false);
+        emit SwapFeeChanged(
+            _pair == _constantProductPair ? DEFAULT_SWAP_FEE_CP : DEFAULT_SWAP_FEE_SP,
+            lNewDefaultSwapFee
+        );
         _pair.updateSwapFee();
+
+        vm.expectEmit(true, true, false, false);
+        emit PlatformFeeChanged(DEFAULT_PLATFORM_FEE, lNewDefaultPlatformFee);
         _pair.updatePlatformFee();
 
         // assert
