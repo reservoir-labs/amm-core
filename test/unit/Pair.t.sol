@@ -89,13 +89,16 @@ contract PairTest is BaseTest
         }
     }
 
-    function testSetSwapFeeForPair_BreachMaximum() public allPairs
+    function testSetSwapFeeForPair_BreachMaximum(uint256 aCustomSwapFee) public allPairs
     {
+        // assume
+        uint256 lCustomSwapFee = bound(aCustomSwapFee, _pair.MAX_SWAP_FEE() + 1, type(uint256).max - 1);
+
         // act & assert
         vm.expectRevert("P: INVALID_SWAP_FEE");
         _factory.rawCall(
             address(_pair),
-            abi.encodeWithSignature("setCustomSwapFee(uint256)", 400_000),
+            abi.encodeWithSignature("setCustomSwapFee(uint256)", lCustomSwapFee),
             0
         );
     }
@@ -144,8 +147,8 @@ contract PairTest is BaseTest
 
     function testSetPlatformFeeForPair_BreachMaximum(uint256 aPlatformFee) public allPairs
     {
-        // assume
-        uint256 lPlatformFee = bound(aPlatformFee, _pair.MAX_PLATFORM_FEE() + 1, type(uint256).max);
+        // assume - max is type(uint256).max - 1 as type(uint256).max is used to indicate absence of custom platformFee
+        uint256 lPlatformFee = bound(aPlatformFee, _pair.MAX_PLATFORM_FEE() + 1, type(uint256).max - 1);
 
         // act & assert
         vm.expectRevert("P: INVALID_PLATFORM_FEE");
