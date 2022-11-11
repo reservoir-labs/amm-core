@@ -42,9 +42,8 @@ library ConstantProductOracleMath {
         logSpotPrice = int112(rawResult);
     }
 
-    /*
-     * @param sqrtK square root of the product of the reserves multiplied
-     */
+    /// @param reserve0 amount in native precision
+    /// @param reserve1 amount in native precision
     function calcLogLiq(
         uint256 reserve0,
         uint256 reserve1

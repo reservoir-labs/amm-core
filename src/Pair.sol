@@ -57,14 +57,11 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token1  = aToken1;
 
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
-        swapFee     = factory.get(swapFeeName).toUint256();
-        platformFee = factory.read(PLATFORM_FEE_NAME).toUint256();
+        updateSwapFee();
+        updatePlatformFee();
 
         token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
         token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
-
-        require(swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
-        require(platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
     }
 
     function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
