@@ -9,6 +9,7 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import "../../src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test
 {
@@ -22,6 +23,7 @@ abstract contract BaseTest is Test
     uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
     GenericFactory  internal _factory       = new GenericFactory();
+    OracleCaller    internal _oracleCaller  = new OracleCaller();
 
     address         internal _recoverer     = _makeAddress("recoverer");
     address         internal _platformFeeTo = _makeAddress("platformFeeTo");
@@ -65,6 +67,10 @@ abstract contract BaseTest is Test
         _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
+
+        // set oracle caller
+        _factory.write("Shared::oracleCaller", address(_oracleCaller));
+        _oracleCaller.whitelistAddress(address(this), true);
     }
 
     function _makeAddress(string memory aName) internal returns (address)
@@ -109,7 +115,7 @@ abstract contract BaseTest is Test
         );
 
         vm.record();
-        aPair.observations(aIndex);
+        aPair.observation(aIndex);
         (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
         require(lAccesses.length == 1, "invalid number of accesses");
 

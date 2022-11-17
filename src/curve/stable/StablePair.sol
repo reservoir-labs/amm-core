@@ -11,7 +11,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
-import { ReservoirPair } from "src/ReservoirPair.sol";
+import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { IPair, Pair } from "src/Pair.sol";
 
 struct AmplificationData {
@@ -387,7 +387,7 @@ contract StablePair is ReservoirPair {
     //////////////////////////////////////////////////////////////////////////*/
 
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast) internal override {
-        Observation storage previous = observations[index];
+        Observation storage previous = _observations[index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(),
@@ -407,7 +407,7 @@ contract StablePair is ReservoirPair {
             int56 logAccClampedPrice = previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
             int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
             index += 1;
-            observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
+            _observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
         }
     }
 }

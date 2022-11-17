@@ -1,7 +1,7 @@
 pragma solidity 0.8.13;
 
 import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
-import { OracleWriter } from "src/oracle/OracleWriter.sol";
+import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 
 abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGuard {
