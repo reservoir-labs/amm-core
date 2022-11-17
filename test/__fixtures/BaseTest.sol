@@ -23,7 +23,7 @@ abstract contract BaseTest is Test
     uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
     GenericFactory  internal _factory       = new GenericFactory();
-    OracleCaller    internal _oracleCaller  = new OracleCaller();
+    OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
 
     address         internal _recoverer     = _makeAddress("recoverer");
     address         internal _platformFeeTo = _makeAddress("platformFeeTo");
@@ -57,6 +57,10 @@ abstract contract BaseTest is Test
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
+        // set oracle caller
+        _factory.write("Shared::oracleCaller", address(_oracleCaller));
+        _oracleCaller.whitelistAddress(address(this), true);
+
         // initial mint
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
         _tokenA.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
@@ -67,10 +71,6 @@ abstract contract BaseTest is Test
         _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
-
-        // set oracle caller
-        _factory.write("Shared::oracleCaller", address(_oracleCaller));
-        _oracleCaller.whitelistAddress(address(this), true);
     }
 
     function _makeAddress(string memory aName) internal returns (address)
@@ -115,10 +115,11 @@ abstract contract BaseTest is Test
         );
 
         vm.record();
-        aPair.observation(aIndex);
+        _oracleCaller.observation(aPair, aIndex);
         (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
-        require(lAccesses.length == 1, "invalid number of accesses");
+        console.log("length", lAccesses.length);
+        require(lAccesses.length == 2, "invalid number of accesses");
 
-        vm.store(address(aPair), lAccesses[0], lEncoded);
+        vm.store(address(aPair), lAccesses[1], lEncoded);
     }
 }

@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { IOracleWriter } from "src/interfaces/IOracleWriter.sol";
+import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
 contract OracleWriterTest is BaseTest
@@ -26,6 +26,16 @@ contract OracleWriterTest is BaseTest
             _;
             vm.revertTo(lBefore);
         }
+    }
+
+    function testObservation_NotOracleCaller(uint256 aIndex) external allPairs
+    {
+        // assume
+        uint256 lIndex = bound(aIndex, 0, type(uint16).max);
+
+        // act & assert
+        vm.expectRevert("OW: NOT_ORACLE_CALLER");
+        _pair.observation(lIndex);
     }
 
     function testAllowedChangePerSecond_Default() external allPairs
@@ -76,12 +86,12 @@ contract OracleWriterTest is BaseTest
         _stablePair.sync();
 
         // assert
-        (int112 lAccRawPriceCP, , int56 lAccLogLiqCP, ) = _constantProductPair.observations(0);
-        (int112 lAccRawPriceSP, , int56 lAccLogLiqSP, ) = _stablePair.observations(0);
-        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
-        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
+        Observation memory lObsCP = _oracleCaller.observation(_constantProductPair, 0);
+        Observation memory lObsSP = _oracleCaller.observation(_stablePair, 0);
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
         assertEq(lUncompressedLiqSP, lUncompressedLiqCP);
-        assertEq(lAccRawPriceCP, lAccRawPriceSP);
+        assertEq(lObsCP.logAccRawPrice, lObsSP.logAccRawPrice);
     }
 
     function testOracle_SameReservesDiffPrice() external
@@ -104,12 +114,12 @@ contract OracleWriterTest is BaseTest
         lSP.sync();
 
         // assert
-        (int112 lAccRawPriceCP, , int56 lAccLogLiqCP, ) = lCP.observations(0);
-        (int112 lAccRawPriceSP, , int56 lAccLogLiqSP, ) = lSP.observations(0);
-        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lAccLogLiqCP / 12);
-        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lAccLogLiqSP / 12);
+        Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
+        Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
         assertEq(lUncompressedLiqCP, lUncompressedLiqSP);
-        assertGt(lAccLogLiqSP, lAccRawPriceCP);
+        assertGt(lObsSP.logAccRawPrice, lObsCP.logAccRawPrice);
     }
 
     // this test case shows how different reserves in respective curves can result in the same price
@@ -132,12 +142,12 @@ contract OracleWriterTest is BaseTest
         _stepTime(12);
         lCP.sync();
         lSP.sync();
-        (int112 lAccRawPriceCP, , int56 lAccLiqCP, ) = lCP.observations(0);
-        (int112 lAccRawPriceSP, , int56 lAccLiqSP, ) = lSP.observations(0);
-        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lAccRawPriceCP / 12);
-        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lAccRawPriceSP / 12);
+        Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
+        Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
+        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
+        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
-        assertGt(lAccLiqCP, lAccLiqSP);
+        assertGt(lObsCP.logAccLiquidity, lObsSP.logAccLiquidity);
     }
 
     // this test case demonstrates how the two curves can have identical liquidity and price recorded by the oracle
@@ -159,11 +169,11 @@ contract OracleWriterTest is BaseTest
         _stepTime(12);
         lCP.sync();
         lSP.sync();
-        (int112 lAccRawPriceCP, , int56 lAccLiqCP, ) = lCP.observations(0);
-        (int112 lAccRawPriceSP, , int56 lAccLiqSP, ) = lSP.observations(0);
-        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lAccRawPriceCP / 12);
-        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lAccRawPriceSP / 12);
+        Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
+        Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
+        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
+        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
-        assertEq(lAccLiqCP, lAccLiqSP);
+        assertEq(lObsCP.logAccLiquidity, lObsSP.logAccLiquidity);
     }
 }

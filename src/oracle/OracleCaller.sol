@@ -3,12 +3,14 @@ pragma solidity ^0.8.0;
 import { Owned } from "solmate/auth/Owned.sol";
 import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 
-contract OracleCaller is Owned(msg.sender) {
+contract OracleCaller is Owned {
     event WhitelistChanged(address aCaller, bool aWhitelist);
 
     mapping(address => bool) public whitelist;
 
-    function observation(IOracleWriter aPair, uint256 aIndex) external returns (Observation memory rObservation) {
+    constructor(address aOwner) Owned(aOwner) {} // solhint-disable-line no-empty-blocks
+
+    function observation(IOracleWriter aPair, uint256 aIndex) external view returns (Observation memory rObservation) {
         require(whitelist[msg.sender], "OC: NOT_WHITELISTED");
         rObservation = aPair.observation(aIndex);
     }
