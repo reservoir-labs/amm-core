@@ -9,7 +9,7 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-import "../../src/oracle/OracleCaller.sol";
+import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test
 {

@@ -50,7 +50,8 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) public onlyFactory {
         require(0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
         emit AllowedChangePerSecondChanged(allowedChangePerSecond, aAllowedChangePerSecond);
-        allowedChangePerSecond = aAllowedChangePerSecond;}
+        allowedChangePerSecond = aAllowedChangePerSecond;
+    }
 
 
     function _calcClampedPrice(
