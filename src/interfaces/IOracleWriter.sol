@@ -19,6 +19,7 @@ struct Observation {
 
 interface IOracleWriter {
     function oracleCaller() external view returns (address);
+    function updateOracleCaller() external;
 
     function observation(uint256 aIndex) external view returns (Observation memory rObservation);
     function index() external view returns (uint16 rIndex);

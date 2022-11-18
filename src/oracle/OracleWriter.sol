@@ -34,7 +34,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     }
 
     constructor() {
-        setOracleCaller(factory.read(ORACLE_CALLER_NAME).toAddress());
+        updateOracleCaller();
         setAllowedChangePerSecond(factory.read(ALLOWED_CHANGE_NAME).toUint256());
     }
 
@@ -42,9 +42,12 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         rObservation = _observations[aIndex];
     }
 
-    function setOracleCaller(address aNewCaller) public onlyFactory {
-        emit OracleCallerChanged(oracleCaller, aNewCaller);
-        oracleCaller = aNewCaller;
+    function updateOracleCaller() public {
+        address lNewCaller = factory.read(ORACLE_CALLER_NAME).toAddress();
+        if (lNewCaller != oracleCaller) {
+            emit OracleCallerChanged(oracleCaller, lNewCaller);
+            oracleCaller = lNewCaller;
+        }
     }
 
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) public onlyFactory {
@@ -52,7 +55,6 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         emit AllowedChangePerSecondChanged(allowedChangePerSecond, aAllowedChangePerSecond);
         allowedChangePerSecond = aAllowedChangePerSecond;
     }
-
 
     function _calcClampedPrice(
         uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed

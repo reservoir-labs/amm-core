@@ -4,9 +4,14 @@ import "test/__fixtures/BaseTest.sol";
 
 import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { GenericFactory } from "src/GenericFactory.sol";
 
 contract OracleWriterTest is BaseTest
 {
+    using FactoryStoreLib for GenericFactory;
+
+    event OracleCallerChanged(address oldCaller, address newCaller);
     event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 
     IOracleWriter[] internal _pairs;
@@ -36,6 +41,33 @@ contract OracleWriterTest is BaseTest
         // act & assert
         vm.expectRevert("OW: NOT_ORACLE_CALLER");
         _pair.observation(lIndex);
+    }
+
+    function testUpdateOracleCaller() external allPairs
+    {
+        // arrange
+        address lNewOracleCaller = address(0x555);
+        _factory.write("Shared::oracleCaller", lNewOracleCaller);
+
+        // act
+        vm.expectEmit(true, true, false, false);
+        emit OracleCallerChanged(address(_oracleCaller), lNewOracleCaller);
+        _pair.updateOracleCaller();
+
+        // assert
+        assertEq(_pair.oracleCaller(), lNewOracleCaller);
+    }
+
+    function testUpdateOracleCaller_NoChange() external allPairs
+    {
+        // arrange
+        address lBefore = _pair.oracleCaller();
+
+        // act
+        _pair.updateOracleCaller();
+
+        // assert
+        assertEq(_pair.oracleCaller(), lBefore);
     }
 
     function testAllowedChangePerSecond_Default() external allPairs
