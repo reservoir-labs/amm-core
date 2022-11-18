@@ -23,7 +23,6 @@ abstract contract BaseTest is Test
     uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
     GenericFactory  internal _factory       = new GenericFactory();
-    OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
 
     address         internal _recoverer     = _makeAddress("recoverer");
     address         internal _platformFeeTo = _makeAddress("platformFeeTo");
@@ -39,6 +38,8 @@ abstract contract BaseTest is Test
 
     ConstantProductPair   internal _constantProductPair;
     StablePair            internal _stablePair;
+
+    OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
 
     constructor()
     {
@@ -117,7 +118,6 @@ abstract contract BaseTest is Test
         vm.record();
         _oracleCaller.observation(aPair, aIndex);
         (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
-        console.log("length", lAccesses.length);
         require(lAccesses.length == 2, "invalid number of accesses");
 
         vm.store(address(aPair), lAccesses[1], lEncoded);
