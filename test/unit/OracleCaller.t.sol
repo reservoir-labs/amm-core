@@ -5,6 +5,7 @@ import "test/__fixtures/BaseTest.sol";
 import { IOracleWriter } from "src/interfaces/IOracleWriter.sol";
 
 contract OracleCallerTest is BaseTest {
+    event WhitelistChanged(address caller, bool whitelist);
 
     IOracleWriter[] internal _pairs;
     IOracleWriter   internal _pair;
@@ -35,5 +36,25 @@ contract OracleCallerTest is BaseTest {
         vm.expectRevert("OC: NOT_WHITELISTED");
         _oracleCaller.observation(_pair, lIndex);
         vm.stopPrank();
+    }
+
+    function testWhitelistAddress() external allPairs
+    {
+        // act & assert
+        vm.expectEmit(true, true, false, false);
+        emit WhitelistChanged(_alice, true);
+        _oracleCaller.whitelistAddress(_alice, true);
+
+        // alice can call observation without reverting now
+        vm.prank(_alice);
+        _oracleCaller.observation(_pair, 0);
+    }
+
+    function testWhitelistAddress_NotOwner() external
+    {
+        // act & assert
+        vm.prank(_bob);
+        vm.expectRevert("UNAUTHORIZED");
+        _oracleCaller.whitelistAddress(_cal, true);
     }
 }

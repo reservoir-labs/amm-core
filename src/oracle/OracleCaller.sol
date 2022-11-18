@@ -4,7 +4,7 @@ import { Owned } from "solmate/auth/Owned.sol";
 import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 
 contract OracleCaller is Owned {
-    event WhitelistChanged(address aCaller, bool aWhitelist);
+    event WhitelistChanged(address caller, bool whitelist);
 
     mapping(address => bool) public whitelist;
 
