@@ -18,7 +18,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     string internal constant ALLOWED_CHANGE_NAME = "Shared::allowedChangePerSecond";
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
-    Observation[65536] public _observations;
+    Observation[65536] internal _observations;
     uint16 public index = type(uint16).max;
 
     // maximum allowed rate of change of price per second
@@ -28,17 +28,13 @@ abstract contract OracleWriter is Pair, IOracleWriter {
 
     address public oracleCaller;
 
-    modifier onlyOracleCaller() {
-        require(msg.sender == oracleCaller, "OW: NOT_ORACLE_CALLER");
-        _;
-    }
-
     constructor() {
         updateOracleCaller();
         setAllowedChangePerSecond(factory.read(ALLOWED_CHANGE_NAME).toUint256());
     }
 
-    function observation(uint256 aIndex) external view onlyOracleCaller returns (Observation memory rObservation) {
+    function observation(uint256 aIndex) external view returns (Observation memory rObservation) {
+        require(msg.sender == oracleCaller, "OW: NOT_ORACLE_CALLER");
         rObservation = _observations[aIndex];
     }
 

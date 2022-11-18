@@ -16,9 +16,7 @@ contract OracleCaller is Owned {
     }
 
     function whitelistAddress(address aCaller, bool aWhitelist) external onlyOwner {
-        if (whitelist[aCaller] != aWhitelist) {
-            whitelist[aCaller] = aWhitelist;
-            emit WhitelistChanged(aCaller, aWhitelist);
-        }
+        whitelist[aCaller] = aWhitelist;
+        emit WhitelistChanged(aCaller, aWhitelist);
     }
 }
