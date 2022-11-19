@@ -9,6 +9,7 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test
 {
@@ -38,6 +39,8 @@ abstract contract BaseTest is Test
     ConstantProductPair   internal _constantProductPair;
     StablePair            internal _stablePair;
 
+    OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
+
     constructor()
     {
         // set shared variables
@@ -54,6 +57,10 @@ abstract contract BaseTest is Test
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+
+        // set oracle caller
+        _factory.write("Shared::oracleCaller", address(_oracleCaller));
+        _oracleCaller.whitelistAddress(address(this), true);
 
         // initial mint
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
@@ -109,10 +116,10 @@ abstract contract BaseTest is Test
         );
 
         vm.record();
-        aPair.observations(aIndex);
+        _oracleCaller.observation(aPair, aIndex);
         (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
-        require(lAccesses.length == 1, "invalid number of accesses");
+        require(lAccesses.length == 2, "invalid number of accesses");
 
-        vm.store(address(aPair), lAccesses[0], lEncoded);
+        vm.store(address(aPair), lAccesses[1], lEncoded);
     }
 }

@@ -2,7 +2,7 @@ pragma solidity 0.8.13;
 
 import { stdMath } from "forge-std/Test.sol";
 
-import { IOracleWriter } from "src/interfaces/IOracleWriter.sol";
+import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
@@ -16,8 +16,9 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
     string internal constant ALLOWED_CHANGE_NAME = "Shared::allowedChangePerSecond";
+    string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
-    Observation[65536] public observations;
+    Observation[65536] internal _observations;
     uint16 public index = type(uint16).max;
 
     // maximum allowed rate of change of price per second
@@ -25,9 +26,24 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     uint256 public allowedChangePerSecond;
     uint256 public prevClampedPrice;
 
+    address public oracleCaller;
+
     constructor() {
-        uint256 lAllowedChangePerSecond = factory.read(ALLOWED_CHANGE_NAME).toUint256();
-        setAllowedChangePerSecond(lAllowedChangePerSecond);
+        updateOracleCaller();
+        setAllowedChangePerSecond(factory.read(ALLOWED_CHANGE_NAME).toUint256());
+    }
+
+    function observation(uint256 aIndex) external view returns (Observation memory rObservation) {
+        require(msg.sender == oracleCaller, "OW: NOT_ORACLE_CALLER");
+        rObservation = _observations[aIndex];
+    }
+
+    function updateOracleCaller() public {
+        address lNewCaller = factory.read(ORACLE_CALLER_NAME).toAddress();
+        if (lNewCaller != oracleCaller) {
+            emit OracleCallerChanged(oracleCaller, lNewCaller);
+            oracleCaller = lNewCaller;
+        }
     }
 
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) public onlyFactory {

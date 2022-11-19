@@ -11,6 +11,7 @@ import { AssetManager } from "test/__mocks/AssetManager.sol";
 import { Math } from "src/libraries/Math.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
+import { Observation } from "src/interfaces/IOracleWriter.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
@@ -308,29 +309,29 @@ contract ConstantProductPairTest is BaseTest
         // sanity
         assertEq(_constantProductPair.index(), 1);
 
-        (int112 lLogPriceAcc, , int112 lLogLiqAcc, uint32 lTimestamp) = _constantProductPair.observations(0);
-        assertTrue(lLogPriceAcc == 0);
-        assertTrue(lLogLiqAcc != 0);
-        assertTrue(lTimestamp != 0);
+        Observation memory lObs = _oracleCaller.observation(_constantProductPair, 0);
+        assertTrue(lObs.logAccRawPrice == 0);
+        assertTrue(lObs.logAccLiquidity != 0);
+        assertTrue(lObs.timestamp != 0);
 
-        (lLogPriceAcc, , lLogLiqAcc, lTimestamp) = _constantProductPair.observations(1);
-        assertTrue(lLogPriceAcc != 0);
-        assertTrue(lLogLiqAcc != 0);
-        assertTrue(lTimestamp != 0);
+        lObs = _oracleCaller.observation(_constantProductPair, 1);
+        assertTrue(lObs.logAccRawPrice != 0);
+        assertTrue(lObs.logAccLiquidity != 0);
+        assertTrue(lObs.timestamp != 0);
 
         // act
         _writeObservation(_constantProductPair, 0, int112(1337), int56(-1337), int56(-1337), uint32(666));
 
         // assert
-        (lLogPriceAcc, , lLogLiqAcc, lTimestamp) = _constantProductPair.observations(0);
-        assertEq(lLogPriceAcc, int112(1337));
-        assertEq(lLogLiqAcc, int112(-1337));
-        assertEq(lTimestamp, uint32(666));
+        lObs = _oracleCaller.observation(_constantProductPair, 0);
+        assertEq(lObs.logAccRawPrice, int112(1337));
+        assertEq(lObs.logAccLiquidity, int112(-1337));
+        assertEq(lObs.timestamp, uint32(666));
 
-        (lLogPriceAcc, , lLogLiqAcc, lTimestamp) = _constantProductPair.observations(1);
-        assertTrue(lLogPriceAcc != 0);
-        assertTrue(lLogLiqAcc != 0);
-        assertTrue(lTimestamp != 0);
+        lObs = _oracleCaller.observation(_constantProductPair, 1);
+        assertTrue(lObs.logAccRawPrice != 0);
+        assertTrue(lObs.logAccLiquidity != 0);
+        assertTrue(lObs.timestamp != 0);
     }
 
     function testOracle_OverflowAccPrice() public
@@ -344,7 +345,7 @@ contract ConstantProductPairTest is BaseTest
             0,
             uint32(block.timestamp)
         );
-        (int112 lPrevAccPrice, , , ) = _constantProductPair.observations(_constantProductPair.index());
+        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
 
         // act
         uint256 lAmountToSwap = 1e18;
@@ -355,8 +356,8 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert - when it overflows it goes from a very positive number to a very negative number
-        (int112 lCurrAccPrice, , , ) = _constantProductPair.observations(_constantProductPair.index());
-        assertLt(lCurrAccPrice, lPrevAccPrice);
+        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
 
     function testOracle_OverflowAccLiquidity() public
@@ -370,15 +371,15 @@ contract ConstantProductPairTest is BaseTest
             type(int56).max,
             uint32(block.timestamp)
         );
-        (, , int112 lPrevAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
+        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
 
         // act
         _stepTime(5);
         _constantProductPair.sync();
 
         // assert
-        (, , int112 lCurrAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
-        assertLt(lCurrAccLiq, lPrevAccLiq);
+        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        assertLt(lCurrObs.logAccLiquidity, lPrevObs.logAccLiquidity);
     }
 
     function testOracle_CorrectPrice() public
@@ -404,17 +405,17 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (int lAccPrice1, , , uint32 lTimestamp1) = _constantProductPair.observations(0);
-        (int lAccPrice2, , , uint32 lTimestamp2) = _constantProductPair.observations(1);
-        (int lAccPrice3, , , uint32 lTimestamp3) = _constantProductPair.observations(2);
+        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
+        Observation memory lObs2 = _oracleCaller.observation(_constantProductPair, 2);
 
         assertApproxEqRel(
-            LogCompression.fromLowResLog((lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1)),
+            LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs1.timestamp - lObs0.timestamp)),
             lPrice1,
             0.0001e18
         );
         assertApproxEqRel(
-            LogCompression.fromLowResLog((lAccPrice3 - lAccPrice1) / int32(lTimestamp3 - lTimestamp1)),
+            LogCompression.fromLowResLog((lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)),
             Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
         );
@@ -433,8 +434,8 @@ contract ConstantProductPairTest is BaseTest
         lPair.sync();
 
         // assert
-        (int112 accLogPrice, , ,) = lPair.observations(0);
-        assertApproxEqRel(LogCompression.fromLowResLog(accLogPrice / 5), 0.5e18, 0.0001e18);
+        Observation memory lObs = _oracleCaller.observation(lPair, 0);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logAccRawPrice / 5), 0.5e18, 0.0001e18);
     }
 
     function testOracle_SimplePrices() external
@@ -462,14 +463,14 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (int lAccPrice1, , , uint32 lTimestamp1) = _constantProductPair.observations(0);
-        (int lAccPrice2, , , uint32 lTimestamp2) = _constantProductPair.observations(1);
-        (int lAccPrice3, , , uint32 lTimestamp3) = _constantProductPair.observations(2);
+        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
+        Observation memory lObs2 = _oracleCaller.observation(_constantProductPair, 2);
 
-        assertEq(lAccPrice1, LogCompression.toLowResLog(1e18) * 10, "1");
-        assertEq(lAccPrice2, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10, "2");
+        assertEq(lObs0.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
+        assertEq(lObs1.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10, "2");
         assertEq(
-            lAccPrice3,
+            lObs2.logAccRawPrice,
             LogCompression.toLowResLog(1e18) * 10
             + LogCompression.toLowResLog(0.25e18) * 10
             + LogCompression.toLowResLog(0.0625e18) * 10,
@@ -478,19 +479,19 @@ contract ConstantProductPairTest is BaseTest
 
         // Price for observation window 1-2
         assertApproxEqRel(
-            LogCompression.fromLowResLog((lAccPrice2 - lAccPrice1) / int32(lTimestamp2 - lTimestamp1)),
+            LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs1.timestamp - lObs0.timestamp)),
             0.25e18,
             0.0001e18
         );
         // Price for observation window 2-3
         assertApproxEqRel(
-            LogCompression.fromLowResLog((lAccPrice3 - lAccPrice2) / int32(lTimestamp3 - lTimestamp2)),
+            LogCompression.fromLowResLog((lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(lObs2.timestamp - lObs1.timestamp)),
             0.0625e18,
             0.0001e18
         );
         // Price for observation window 1-3
         assertApproxEqRel(
-            LogCompression.fromLowResLog((lAccPrice3 - lAccPrice1) / int32(lTimestamp3 - lTimestamp1)),
+            LogCompression.fromLowResLog((lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)),
             0.125e18,
             0.0001e18
         );
@@ -509,8 +510,8 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.burn(address(this));
 
         // assert
-        (, , int256 lAccLiq, ) = _constantProductPair.observations(_constantProductPair.index());
-        uint256 lAverageLiq = LogCompression.fromLowResLog(lAccLiq / 5);
+        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
         // we check that it is within 0.01% of accuracy
         assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
 
@@ -520,8 +521,8 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (, , int256 lAccLiq2, ) = _constantProductPair.observations(_constantProductPair.index());
-        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lAccLiq2 - lAccLiq) / 5);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
     }
 
@@ -549,41 +550,9 @@ contract ConstantProductPairTest is BaseTest
         uint256 lTotalSupply = _constantProductPair.totalSupply();
         assertEq(lTotalSupply, type(uint112).max);
 
-        (, , int112 lAccLiq1, ) = _constantProductPair.observations(0);
-        (, , int112 lAccLiq2, ) = _constantProductPair.observations(_constantProductPair.index());
-        assertApproxEqRel(type(uint112).max, LogCompression.fromLowResLog( (lAccLiq2 - lAccLiq1) / 5), 0.0001e18);
-    }
-
-    function testOracle_ClampedPrice() public
-    {
-        // arrange
-        _stepTime(5);
-        uint256 lSwapAmt = 100e18;
-        _tokenB.mint(address(_constantProductPair), lSwapAmt);
-        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
-
-        // sanity
-        assertEq(_constantProductPair.prevClampedPrice(), 1e18);
-
-        // act
-        _stepTime(5);
-        _constantProductPair.sync();
-
-        // sanity
-        assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
-
-        // assert
-        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
-
-        // act
-        _stepTime(5);
-        _constantProductPair.sync();
-
-        // assert - make sure that the prevClampedPrice is keeping up
-        (int112 lAccRawLogPrice2, int56 lAccClampedLogPrice2, , uint32 lTimestamp2) = _constantProductPair.observations(2);
-        assertEq(_constantProductPair.prevClampedPrice(), 1.00500625e18);
-        assertApproxEqRel(LogCompression.fromLowResLog((lAccRawLogPrice2 - lAccRawLogPrice1) / 5), 3.994e18, 0.0001e18);
-        assertApproxEqRel(LogCompression.fromLowResLog((lAccClampedLogPrice2 - lAccClampedLogPrice1) / 5), 1.00500625e18, 0.0001e18);
+        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        assertApproxEqRel(type(uint112).max, LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5), 0.0001e18);
     }
 
     function testOracle_ClampedPrice_NoDiffWithinLimit() external
@@ -602,9 +571,9 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
         // no diff between raw and clamped prices
-        assertEq(lAccClampedLogPrice1, lAccRawLogPrice1);
+        assertEq(lObs1.logAccClampedPrice, lObs1.logAccRawPrice);
         assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
 
@@ -625,9 +594,9 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
         // no diff between raw and clamped prices
-        assertEq(lAccClampedLogPrice1, lAccRawLogPrice1);
+        assertEq(lObs1.logAccClampedPrice, lObs1.logAccRawPrice);
         assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
 
@@ -648,8 +617,8 @@ contract ConstantProductPairTest is BaseTest
         _constantProductPair.sync();
 
         // assert
-        (int112 lAccRawLogPrice1, int56 lAccClampedLogPrice1, , uint32 lTimestamp1) = _constantProductPair.observations(1);
-        assertGt(lAccRawLogPrice1, lAccClampedLogPrice1);
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
+        assertGt(lObs1.logAccRawPrice, lObs1.logAccClampedPrice);
         assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
 }
