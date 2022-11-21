@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import { ReentrancyGuard } from "@openzeppelin/security/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 import { Ownable } from "@openzeppelin/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
