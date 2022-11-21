@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import "src/libraries/MathUtils.sol";
 import { stdMath } from "forge-std/Test.sol";

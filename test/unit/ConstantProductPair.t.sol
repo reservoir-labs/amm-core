@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 import { stdStorage } from "forge-std/Test.sol";

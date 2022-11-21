@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { IUniswapV2ERC20 } from "src/interfaces/IUniswapV2ERC20.sol";

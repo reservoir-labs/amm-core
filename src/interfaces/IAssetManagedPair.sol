@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IPair } from "src/interfaces/IPair.sol";

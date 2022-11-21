@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
 import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";

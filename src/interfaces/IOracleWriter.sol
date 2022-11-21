@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 struct Observation {
     // natural log (ln) of the raw accumulated price (token1/token0)
