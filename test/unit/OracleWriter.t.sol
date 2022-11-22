@@ -151,7 +151,12 @@ contract OracleWriterTest is BaseTest
         uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
         uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
         assertEq(lUncompressedLiqCP, lUncompressedLiqSP);
-        assertGt(lObsSP.logAccRawPrice, lObsCP.logAccRawPrice);
+        if (lCP.token0() == address(_tokenB)) {
+            assertGt(lObsSP.logAccRawPrice, lObsCP.logAccRawPrice);
+        }
+        else {
+            assertGt(lObsCP.logAccRawPrice, lObsSP.logAccRawPrice);
+        }
     }
 
     // this test case shows how different reserves in respective curves can result in the same price

@@ -152,7 +152,12 @@ contract ConstantProductPairTest is BaseTest
 
         // act
         _tokenB.mint(address(lPair), lSwapAmount);
-        lPair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lPair.swap(
+            lPair.token0() == address(_tokenB) ? int256(lSwapAmount) : -int256(lSwapAmount),
+            true,
+            address(this),
+            bytes("")
+        );
 
         // assert
         assertEq(_tokenC.balanceOf(address(this)), 0.997e18);
