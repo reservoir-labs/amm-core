@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -119,24 +120,23 @@ contract StablePair is ReservoirPair {
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) public nonReentrant returns (uint256 liquidity) {
+    function mint(uint256 token0Amt, uint256 token1Amt, address to, bytes calldata data) public nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
-        (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
-        uint256 newLiq = _computeLiquidity(balance0, balance1);
-        uint256 amount0 = balance0 - _reserve0;
-        uint256 amount1 = balance1 - _reserve1;
+        uint256 newLiq = _computeLiquidity(balance0 + token0Amt, balance1 + token1Amt);
+        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(token0Amt, token1Amt, balance0, balance1);
+        // where should we add the fee to?
+//        token0Amt -= uint112(fee0);
+//        token1Amt -= uint112(fee1);
 
-        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, _reserve0, _reserve1);
-        _reserve0 += uint112(fee0);
-        _reserve1 += uint112(fee1);
-
-        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
+        // would this be a challenge if the tokens keeps getting rebased? If the rebase keeps going up then the platformFee would be more than expected
+        // if the token supply shrinks then the platform might not get the fee it deserves
+        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(balance0, balance1);
 
         if (_totalSupply == 0) {
-            require(amount0 > 0 && amount1 > 0, "SP: INVALID_AMOUNTS");
+            require(token0Amt > 0 && token1Amt > 0, "SP: INVALID_AMOUNTS");
             liquidity = newLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
@@ -144,7 +144,14 @@ contract StablePair is ReservoirPair {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        _update(balance0, balance1, _reserve0, _reserve1);
+
+        IReservoirCallee(msg.sender).mintCallback(token0Amt, token1Amt, data);
+
+        (uint256 newBalance0, uint256 newBalance1) = _balance();
+
+        require(newBalance0 >= balance0 + token0Amt && newBalance1 >= balance1 + token1Amt, "SP: INSUFFICIENT_INPUT_TOKENS");
+
+        _update(newBalance0, newBalance1, uint112(balance0), uint112(balance1));
 
         // casting is safe as the max invariant would be 2 * uint112 (* uint60 in the case of tokens with 0 decimal places)
         // which results in 112 + 60 + 1 = 173 bits
@@ -152,7 +159,7 @@ contract StablePair is ReservoirPair {
         lastInvariant = uint192(newLiq);
         lastInvariantAmp = _getCurrentAPrecise();
 
-        emit Mint(msg.sender, amount0, amount1);
+//        emit Mint(msg.sender, token0Amt, token1Amt);
 
         _managerCallback();
     }
@@ -161,22 +168,25 @@ contract StablePair is ReservoirPair {
     function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
-        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+        (uint256 balance0, uint256 balance1) = _balance();
         uint256 liquidity = balanceOf[address(this)];
 
-        (uint256 _totalSupply, ) = _mintFee(_reserve0, _reserve1);
+        (uint256 _totalSupply, ) = _mintFee(balance0, balance1);
 
-        amount0 = (liquidity * _reserve0) / _totalSupply;
-        amount1 = (liquidity * _reserve1) / _totalSupply;
+        amount0 = (liquidity * balance0) / _totalSupply;
+        amount1 = (liquidity * balance1) / _totalSupply;
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
-        _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
+        _checkedTransfer(token0, to, amount0, balance0, balance1);
+        _checkedTransfer(token1, to, amount1, balance0, balance1);
 
-        _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
+        uint256 newBalance0 = _totalToken0();
+        uint256 newBalance1 = _totalToken1();
 
-        lastInvariant = uint192(_computeLiquidity(reserve0, reserve1));
+        _update(newBalance0, newBalance1, uint112(balance0), uint112(balance1));
+
+        lastInvariant = uint192(_computeLiquidity(newBalance0, newBalance1));
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
@@ -187,7 +197,7 @@ contract StablePair is ReservoirPair {
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external nonReentrant returns (uint256 amountOut) {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
+        (uint256 balance0, uint256 balance1) = _balance();
         uint256 amountIn;
         address tokenOut;
 
@@ -197,13 +207,13 @@ contract StablePair is ReservoirPair {
             if (amount > 0) {
                 tokenOut = token1;
                 amountIn = uint256(amount);
-                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+                amountOut = _getAmountOut(amountIn, balance0, balance1, true);
             }
             // swap token1 exact in for token0 variable out
             else {
                 tokenOut = token0;
                 amountIn = uint256(-amount);
-                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+                amountOut = _getAmountOut(amountIn, balance0, balance1, false);
             }
         }
         // exact out
@@ -211,40 +221,37 @@ contract StablePair is ReservoirPair {
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
                 amountOut = uint256(amount);
-                require(amountOut < _reserve0, "SP: NOT_ENOUGH_LIQ");
+                require(amountOut < balance0, "SP: NOT_ENOUGH_LIQ");
                 tokenOut = token0;
-                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, true);
+                amountIn = _getAmountIn(amountOut, balance0, balance1, true);
             }
             // swap token0 variable in for token1 exact out
             else {
                 amountOut = uint256(-amount);
-                require(amountOut < _reserve1, "SP: NOT_ENOUGH_LIQ");
+                require(amountOut < balance1, "SP: NOT_ENOUGH_LIQ");
                 tokenOut = token1;
-                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
+                amountIn = _getAmountIn(amountOut, balance0, balance1, false);
             }
         }
 
-        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
+        _checkedTransfer(tokenOut, to, amountOut, uint112(balance0), uint112(balance1));
 
-        if (data.length > 0) {
-            IReservoirCallee(to).reservoirCall(
-                msg.sender,
-                tokenOut == token0 ? amountOut : 0,
-                tokenOut == token1 ? amountOut : 0,
-                data
-            );
-        }
+        IReservoirCallee(to).swapCallback(
+            tokenOut == token0 ? amountOut : 0,
+            tokenOut == token1 ? amountOut : 0,
+            data
+        );
 
-        uint256 balance0 = _totalToken0();
-        uint256 balance1 = _totalToken1();
+        uint256 newBalance0 = _totalToken0();
+        uint256 newBalance1 = _totalToken1();
 
         uint256 actualAmountIn =
             tokenOut == token0
-            ? balance1 - _reserve1
-            : balance0 - _reserve0;
+            ? newBalance1 - balance1
+            : newBalance0 - balance0;
         require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
-        _update(balance0, balance1, _reserve0, _reserve1);
+        _update(newBalance0, newBalance1, uint112(balance0), uint112(balance1));
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
@@ -363,17 +370,6 @@ contract StablePair is ReservoirPair {
 
     function getCurrentAPrecise() external view returns (uint64) {
         return _getCurrentAPrecise();
-    }
-
-    function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
-
-        if (tokenIn == token0) {
-            finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
-        } else {
-            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
-        }
     }
 
     function getVirtualPrice() public view returns (uint256 virtualPrice) {

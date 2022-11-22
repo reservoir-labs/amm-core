@@ -1,5 +1,6 @@
 pragma solidity 0.8.13;
 
 interface IReservoirCallee {
-    function reservoirCall(address sender, uint amount0, uint amount1, bytes calldata data) external;
+    function swapCallback(uint amount0Out, uint amount1Out, bytes calldata data) external;
+    function mintCallback(uint amount0Owed, uint amount1Owed, bytes calldata data) external;
 }

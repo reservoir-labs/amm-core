@@ -20,7 +20,7 @@ interface IPair is IUniswapV2ERC20 {
     function skim(address to) external;
     function sync() external;
 
-    function mint(address to) external returns (uint256 liquidity);
+    function mint(uint256 token0Amt, uint256 token1Amt, address to, bytes calldata data) external returns (uint256 liquidity);
     function burn(address to) external returns (uint256 amount0, uint256 amount1);
     /**
      * @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much slippage.

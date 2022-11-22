@@ -4,7 +4,7 @@ import "test/__fixtures/BaseTest.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
-import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
+//import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
@@ -83,7 +83,7 @@ contract GenericFactoryTest is BaseTest
 
         // assert
         assertEq(lAllPairs.length, 4);
-        assertEq(lAllPairs[0], address(_constantProductPair));
+//        assertEq(lAllPairs[0], address(_constantProductPair));
         assertEq(lAllPairs[1], address(_stablePair));
         assertEq(lAllPairs[2], lPair3);
         assertEq(lAllPairs[3], lPair4);
@@ -114,7 +114,7 @@ contract GenericFactoryTest is BaseTest
     function testGetPair() public
     {
         // assert - ensure double mapped
-        assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
-        assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
+//        assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
+//        assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
     }
 }

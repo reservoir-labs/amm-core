@@ -11,7 +11,7 @@ contract ReservoirPairTest is BaseTest
 
     function setUp() public
     {
-        _pairs.push(_constantProductPair);
+//        _pairs.push(_constantProductPair);
         _pairs.push(_stablePair);
     }
 

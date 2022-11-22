@@ -6,7 +6,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
-import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
+//import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
@@ -36,7 +36,7 @@ abstract contract BaseTest is Test
     MintableERC20   internal _tokenD        = new MintableERC20("TokenD", "TD", 6);
     MintableERC20   internal _tokenE        = new MintableERC20("TokenF", "TF", 25);
 
-    ConstantProductPair   internal _constantProductPair;
+//    ConstantProductPair   internal _constantProductPair;
     StablePair            internal _stablePair;
 
     OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
@@ -50,8 +50,8 @@ abstract contract BaseTest is Test
         _factory.write("Shared::allowedChangePerSecond", DEFAULT_ALLOWED_CHANGE_PER_SECOND);
 
         // add constant product curve
-        _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
+//        _factory.addCurve(type(ConstantProductPair).creationCode);
+//        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
@@ -63,15 +63,15 @@ abstract contract BaseTest is Test
         _oracleCaller.whitelistAddress(address(this), true);
 
         // initial mint
-        _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
-        _tokenA.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
-        _constantProductPair.mint(_alice);
+//        _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
+//        _tokenA.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
+//        _tokenB.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
+//        _constantProductPair.mint(_alice);
 
         _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
         _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
-        _stablePair.mint(_alice);
+        _stablePair.mint(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, _alice, "");
     }
 
     function _makeAddress(string memory aName) internal returns (address)
