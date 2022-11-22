@@ -14,7 +14,7 @@ import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { IPair, Pair } from "src/Pair.sol";
-
+import "forge-std/console.sol";
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
     uint64 initialA;
@@ -144,8 +144,13 @@ contract StablePair is ReservoirPair {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
+        console.log("msg.sender", msg.sender);
+        console.log("t0", token0Amt);
+        console.log("t1", token1Amt);
 
-        IReservoirCallee(msg.sender).mintCallback(token0Amt, token1Amt, data);
+        IReservoirCallee(msg.sender).mintCallback(token0Amt, token1Amt, bytes(data));
+
+        console.log("after call");
 
         (uint256 newBalance0, uint256 newBalance1) = _balance();
 

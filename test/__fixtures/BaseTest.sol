@@ -10,6 +10,8 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { MockRouter } from "test/__mocks/MockRouter.sol";
 
 abstract contract BaseTest is Test
 {
@@ -41,6 +43,8 @@ abstract contract BaseTest is Test
 
     OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
 
+    MockRouter internal _mr = new MockRouter(_tokenA, _tokenB);
+
     constructor()
     {
         // set shared variables
@@ -68,10 +72,14 @@ abstract contract BaseTest is Test
 //        _tokenB.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
 //        _constantProductPair.mint(_alice);
 
-        _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
-        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
-        _stablePair.mint(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, _alice, "");
+        _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 0));
+        _tokenA.mint(address(this), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(this), INITIAL_MINT_AMOUNT);
+        _tokenA.approve(address(_mr), type(uint256).max);
+        _tokenB.approve(address(_mr), type(uint256).max);
+
+        _mr.mint(_stablePair, _alice, INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT);
+//        _stablePair.mint(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, _alice, "");
     }
 
     function _makeAddress(string memory aName) internal returns (address)

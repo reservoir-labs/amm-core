@@ -39,7 +39,7 @@ contract StablePairTest is BaseTest
         _createPair(address(_tokenC), address(_tokenD), 1);
     }
 
-    function testMint() public
+    function testMintt() public
     {
         // arrange
         uint256 lLpTokenTotalSupply = _stablePair.totalSupply();
@@ -48,9 +48,10 @@ contract StablePairTest is BaseTest
         uint256 lLiquidityToAdd = 5e18;
 
         // act
-        _tokenA.mint(address(_stablePair), lLiquidityToAdd);
-        _tokenB.mint(address(_stablePair), lLiquidityToAdd);
-        _stablePair.mint(lLiquidityToAdd, lLiquidityToAdd, address(this), "");
+//        _tokenA.mint(address(_stablePair), lLiquidityToAdd);
+//        _tokenB.mint(address(_stablePair), lLiquidityToAdd);
+//        _stablePair.mint(lLiquidityToAdd, lLiquidityToAdd, address(this), "");
+        _mr.mint(_stablePair, address(this), lLiquidityToAdd, lLiquidityToAdd);
 
         // assert
         // this works only because the pools are balanced. When the pool is imbalanced the calculation will differ
