@@ -241,7 +241,7 @@ contract StablePairTest is BaseTest
         uint256 lPlatformFee = bound(aPlatformFee, 0, _stablePair.MAX_PLATFORM_FEE());
 
         // arrange
-        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
+        StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 0));
         vm.prank(address(_factory));
         lPair.setCustomPlatformFee(lPlatformFee);
         _tokenC.mint(address(lPair), 100_000_000e18);
@@ -290,12 +290,14 @@ contract StablePairTest is BaseTest
         );
     }
 
-    function testSwap() public
+    function testSwapp() public
     {
         // act
         uint256 lAmountToSwap = 5e18;
-        _tokenA.mint(address(_stablePair), lAmountToSwap);
-        uint256 lAmountOut = _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
+//        _tokenA.mint(address(_stablePair), lAmountToSwap);
+//        uint256 lAmountOut = _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
+
+        uint256 lAmountOut = _mr.swap(_stablePair, address(this), int256(lAmountToSwap), true);
 
         // assert
         assertEq(lAmountOut, _tokenB.balanceOf(address(this)));

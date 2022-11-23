@@ -73,11 +73,6 @@ abstract contract BaseTest is Test
 //        _constantProductPair.mint(_alice);
 
         _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 0));
-        _tokenA.mint(address(this), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(this), INITIAL_MINT_AMOUNT);
-        _tokenA.approve(address(_mr), type(uint256).max);
-        _tokenB.approve(address(_mr), type(uint256).max);
-
         _mr.mint(_stablePair, _alice, INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT);
 //        _stablePair.mint(INITIAL_MINT_AMOUNT, INITIAL_MINT_AMOUNT, _alice, "");
     }

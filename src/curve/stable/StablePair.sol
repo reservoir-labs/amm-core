@@ -144,13 +144,8 @@ contract StablePair is ReservoirPair {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        console.log("msg.sender", msg.sender);
-        console.log("t0", token0Amt);
-        console.log("t1", token1Amt);
 
         IReservoirCallee(msg.sender).mintCallback(token0Amt, token1Amt, bytes(data));
-
-        console.log("after call");
 
         (uint256 newBalance0, uint256 newBalance1) = _balance();
 
@@ -241,9 +236,9 @@ contract StablePair is ReservoirPair {
 
         _checkedTransfer(tokenOut, to, amountOut, uint112(balance0), uint112(balance1));
 
-        IReservoirCallee(to).swapCallback(
-            tokenOut == token0 ? amountOut : 0,
-            tokenOut == token1 ? amountOut : 0,
+        IReservoirCallee(msg.sender).swapCallback(
+            tokenOut == token0 ? 0 : amountIn,
+            tokenOut == token1 ? 0 : amountIn,
             data
         );
 
