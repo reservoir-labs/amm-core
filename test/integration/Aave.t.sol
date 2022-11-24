@@ -310,7 +310,7 @@ contract AaveIntegrationTest is BaseTest
         _poolConfigurator.setReserveFreeze(USDC, true);
 
         // act - withdraw should still succeed when reserve is frozen
-        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, lAmountToManage)));
+        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (lAmountToManage0, lAmountToManage1)));
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert
