@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";

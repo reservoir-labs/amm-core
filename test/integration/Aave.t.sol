@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 import { Errors } from "test/integration/AaveErrors.sol";
@@ -310,7 +310,7 @@ contract AaveIntegrationTest is BaseTest
         _poolConfigurator.setReserveFreeze(USDC, true);
 
         // act - withdraw should still succeed when reserve is frozen
-        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, lAmountToManage)));
+        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (lAmountToManage0, lAmountToManage1)));
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // assert
@@ -641,7 +641,7 @@ contract AaveIntegrationTest is BaseTest
     {
         // arrange
         (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
-        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        (uint256 lReserveUSDC, uint256 lReserveTokenA) = _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         // manage half
         _manager.adjustManagement(
             _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
@@ -651,10 +651,12 @@ contract AaveIntegrationTest is BaseTest
         assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT / 2);
 
         // act - request more than what is available in the pair
-        MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
-        vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (false, 10)));
-        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (0, -10)));
-        _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
+        int256 lOutputAmt = _pair.token0() == USDC ? int256(MINT_AMOUNT / 2 + 10) : -int256(MINT_AMOUNT / 2 + 10);
+        (int256 lExpectedToken0Calldata, int256 lExpectedToken1Calldata) = _pair.token0() == USDC ? (int256(-10), int256(0)) : (int256(0), int256(-10));
+        _tokenA.mint(address(_pair), lReserveTokenA * 2);
+        vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (_pair.token0() == USDC, 10)));
+        vm.expectCall(address(_pair), abi.encodeCall(_pair.adjustManagement, (lExpectedToken0Calldata, lExpectedToken1Calldata)));
+        _pair.swap(lOutputAmt, false, address(this), bytes(""));
 
         // assert
         (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
@@ -673,7 +675,7 @@ contract AaveIntegrationTest is BaseTest
     {
         // arrange
         (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
-        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        (uint256 lReserveUSDC, uint256 lReserveTokenA) = _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         // manage half
         _manager.adjustManagement(
             _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
@@ -682,9 +684,10 @@ contract AaveIntegrationTest is BaseTest
         _poolConfigurator.setReservePause(USDC, true);
 
         // act & assert
-        MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
+        int256 lOutputAmt = _pair.token0() == USDC ? int256(MINT_AMOUNT / 2 + 10) : -int256(MINT_AMOUNT / 2 + 10);
+        _tokenA.mint(address(_pair), lReserveTokenA * 2);
         vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
-        _pair.swap(-int256(MINT_AMOUNT / 2 + 10), false, address(this), bytes(""));
+        _pair.swap(lOutputAmt, false, address(this), bytes(""));
 
         // assert
         assertEq(_manager.shares(_pair, USDC), MINT_AMOUNT / 2);
@@ -696,7 +699,7 @@ contract AaveIntegrationTest is BaseTest
     {
         // arrange
         (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
-        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        (uint256 lReserveUSDC, uint256 lReserveTokenA) = _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         // manage half
         _manager.adjustManagement(
             _pair, int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0), int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
@@ -706,8 +709,9 @@ contract AaveIntegrationTest is BaseTest
         assertEq(IERC20(USDC).balanceOf(address(_pair)), MINT_AMOUNT / 2);
 
         // act - request exactly what is available in the pair
-        MintableERC20(_pair.token0()).mint(address(_pair), lReserve0 * 2);
-        _pair.swap(-int256(MINT_AMOUNT / 2), false, address(this), bytes(""));
+        int256 lOutputAmt = _pair.token0() == USDC ? int256(MINT_AMOUNT / 2) : -int256(MINT_AMOUNT / 2);
+        _tokenA.mint(address(_pair), lReserveTokenA * 2);
+        _pair.swap(lOutputAmt, false, address(this), bytes(""));
 
         // assert
         (lReserve0 , lReserve1, ) = _pair.getReserves();

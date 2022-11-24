@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 

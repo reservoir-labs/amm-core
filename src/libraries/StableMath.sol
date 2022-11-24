@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import "src/libraries/MathUtils.sol";
 import { stdMath } from "forge-std/Test.sol";
@@ -96,6 +96,7 @@ library StableMath {
         uint256 prevD;
         // solhint-disable-next-line var-name-mixedcase
         uint256 D = s;
+        (xp0, xp1) = xp0 < xp1 ? (xp0, xp1) : (xp1, xp0);
         for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
             uint256 dP = (((D * D) / xp0) * D) / xp1 / 4;
             prevD = D;

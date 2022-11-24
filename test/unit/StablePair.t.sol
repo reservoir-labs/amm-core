@@ -1,4 +1,4 @@
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 import "test/__fixtures/MintableERC20.sol";
@@ -274,10 +274,20 @@ contract StablePairTest is BaseTest
         // increase liq by swapping back and forth
         for (uint i; i < 20; ++i) {
             _tokenD.mint(address(lPair), lDSwapAmt);
-            lPair.swap(int256(lDSwapAmt), true, address(this), bytes(""));
+            lPair.swap(
+                lPair.token0() == address(_tokenD) ? int256(lDSwapAmt) : -int256(lDSwapAmt),
+                true,
+                address(this),
+                bytes("")
+            );
 
             _tokenC.mint(address(lPair), lCSwapAmt);
-            lPair.swap(-int256(lCSwapAmt), true, address(this), bytes(""));
+            lPair.swap(
+                lPair.token0() == address(_tokenC) ? int256(lCSwapAmt) : -int256(lCSwapAmt),
+                true,
+                address(this),
+                bytes("")
+            );
         }
 
         (uint256 lReserve0, uint256 lReserve1, ) = lPair.getReserves();
@@ -288,15 +298,16 @@ contract StablePairTest is BaseTest
         lPair.burn(address(this));
 
         // assert
+        (uint256 lReserveC, uint256 lReserveD) = lPair.token0() == address(_tokenC) ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         uint256 lNewLiq = StableMath._computeLiquidityFromAdjustedBalances(
-            lReserve0 * 1e12,
-            lReserve1,
+            lReserveD * 1e12,
+            lReserveC,
             2 * lPair.getCurrentAPrecise()
         );
         uint256 lGrowthInLiq = lNewLiq - lOldLiq;
         uint256 lExpectedPlatformFee =
             lTotalSupply * lGrowthInLiq * lPlatformFee
-            / ((lPair.FEE_ACCURACY() - lPlatformFee ) * lNewLiq + lPlatformFee * lOldLiq);
+            / ((lPair.FEE_ACCURACY() - lPlatformFee) * lNewLiq + lPlatformFee * lOldLiq);
 
         assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
         assertApproxEqRel(
@@ -427,11 +438,18 @@ contract StablePairTest is BaseTest
 
         // act
         _tokenB.mint(address(lPair), lSwapAmt);
-        uint256 lAmtOut = lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        uint256 lAmtOut = lPair.swap(lPair.token0() == address(_tokenB) ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         // assert
         uint256 lExpectedAmountOut = StableMath._getAmountOut(
-            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lSwapAmt,
+            lPair.token0() == address(_tokenB) ? lAmtBToMint : lAmtCToMint,
+            lPair.token1() == address(_tokenB) ? lAmtBToMint : lAmtCToMint,
+            1,
+            1,
+            lPair.token0() == address(_tokenB),
+            DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
         assertEq(lAmtOut, lExpectedAmountOut);
     }
@@ -451,11 +469,18 @@ contract StablePairTest is BaseTest
 
         // act
         _tokenC.mint(address(lPair), lSwapAmt);
-        uint256 lAmtOut = lPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
+        uint256 lAmtOut = lPair.swap(lPair.token0() == address(_tokenC) ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         // assert
         uint256 lExpectedAmountOut = StableMath._getAmountOut(
-            lSwapAmt, lAmtBToMint, lAmtCToMint, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lSwapAmt,
+            lPair.token0() == address(_tokenB) ? lAmtBToMint : lAmtCToMint,
+            lPair.token1() == address(_tokenB) ? lAmtBToMint : lAmtCToMint,
+            1,
+            1,
+            lPair.token0() == address(_tokenC),
+            DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
         assertEq(lAmtOut, lExpectedAmountOut);
     }
@@ -469,18 +494,32 @@ contract StablePairTest is BaseTest
         StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
         vm.prank(address(_factory));
         lPair.setCustomSwapFee(lSwapFee);
-        _tokenC.mint(address(lPair), 100_000_000e18);
-        _tokenD.mint(address(lPair), 120_000_000e6);
+        uint256 lTokenCMintAmt = 100_000_000e18;
+        uint256 lTokenDMintAmt = 120_000_000e6;
+        _tokenC.mint(address(lPair), lTokenCMintAmt);
+        _tokenD.mint(address(lPair), lTokenDMintAmt);
         lPair.mint(address(this));
 
         uint256 lSwapAmt = 10_000_000e6;
         _tokenD.mint(address(lPair), lSwapAmt);
 
-        // act - tokenD is token0
-        uint256 lAmtOut = lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        // act
+        uint256 lAmtOut = lPair.swap(
+            lPair.token0() == address(_tokenD) ? int256(lSwapAmt) : -int256(lSwapAmt),
+            true,
+            address(this),
+            bytes("")
+        );
 
         uint256 lExpectedAmtOut = StableMath._getAmountOut(
-            lSwapAmt, 120_000_000e6, 100_000_000e18, 1e12, 1, true, lSwapFee, 2 * lPair.getCurrentAPrecise()
+            lSwapAmt,
+            lPair.token0() == address(_tokenD) ? lTokenDMintAmt : lTokenCMintAmt,
+            lPair.token1() == address(_tokenD) ? lTokenDMintAmt : lTokenCMintAmt,
+            lPair.token0() == address(_tokenD) ? 1e12 : 1,
+            lPair.token1() == address(_tokenD) ? 1e12 : 1,
+            lPair.token0() == address(_tokenD),
+            lSwapFee,
+            2 * lPair.getCurrentAPrecise()
         );
 
         // assert
@@ -557,11 +596,18 @@ contract StablePairTest is BaseTest
 
         // act
         _tokenD.mint(address(lPair), lSwapAmt);
-        lPair.swap(int256(lSwapAmt), true, address(this), bytes(""));
+        lPair.swap(lPair.token0() == address(_tokenD) ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         // assert
         uint256 lExpectedOutput = StableMath._getAmountOut(
-            lSwapAmt, lDMintAmt, lCMintAmt, 1e12, 1, true, lPair.swapFee(), 2 * lPair.getCurrentAPrecise()
+            lSwapAmt,
+            lPair.token0() == address(_tokenD) ? lDMintAmt : lCMintAmt,
+            lPair.token1() == address(_tokenD) ? lDMintAmt : lCMintAmt,
+            lPair.token0() == address(_tokenD) ? 1e12 : 1,
+            lPair.token1() == address(_tokenD) ? 1e12 : 1,
+            lPair.token0() == address(_tokenD),
+            lPair.swapFee(),
+            2 * lPair.getCurrentAPrecise()
         );
         assertEq(_tokenC.balanceOf(address(this)), lExpectedOutput);
     }
@@ -632,8 +678,9 @@ contract StablePairTest is BaseTest
         (uint256 lAmt0, uint256 lAmt1) = lPair.burn(address(this));
 
         // assert
-        assertEq(lAmt0, 0);
-        assertGt(lAmt1, 0);
+        (uint256 lAmtC, uint256 lAmtD) = lPair.token0() == address(_tokenC) ? (lAmt0, lAmt1) : (lAmt1, lAmt0);
+        assertEq(lAmtD, 0);
+        assertGt(lAmtC, 0);
     }
 
     function testRampA() public
