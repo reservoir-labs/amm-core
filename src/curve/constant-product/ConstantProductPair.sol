@@ -1,7 +1,5 @@
 pragma solidity ^0.8.0;
 
-import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
-
 import { Math } from "src/libraries/Math.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -15,7 +13,6 @@ import { IPair, Pair } from "src/Pair.sol";
 contract ConstantProductPair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
-    using SafeCast for uint256;
 
     // Accuracy^2: 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
     uint256 public constant SQUARED_ACCURACY = 1e76;
