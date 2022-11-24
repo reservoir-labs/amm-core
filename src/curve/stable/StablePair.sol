@@ -174,7 +174,7 @@ contract StablePair is ReservoirPair {
         _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
         _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
 
-        _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
+        _update(_totalToken0(), _totalToken1(), uint112(_reserve0), uint112(_reserve1));
 
         lastInvariant = uint192(_computeLiquidity(reserve0, reserve1));
         lastInvariantAmp = _getCurrentAPrecise();
