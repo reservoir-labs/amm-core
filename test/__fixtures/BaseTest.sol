@@ -39,7 +39,7 @@ abstract contract BaseTest is Test
     ConstantProductPair   internal _constantProductPair;
     StablePair            internal _stablePair;
 
-    OracleCaller    internal _oracleCaller  = new OracleCaller(address(this));
+    OracleCaller    internal _oracleCaller  = new OracleCaller();
 
     constructor()
     {

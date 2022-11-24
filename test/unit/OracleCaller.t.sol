@@ -54,7 +54,7 @@ contract OracleCallerTest is BaseTest {
     {
         // act & assert
         vm.prank(_bob);
-        vm.expectRevert("UNAUTHORIZED");
+        vm.expectRevert("Ownable: caller is not the owner");
         _oracleCaller.whitelistAddress(_cal, true);
     }
 }
