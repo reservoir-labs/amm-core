@@ -8,9 +8,6 @@ remappings = [
 match_path = "test/unit/*.sol"
 verbosity = 3
 
-[profile.default.fuzz]
-runs = 10000
-
 [profile.integration]
 match_path = "test/integration/*.sol"
 
