@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 
 import { SSTORE2 } from "solmate/utils/SSTORE2.sol";
-import { Ownable } from "@openzeppelin/access/Ownable.sol";
+import { Owned } from "solmate/auth/Owned.sol";
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
-contract GenericFactory is IGenericFactory, Ownable
+contract GenericFactory is IGenericFactory, Owned(msg.sender)
 {
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG

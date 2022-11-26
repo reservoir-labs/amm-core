@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
-import { Ownable } from "@openzeppelin/access/Ownable.sol";
+import { Owned } from "solmate/auth/Owned.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
@@ -11,7 +11,7 @@ import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvid
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 
-contract AaveManager is IAssetManager, Ownable, ReentrancyGuard
+contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard
 {
     using FixedPointMathLib for uint256;
 

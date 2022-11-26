@@ -1,10 +1,10 @@
 pragma solidity ^0.8.0;
 
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Owned } from "solmate/auth/Owned.sol";
 
 import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 
-contract OracleCaller is Ownable {
+contract OracleCaller is Owned(msg.sender) {
     event WhitelistChanged(address caller, bool whitelist);
 
     mapping(address => bool) public whitelist;
