@@ -157,6 +157,14 @@ contract AaveIntegrationTest is BaseTest
         assertEq(_manager.getBalance(_pair, address(_tokenA)), 0);
     }
 
+    function testAdjustManagement_NotOwner() public allNetworks allPairs
+    {
+        // act & assert
+        vm.prank(_alice);
+        vm.expectRevert("Ownable: caller is not the owner");
+        _manager.adjustManagement(_pair, 1, 1);
+    }
+
     function _increaseManagementOneToken(int256 aAmountToManage) private
     {
         // arrange
@@ -385,7 +393,7 @@ contract AaveIntegrationTest is BaseTest
         assertTrue(MathUtils.within1(_manager.getBalance(lOtherPair, USDC), uint256(lAmountToManageOther)));
     }
 
-    function testGetBalance_AddingAfterExchangeRateChange(
+    function testGetBalance_AddingAfterProfit(
         uint256 aAmountToManage1,
         uint256 aAmountToManage2,
         uint256 aTime
@@ -426,6 +434,40 @@ contract AaveIntegrationTest is BaseTest
         assertEq(_manager.shares(lOtherPair, USDC), lExpectedShares);
         uint256 lBalance = _manager.getBalance(lOtherPair, USDC);
         assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManageOther)));
+    }
+
+    function testGetBalance_AddingAfterLoss(uint256 aAmountToManage1, uint256 aAmountToManage2) public allNetworks allPairs
+    {
+        // assume
+        ConstantProductPair lOtherPair = _createOtherPair();
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1_000_000, lReserveUSDC));
+        int256 lAmountToManageOther = int256(bound(aAmountToManage2, 1_000_000, lReserveUSDC));
+
+        // arrange
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? lAmountToManagePair : int256(0),
+            _pair.token1() == USDC ? lAmountToManagePair : int256(0)
+        );
+
+        // act - asset manager loses 10% of the assets
+        // todo: how to make manager have a loss? the following is complaining that storage slot can't be found
+        // even if I provide the impl address instead of the proxy address
+        deal(lAaveToken, address(_manager), uint256(lAmountToManagePair) * 9 / 10, true);
+        uint256 lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
+        assertEq(lAaveTokenAmt2, uint256(lAmountToManagePair) * 9 / 10);
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? lAmountToManageOther : int256(0),
+            lOtherPair.token1() == USDC ? lAmountToManageOther : int256(0)
+        );
+
+        // assert
+        assertEq(_manager.shares(_pair, USDC), uint256(lAmountToManagePair));
+        assertTrue(MathUtils.within1(_manager.getBalance(_pair, USDC), lAaveTokenAmt2));
     }
 
     function testShares(uint256 aAmountToManage) public allNetworks allPairs
