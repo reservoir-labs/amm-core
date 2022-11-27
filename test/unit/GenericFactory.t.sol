@@ -107,7 +107,7 @@ contract GenericFactoryTest is BaseTest
         vm.prank(_alice);
 
         // act & assert
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         _factory.addCurve(bytes("random bytes"));
     }
 
