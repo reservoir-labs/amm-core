@@ -11,6 +11,9 @@ verbosity = 3
 [profile.integration]
 match_path = "test/integration/*.sol"
 
+[profile.differential]
+match_path = "test/differential/*.sol"
+
 [profile.ci.fuzz]
 runs = 10_000
 
