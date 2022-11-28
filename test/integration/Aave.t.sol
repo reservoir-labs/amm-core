@@ -456,6 +456,7 @@ contract AaveIntegrationTest is BaseTest
         // act - asset manager loses 10% of the assets
         // todo: how to make manager have a loss? the following is complaining that storage slot can't be found
         // even if I provide the impl address instead of the proxy address
+        // rewinding in time doesn't work
         deal(lAaveToken, address(_manager), uint256(lAmountToManagePair) * 9 / 10, true);
         uint256 lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
         assertEq(lAaveTokenAmt2, uint256(lAmountToManagePair) * 9 / 10);
@@ -492,6 +493,52 @@ contract AaveIntegrationTest is BaseTest
         assertEq(lShares, lTotalShares);
         assertEq(lShares, uint256(lAmountToManage));
         assertEq(lTotalShares, uint256(lAmountToManage));
+    }
+
+    function testShares_AdjustManagementAfterProfit(uint256 aAmountToManage1, uint256 aAmountToManage2) public allNetworks allPairs
+    {
+        // assume
+        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
+        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 100, lReserveUSDC / 2));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 100, lReserveUSDC / 2));
+
+        // arrange
+        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? lAmountToManage1 : int256(0),
+            _pair.token1() == USDC ? lAmountToManage1 : int256(0)
+        );
+
+        // act - go forward in time to simulate accrual of profits
+        skip(30 days);
+        uint256 lAaveTokenAmt1 = IERC20(lAaveToken).balanceOf(address(_manager));
+        assertGt(lAaveTokenAmt1, uint256(lAmountToManage1));
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? lAmountToManage2 : int256(0),
+            _pair.token1() == USDC ? lAmountToManage2 : int256(0)
+        );
+
+        // assert
+        uint256 lShares = _manager.shares(_pair, USDC);
+        uint256 lTotalShares = _manager.totalShares(lAaveToken);
+        assertEq(lShares, lTotalShares);
+        assertLt(lTotalShares, uint256(lAmountToManage1 + lAmountToManage2));
+
+        uint256 lBalance = _manager.getBalance(_pair, USDC);
+        uint256 lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
+        assertEq(lBalance, lAaveTokenAmt2);
+
+        // pair not yet informed of the profits, so the numbers are less than what it actually has
+        uint256 lUSDCManaged = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        assertLt(lUSDCManaged, lBalance);
+
+        // after a sync, the pair should have the correct amount
+        _pair.sync();
+        uint256 lUSDCManagedAfterSync = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        assertEq(lUSDCManagedAfterSync, lBalance);
     }
 
     function testAfterLiquidityEvent_IncreaseInvestmentAfterMint() public allNetworks allPairs
