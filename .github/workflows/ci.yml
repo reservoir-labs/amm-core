@@ -113,7 +113,7 @@ jobs:
         run: npm run test:uniswap
 
   test-differential-balancer:
-    name: Differential test with balancer
+    name: Test differential balancer
     runs-on: ubuntu-latest
 
     steps:
