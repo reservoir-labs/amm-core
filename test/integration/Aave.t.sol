@@ -492,7 +492,6 @@ contract AaveIntegrationTest is BaseTest
         // assert
         assertEq(lShares, lTotalShares);
         assertEq(lShares, uint256(lAmountToManage));
-        assertEq(lTotalShares, uint256(lAmountToManage));
     }
 
     function testShares_AdjustManagementAfterProfit(uint256 aAmountToManage1, uint256 aAmountToManage2) public allNetworks allPairs
