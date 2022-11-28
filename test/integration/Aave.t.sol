@@ -161,7 +161,7 @@ contract AaveIntegrationTest is BaseTest
     {
         // act & assert
         vm.prank(_alice);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("UNAUTHORIZED");
         _manager.adjustManagement(_pair, 1, 1);
     }
 
