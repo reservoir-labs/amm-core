@@ -1,10 +1,10 @@
 pragma solidity ^0.8.0;
 
-import "test/__fixtures/BaseTest.sol";
+import "forge-std/Test.sol";
 
 import { LogExpMath } from "src/libraries/LogExpMath.sol";
 
-contract LogExpMathTest is BaseTest
+contract LogExpMathTest is Test
 {
     address private _balancerLogExpMath = address(100);
 
