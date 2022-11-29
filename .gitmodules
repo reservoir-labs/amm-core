@@ -12,4 +12,4 @@
 	url = https://github.com/Rari-Capital/solmate
 [submodule "lib/balancer-v2-monorepo"]
 	path = reference/balancer-v2-monorepo
-	url = git@github.com:/balancer-labs/balancer-v2-monorepo
+	url = git@github.com:Reservoir-Labs/balancer-v2-monorepo.git
