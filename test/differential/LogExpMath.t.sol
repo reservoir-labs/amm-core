@@ -15,33 +15,71 @@ contract LogExpMathTest is BaseTest
         vm.etch(_balancerLogExpMath, lBytecode);
     }
 
-    function testPow(uint256 aX, uint256 xY) external
+    function testPow(uint256 aX, uint256 aY) external
     {
-        // assume
-        uint256 lX = bound(aX, 0, type(uint256).max);
-        uint256 lY = bound(xY, 0, type(uint256).max);
-
         // act
-        (bool lBool, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("pow(uint256,uint256)", lX, lY));
+        (bool lBool, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("pow(uint256,uint256)", aX, aY));
 
         // assert
         if (lBool) {
-            uint256 lLocalRes = LogExpMath.pow(lX, lY);
+            uint256 lLocalRes = LogExpMath.pow(aX, aY);
             uint256 lDecoded = abi.decode(lRes, (uint256));
             assertEq(lLocalRes, lDecoded);
         }
         else {
             vm.expectRevert();
-            LogExpMath.pow(lX, lY);
+            LogExpMath.pow(aX, aY);
         }
     }
 
-    function testExp() external
-    {}
+    function testExp(int256 aX) external
+    {
+        // act
+        (bool lBool, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("exp(int256)", aX));
 
-    function testLog() external
-    {}
+        // assert
+        if (lBool) {
+            int256 lLocalRes = LogExpMath.exp(aX);
+            int256 lDecoded = abi.decode(lRes, (int256));
+            assertEq(lLocalRes, lDecoded);
+        }
+        else {
+            vm.expectRevert();
+            LogExpMath.exp(aX);
+        }
+    }
 
-    function testLn() external
-    {}
+    function testLog(int256 aArg, int256 aBase) external
+    {
+        // act
+        (bool lBool, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("log(int256,int256)", aArg, aBase));
+
+        // assert
+        if (lBool) {
+            int256 lLocalRes = LogExpMath.log(aArg, aBase);
+            int256 lDecoded = abi.decode(lRes, (int256));
+            assertEq(lLocalRes, lDecoded);
+        }
+        else {
+            vm.expectRevert();
+            LogExpMath.log(aArg, aBase);
+        }
+    }
+
+    function testLn(int256 aArg) external
+    {
+        // act
+        (bool lBool, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("ln(int256)", aArg));
+
+        // assert
+        if (lBool) {
+            int256 lLocalRes = LogExpMath.ln(aArg);
+            int256 lDecoded = abi.decode(lRes, (int256));
+            assertEq(lLocalRes, lDecoded);
+        }
+        else {
+            vm.expectRevert();
+            LogExpMath.ln(aArg);
+        }
+    }
 }
