@@ -18,10 +18,10 @@ contract LogCompressionTest is Test {
     function testToLowResLog(uint256 aValue) external
     {
         // act
-        (bool lBool, bytes memory lRes) = _balancerLogCompression.staticcall(abi.encodeWithSignature("toLowResLog(uint256)", aValue));
+        (bool lSuccess, bytes memory lRes) = _balancerLogCompression.staticcall(abi.encodeWithSignature("toLowResLog(uint256)", aValue));
 
         // assert
-        if (lBool) {
+        if (lSuccess) {
             int256 lLocalRes = LogCompression.toLowResLog(aValue);
             int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
@@ -35,10 +35,10 @@ contract LogCompressionTest is Test {
     function testFromLowResLog(int256 aValue) external
     {
         // act
-        (bool lBool, bytes memory lRes) = _balancerLogCompression.staticcall(abi.encodeWithSignature("fromLowResLog(int256)", aValue));
+        (bool lSuccess, bytes memory lRes) = _balancerLogCompression.staticcall(abi.encodeWithSignature("fromLowResLog(int256)", aValue));
 
         // assert
-        if (lBool) {
+        if (lSuccess) {
             uint256 lLocalRes = LogCompression.fromLowResLog(aValue);
             uint256 lDecoded = abi.decode(lRes, (uint256));
             assertEq(lLocalRes, lDecoded);
