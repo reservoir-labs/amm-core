@@ -126,8 +126,11 @@ jobs:
         with:
           version: nightly
 
-      - name: Install js dependencies and build
+      - name: Install js dependencies
         run: npm run install:balancer
+
+      - name: Build only the artifacts we need
+        run: npm run build:balancer
 
       - name: Balancer differential tests
         run: npm run test:balancer
