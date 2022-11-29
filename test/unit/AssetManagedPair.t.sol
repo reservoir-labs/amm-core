@@ -15,7 +15,7 @@ contract AssetManagedPairTest is BaseTest
     IAssetManagedPair[] internal _pairs;
     IAssetManagedPair   internal _pair;
 
-    modifier parameterizedTest() {
+    modifier allPairs() {
         for (uint256 i = 0; i < _pairs.length; ++i) {
             uint256 lBefore = vm.snapshot();
             _pair = _pairs[i];
@@ -30,7 +30,7 @@ contract AssetManagedPairTest is BaseTest
         _pairs.push(_stablePair);
     }
 
-    function testSetManager() external parameterizedTest
+    function testSetManager() external allPairs
     {
         // sanity
         assertEq(address(_pair.assetManager()), address(0));
@@ -43,7 +43,7 @@ contract AssetManagedPairTest is BaseTest
         assertEq(address(_pair.assetManager()), address(_manager));
     }
 
-    function testSetManager_CannotMigrateWithManaged() external parameterizedTest
+    function testSetManager_CannotMigrateWithManaged() external allPairs
     {
         // arrange
         vm.prank(address(_factory));
@@ -57,7 +57,7 @@ contract AssetManagedPairTest is BaseTest
         _pair.setManager(AssetManager(address(0)));
     }
 
-    function testManageReserves() external parameterizedTest
+    function testAdjustManagement() external allPairs
     {
         // arrange
         _tokenA.mint(address(_pair), 50e18);
@@ -75,7 +75,7 @@ contract AssetManagedPairTest is BaseTest
         assertEq(_tokenB.balanceOf(address(this)), 20e18);
     }
 
-    function testManageReserves_DecreaseManagement() external parameterizedTest
+    function testAdjustManagement_DecreaseManagement() external allPairs
     {
         // arrange
         vm.prank(address(_factory));
@@ -119,7 +119,7 @@ contract AssetManagedPairTest is BaseTest
         assertEq(_manager.getBalance(_pair, address(lToken1)), 10e18);
     }
 
-    function testManageReserves_KStillHolds() external parameterizedTest
+    function testAdjustManagement_KStillHolds() external allPairs
     {
         // arrange
         vm.prank(address(_factory));
@@ -139,6 +139,30 @@ contract AssetManagedPairTest is BaseTest
 
         // assert
         assertEq(lLiq1, lLiq2);
+    }
+
+    function testAdjustManagement_AdjustAfterLoss() external allPairs
+    {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+
+        // sanity
+        uint256 lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
+        assertEq(lTokenAManaged, 7e18);
+
+        // act
+        _manager.adjustManagement(_pair, 20e18, 20e18);
+        lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
+
+        // assert
+        assertEq(lTokenAManaged, 20e18 + 7e18);
+        assertEq(_pair.token0Managed(), 20e18 + 10e18);
+        _pair.sync();
+        assertEq(_pair.token0Managed(), 20e18 + 7e18); // number is updated after sync
     }
 
     function testSyncManaged_ConstantProduct() external
@@ -212,7 +236,7 @@ contract AssetManagedPairTest is BaseTest
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
-    function testSync() external parameterizedTest
+    function testSync() external allPairs
     {
         // arrange
         vm.prank(address(_factory));
