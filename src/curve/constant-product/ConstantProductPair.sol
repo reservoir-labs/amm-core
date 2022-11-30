@@ -86,11 +86,9 @@ contract ConstantProductPair is ReservoirPair {
         // perf: can be unchecked
         uint _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK; // ASSERT: < UINT256
         uint _scaledMultiplier = ACCURACY - (SQUARED_ACCURACY / _scaledGrowth); // ASSERT: < UINT128
-        uint _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY; // ASSERT: < UINT144 during
-            // maths, ends < UINT128
+        uint _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
 
-        _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT:
-            // _scaledTargetOwnership < ACCURACY
+        _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT: _scaledTargetOwnership < ACCURACY
     }
 
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
