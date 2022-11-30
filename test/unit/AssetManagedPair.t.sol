@@ -198,19 +198,14 @@ contract AssetManagedPairTest is BaseTest
 
         // act
         uint lLpTokenBal = _pair.balanceOf(_alice);
+        uint lTotalSupply = _pair.totalSupply();
         vm.prank(_alice);
         _pair.transfer(address(_pair) , lLpTokenBal);
         _pair.burn(address(this));
 
         // assert - the burner gets less than in the case where the loss didn't happen
-        // todo: take into account min_liquidity
-        if (_pair == _constantProductPair) {
-            assertLt(_tokenA.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
-            assertLt(_tokenB.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
-        } else if (_pair == _stablePair) {
-            assertLt(_tokenA.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
-            assertLt(_tokenB.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
-        }
+        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
     }
 
     function testSwap_AfterLoss() external allPairs {
