@@ -9,7 +9,7 @@ contract OracleCaller is Owned(msg.sender) {
 
     mapping(address => bool) public whitelist;
 
-    function observation(IOracleWriter aPair, uint256 aIndex) external view returns (Observation memory rObservation) {
+    function observation(IOracleWriter aPair, uint aIndex) external view returns (Observation memory rObservation) {
         require(whitelist[msg.sender], "OC: NOT_WHITELISTED");
         rObservation = aPair.observation(aIndex);
     }

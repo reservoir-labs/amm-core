@@ -9,16 +9,14 @@ import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
-contract GenericFactory is IGenericFactory, Owned(msg.sender)
-{
+contract GenericFactory is IGenericFactory, Owned(msg.sender) {
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG
     //////////////////////////////////////////////////////////////////////////*/
 
     mapping(bytes32 => bytes32) public get;
 
-    function set(bytes32 aKey, bytes32 aValue) external onlyOwner
-    {
+    function set(bytes32 aKey, bytes32 aValue) external onlyOwner {
         get[aKey] = aValue;
     }
 
@@ -28,8 +26,7 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender)
 
     address[] private _getByteCode;
 
-    function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint256 rCurveId)
-    {
+    function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint rCurveId) {
         rCurveId = _getByteCode.length;
 
         _getByteCode.push(SSTORE2.write(aInitCode));
@@ -39,25 +36,20 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender)
                                     PAIRS
     //////////////////////////////////////////////////////////////////////////*/
 
-    event PairCreated(address indexed token0, address indexed token1, uint256 curveId, address pair);
+    event PairCreated(address indexed token0, address indexed token1, uint curveId, address pair);
 
-    mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
+    mapping(address => mapping(address => mapping(uint => address))) public getPair;
     address[] private _allPairs;
 
-    function allPairs() external view returns (address[] memory)
-    {
+    function allPairs() external view returns (address[] memory) {
         return _allPairs;
     }
 
-    function _sortAddresses(address a, address b) private pure returns (address r0, address r1)
-    {
-        (r0, r1) = a < b
-            ? (a, b)
-            : (b, a);
+    function _sortAddresses(address a, address b) private pure returns (address r0, address r1) {
+        (r0, r1) = a < b ? (a, b) : (b, a);
     }
 
-    function createPair(address aTokenA, address aTokenB, uint256 aCurveId) external returns (address rPair)
-    {
+    function createPair(address aTokenA, address aTokenB, uint aCurveId) external returns (address rPair) {
         require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
         require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
@@ -69,18 +61,19 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender)
 
         assembly {
             // create2 the pair, uniqueness guaranteed by args
-            rPair := create2(
-                // 0 value is sent at deployment
-                0,
-                // skip the first word of lByteCode (which is length)
-                add(lInitCode, 0x20),
-                // load the length of lBytecode (which is stored in the first
-                // word)
-                mload(lInitCode),
-                // do not use any salt, our bytecode is unique due to
-                // (token0,token1) constructor arguments
-                0
-            )
+            rPair :=
+                create2(
+                    // 0 value is sent at deployment
+                    0,
+                    // skip the first word of lByteCode (which is length)
+                    add(lInitCode, 0x20),
+                    // load the length of lBytecode (which is stored in the first
+                    // word)
+                    mload(lInitCode),
+                    // do not use any salt, our bytecode is unique due to
+                    // (token0,token1) constructor arguments
+                    0
+                )
         }
         require(rPair != address(0), "FACTORY: DEPLOY_FAILED");
 
@@ -96,17 +89,11 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender)
                                     EXECUTE
     //////////////////////////////////////////////////////////////////////////*/
 
-    function rawCall(
-        address aTarget,
-        bytes calldata aCalldata,
-        uint256 aValue
-    ) external onlyOwner returns (bytes memory)
+    function rawCall(address aTarget, bytes calldata aCalldata, uint aValue)
+        external
+        onlyOwner
+        returns (bytes memory)
     {
-        return Address.functionCallWithValue(
-            aTarget,
-            aCalldata,
-            aValue,
-            "FACTORY: RAW_CALL_REVERTED"
-        );
+        return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
     }
 }

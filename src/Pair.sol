@@ -14,15 +14,15 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    string  internal    constant PLATFORM_FEE_TO_NAME   = "Shared::platformFeeTo";
-    string  private     constant PLATFORM_FEE_NAME      = "Shared::platformFee";
-    string  private     constant RECOVERER_NAME         = "Shared::defaultRecoverer";
-    bytes4  private     constant SELECTOR               = bytes4(keccak256("transfer(address,uint256)"));
+    string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
+    string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
+    string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
+    bytes4 private constant SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
 
-    uint256 public constant MINIMUM_LIQUIDITY   = 10**3;
-    uint256 public constant FEE_ACCURACY        = 1_000_000;  // 100%
-    uint256 public constant MAX_PLATFORM_FEE    = 500_000;    //  50%
-    uint256 public constant MAX_SWAP_FEE        = 20_000;     //   2%
+    uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
+    uint public constant FEE_ACCURACY = 1_000_000; // 100%
+    uint public constant MAX_PLATFORM_FEE = 500_000; //  50%
+    uint public constant MAX_SWAP_FEE = 20_000; //   2%
 
     GenericFactory public immutable factory;
     address public immutable token0;
@@ -37,7 +37,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     uint112 internal reserve0;
     uint112 internal reserve1;
-    uint32  internal blockTimestampLast;
+    uint32 internal blockTimestampLast;
 
     uint public swapFee;
     uint public customSwapFee = type(uint).max;
@@ -53,15 +53,15 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     constructor(address aToken0, address aToken1, string memory aSwapFeeName) {
         factory = GenericFactory(msg.sender);
-        token0  = aToken0;
-        token1  = aToken1;
+        token0 = aToken0;
+        token1 = aToken1;
 
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
         updateSwapFee();
         updatePlatformFee();
 
-        token0PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken0).decimals());
-        token1PrecisionMultiplier = uint128(10)**(18 - ERC20(aToken1).decimals());
+        token0PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken0).decimals());
+        token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
     }
 
     function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
@@ -86,10 +86,8 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     }
 
     function updateSwapFee() public {
-        uint256 _swapFee = customSwapFee != type(uint).max
-            ? customSwapFee
-            : factory.get(swapFeeName).toUint256();
-        if (_swapFee == swapFee) { return; }
+        uint _swapFee = customSwapFee != type(uint).max ? customSwapFee : factory.get(swapFeeName).toUint256();
+        if (_swapFee == swapFee) return;
 
         require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
 
@@ -98,10 +96,9 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     }
 
     function updatePlatformFee() public {
-        uint256 _platformFee = customPlatformFee != type(uint).max
-            ? customPlatformFee
-            : factory.read(PLATFORM_FEE_NAME).toUint256();
-        if (_platformFee == platformFee) { return; }
+        uint _platformFee =
+            customPlatformFee != type(uint).max ? customPlatformFee : factory.read(PLATFORM_FEE_NAME).toUint256();
+        if (_platformFee == platformFee) return;
 
         require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
 
@@ -126,5 +123,5 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
-    function _update(uint256 aTotalToken0, uint256 aTotalToken1, uint112 aReserve0, uint112 aReserve1) internal virtual;
+    function _update(uint aTotalToken0, uint aTotalToken1, uint112 aReserve0, uint112 aReserve1) internal virtual;
 }
