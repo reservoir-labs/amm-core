@@ -165,6 +165,81 @@ contract AssetManagedPairTest is BaseTest
         assertEq(_pair.token0Managed(), 20e18 + 7e18); // number is updated after sync
     }
 
+    function testMint_AfterLoss() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
+
+        // act
+        _tokenA.mint(address(_pair), 100e18);
+        _tokenB.mint(address(_pair), 100e18);
+        _pair.mint(address(this));
+
+        // assert - the minter gets more than in the case where the loss didn't happen
+        if (_pair == _constantProductPair) {
+            assertGt(_pair.balanceOf(address(this)), 100e18); // sqrt(100e18 * 100e18)
+        } else if (_pair == _stablePair) {
+            assertGt(_pair.balanceOf(address(this)), 100e18 + 100e18);
+        }
+    }
+
+    function testBurn_AfterLoss() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
+
+        // act
+        uint lLpTokenBal = _pair.balanceOf(_alice);
+        vm.prank(_alice);
+        _pair.transfer(address(_pair) , lLpTokenBal);
+        _pair.burn(address(this));
+
+        // assert - the burner gets less than in the case where the loss didn't happen
+        // todo: take into account min_liquidity
+        if (_pair == _constantProductPair) {
+            assertLt(_tokenA.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
+            assertLt(_tokenB.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
+        } else if (_pair == _stablePair) {
+            assertLt(_tokenA.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
+            assertLt(_tokenB.balanceOf(address(this)), INITIAL_MINT_AMOUNT);
+        }
+    }
+
+    function testSwap_AfterLoss() external allPairs {
+        // arrange
+        int256 lSwapAmt = 1e18;
+        uint256 lBefore = vm.snapshot();
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        _pair.swap(lSwapAmt, true, address(this), "");
+        uint256 lNoLossOutAmt = _tokenB.balanceOf(address(this));
+        vm.revertTo(lBefore);
+
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+
+        _pair.sync();
+
+        // act
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        _pair.swap(lSwapAmt, true, address(this), "");
+
+        // assert - after losing some token A, it becomes more expensive as it is scarcer so
+        // we get more token B out
+        uint256 lAfterLossOutAmt = _tokenB.balanceOf(address(this));
+        assertGt(lAfterLossOutAmt, lNoLossOutAmt);
+    }
+
     function testSyncManaged_ConstantProduct() external
     {
         // arrange
