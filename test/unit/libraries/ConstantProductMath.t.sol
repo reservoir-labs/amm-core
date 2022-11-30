@@ -5,12 +5,10 @@ import "test/__fixtures/BaseTest.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
-contract ConstantProductMathTest is BaseTest
-{
-    function testConstantProductOracleMath() external
-    {
+contract ConstantProductMathTest is BaseTest {
+    function testConstantProductOracleMath() external {
         // assert
-        (uint256 lSpotPrice, int256 lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(1e18, 1e18);
+        (uint lSpotPrice, int lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(1e18, 1e18);
         assertEq(lSpotPrice, 1e18);
         assertEq(lLogSpotPrice, LogCompression.toLowResLog(1e18));
 
@@ -20,33 +18,22 @@ contract ConstantProductMathTest is BaseTest
 
         (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max / 2, type(uint112).max);
         assertEq(lSpotPrice, 2e18 + 1);
-        assertEq(
-            lLogSpotPrice,
-            LogCompression.toLowResLog(2e18)
-        );
+        assertEq(lLogSpotPrice, LogCompression.toLowResLog(2e18));
 
         (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 2);
         assertEq(lSpotPrice, 0.5e18);
-        assertEq(
-            lLogSpotPrice,
-            LogCompression.toLowResLog(0.5e18)
-        );
+        assertEq(lLogSpotPrice, LogCompression.toLowResLog(0.5e18));
 
         (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max / 10, type(uint112).max);
         assertEq(lSpotPrice, 10e18 + 1);
-        assertEq(
-            lLogSpotPrice,
-            LogCompression.toLowResLog(10e18)
-        );
+        assertEq(lLogSpotPrice, LogCompression.toLowResLog(10e18));
 
         (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 10);
         assertEq(lSpotPrice, 0.1e18);
-        assertEq(
-            lLogSpotPrice,
-            LogCompression.toLowResLog(0.1e18)
-        );
+        assertEq(lLogSpotPrice, LogCompression.toLowResLog(0.1e18));
 
-        (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 1e17);
+        (lSpotPrice, lLogSpotPrice) =
+            ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 1e17);
         assertEq(lSpotPrice, 1e18 / 1e17);
         assertApproxEqRel(
             lLogSpotPrice,
@@ -55,7 +42,8 @@ contract ConstantProductMathTest is BaseTest
             0.01e18
         );
 
-        (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max / 1e17, type(uint112).max);
+        (lSpotPrice, lLogSpotPrice) =
+            ConstantProductOracleMath.calcLogPrice(type(uint112).max / 1e17, type(uint112).max);
         // this small discrepancy occurs because we use divWadUp
         assertApproxEqRel(lSpotPrice, 1e18 * 1e17, 0.00000000000000001e18);
         assertApproxEqRel(
@@ -65,29 +53,22 @@ contract ConstantProductMathTest is BaseTest
             0.01e18
         );
 
-        (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 1e18);
+        (lSpotPrice, lLogSpotPrice) =
+            ConstantProductOracleMath.calcLogPrice(type(uint112).max, type(uint112).max / 1e18);
         assertEq(lSpotPrice, 1e18 / 1e18);
-        assertApproxEqRel(
-            lLogSpotPrice,
-            LogCompression.toLowResLog(1e18 / 1e18),
-            0.1e18
-        );
+        assertApproxEqRel(lLogSpotPrice, LogCompression.toLowResLog(1e18 / 1e18), 0.1e18);
 
-        (lSpotPrice, lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(type(uint112).max / 1e18, type(uint112).max);
+        (lSpotPrice, lLogSpotPrice) =
+            ConstantProductOracleMath.calcLogPrice(type(uint112).max / 1e18, type(uint112).max);
         // this small discrepancy occurs because we use divWadUp
         assertApproxEqRel(lSpotPrice, 1e18 * 1e18, 0.000000000000001e18);
-        assertApproxEqRel(
-            lLogSpotPrice,
-            LogCompression.toLowResLog(1e18 * 1e18),
-            0.1e18
-        );
+        assertApproxEqRel(lLogSpotPrice, LogCompression.toLowResLog(1e18 * 1e18), 0.1e18);
     }
 
-    function testCalcLogPrice_ReturnsOneWeiWhenPriceDiffGreaterThan1e18(uint256 aReserve0, uint256 aReserve1) public
-    {
+    function testCalcLogPrice_ReturnsOneWeiWhenPriceDiffGreaterThan1e18(uint aReserve0, uint aReserve1) public {
         // arrange
-        uint256 lReserve1 = bound(aReserve0, 1, type(uint112).max / 1e18);
-        uint256 lReserve0 = bound(aReserve1, lReserve1 * 1e18, type(uint112).max);
+        uint lReserve1 = bound(aReserve0, 1, type(uint112).max / 1e18);
+        uint lReserve0 = bound(aReserve1, lReserve1 * 1e18, type(uint112).max);
 
         // act
         (, int112 lLogPrice) = ConstantProductOracleMath.calcLogPrice(lReserve0, lReserve1);

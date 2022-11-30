@@ -6,7 +6,6 @@ import { IAssetManagedPair, IAssetManager } from "src/interfaces/IAssetManagedPa
 import { Pair } from "src/Pair.sol";
 
 abstract contract AssetManagedPair is Pair, IAssetManagedPair {
-
     /*//////////////////////////////////////////////////////////////////////////
                                 ASSET MANAGER
     //////////////////////////////////////////////////////////////////////////*/
@@ -37,12 +36,12 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
     uint112 public token0Managed;
     uint112 public token1Managed;
 
-    function _totalToken0() internal view returns (uint256) {
-        return IERC20(token0).balanceOf(address(this)) + uint256(token0Managed);
+    function _totalToken0() internal view returns (uint) {
+        return IERC20(token0).balanceOf(address(this)) + uint(token0Managed);
     }
 
-    function _totalToken1() internal view returns (uint256) {
-        return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
+    function _totalToken1() internal view returns (uint) {
+        return IERC20(token1).balanceOf(address(this)) + uint(token1Managed);
     }
 
     function _handleReport(address token, uint112 prevBalance, uint112 newBalance) internal {
@@ -52,19 +51,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
             emit ProfitReported(token, lProfit);
 
-            token == token0
-                ? reserve0 += lProfit
-                : reserve1 += lProfit;
-        }
-        else if (newBalance < prevBalance) {
+            token == token0 ? reserve0 += lProfit : reserve1 += lProfit;
+        } else if (newBalance < prevBalance) {
             // report loss
             uint112 lLoss = prevBalance - newBalance;
 
             emit LossReported(token, lLoss);
 
-            token == token0
-                ? reserve0 -= lLoss
-                : reserve1 -= lLoss;
+            token == token0 ? reserve0 -= lLoss : reserve1 -= lLoss;
         }
         // else do nothing balance is equal
     }
@@ -89,23 +83,18 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
             return;
         }
         // supplying to / withdrawing from 3rd party markets might fail
-        try assetManager.afterLiquidityEvent() {} // solhint-disable-line no-empty-blocks
-        catch {}                                  // solhint-disable-line no-empty-blocks
+        try assetManager.afterLiquidityEvent() { } catch { } // solhint-disable-line no-empty-blocks
     }
 
-    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
-        require(
-            token0Change != type(int256).min && token1Change != type(int256).min,
-            "AMP: CAST_WOULD_OVERFLOW"
-        );
+    function adjustManagement(int token0Change, int token1Change) external onlyManager {
+        require(token0Change != type(int).min && token1Change != type(int).min, "AMP: CAST_WOULD_OVERFLOW");
 
         if (token0Change > 0) {
-            uint112 lDelta = uint112(uint256(int256(token0Change)));
+            uint112 lDelta = uint112(uint(int(token0Change)));
             token0Managed += lDelta;
             IERC20(token0).transfer(address(assetManager), lDelta);
-        }
-        else if (token0Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token0Change)));
+        } else if (token0Change < 0) {
+            uint112 lDelta = uint112(uint(int(-token0Change)));
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
@@ -114,15 +103,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         }
 
         if (token1Change > 0) {
-            uint112 lDelta = uint112(uint256(int256(token1Change)));
+            uint112 lDelta = uint112(uint(int(token1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
             IERC20(token1).transfer(address(assetManager), lDelta);
-        }
-        else if (token1Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token1Change)));
+        } else if (token1Change < 0) {
+            uint112 lDelta = uint112(uint(int(-token1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;

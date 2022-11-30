@@ -24,3 +24,9 @@ runs = 10_000
 [rpc_endpoints]
 avalanche = "https://api.avax.network/ext/bc/C/rpc"
 polygon = "https://polygon-rpc.com"
+
+[fmt]
+bracket_spacing = true
+wrap_comments = false
+number_underscore = "thousands"
+int_types = "short"

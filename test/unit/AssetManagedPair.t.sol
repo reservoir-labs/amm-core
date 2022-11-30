@@ -8,30 +8,27 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
-contract AssetManagedPairTest is BaseTest
-{
+contract AssetManagedPairTest is BaseTest {
     AssetManager private _manager = new AssetManager();
 
     IAssetManagedPair[] internal _pairs;
-    IAssetManagedPair   internal _pair;
+    IAssetManagedPair internal _pair;
 
     modifier parameterizedTest() {
-        for (uint256 i = 0; i < _pairs.length; ++i) {
-            uint256 lBefore = vm.snapshot();
+        for (uint i = 0; i < _pairs.length; ++i) {
+            uint lBefore = vm.snapshot();
             _pair = _pairs[i];
             _;
             vm.revertTo(lBefore);
         }
     }
 
-    function setUp() public
-    {
+    function setUp() public {
         _pairs.push(_constantProductPair);
         _pairs.push(_stablePair);
     }
 
-    function testSetManager() external parameterizedTest
-    {
+    function testSetManager() external parameterizedTest {
         // sanity
         assertEq(address(_pair.assetManager()), address(0));
 
@@ -43,8 +40,7 @@ contract AssetManagedPairTest is BaseTest
         assertEq(address(_pair.assetManager()), address(_manager));
     }
 
-    function testSetManager_CannotMigrateWithManaged() external parameterizedTest
-    {
+    function testSetManager_CannotMigrateWithManaged() external parameterizedTest {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -57,8 +53,7 @@ contract AssetManagedPairTest is BaseTest
         _pair.setManager(AssetManager(address(0)));
     }
 
-    function testManageReserves() external parameterizedTest
-    {
+    function testManageReserves() external parameterizedTest {
         // arrange
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
@@ -75,8 +70,7 @@ contract AssetManagedPairTest is BaseTest
         assertEq(_tokenB.balanceOf(address(this)), 20e18);
     }
 
-    function testManageReserves_DecreaseManagement() external parameterizedTest
-    {
+    function testManageReserves_DecreaseManagement() external parameterizedTest {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -85,18 +79,18 @@ contract AssetManagedPairTest is BaseTest
         address lToken1 = _pair.token1();
 
         // sanity
-        (uint112 lReserve0, uint112 lReserve1, ) = _pair.getReserves();
-        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
-        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
+        (uint112 lReserve0, uint112 lReserve1,) = _pair.getReserves();
+        uint lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
+        uint lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
 
         _manager.adjustManagement(_pair, 20e18, 20e18);
 
-        (uint112 lReserve0_1, uint112 lReserve1_1, ) = _pair.getReserves();
-        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_pair));
-        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_pair));
+        (uint112 lReserve0_1, uint112 lReserve1_1,) = _pair.getReserves();
+        uint lBal0After = IERC20(lToken0).balanceOf(address(_pair));
+        uint lBal1After = IERC20(lToken1).balanceOf(address(_pair));
 
-        assertEq(uint256(lReserve0_1), lReserve0);
-        assertEq(uint256(lReserve1_1), lReserve1);
+        assertEq(uint(lReserve0_1), lReserve0);
+        assertEq(uint(lReserve1_1), lReserve1);
         assertEq(lBal0Before - lBal0After, 20e18);
         assertEq(lBal1Before - lBal1After, 20e18);
 
@@ -108,19 +102,18 @@ contract AssetManagedPairTest is BaseTest
         // act
         _manager.adjustManagement(_pair, -10e18, -10e18);
 
-        (uint112 lReserve0_2, uint112 lReserve1_2, ) = _pair.getReserves();
+        (uint112 lReserve0_2, uint112 lReserve1_2,) = _pair.getReserves();
 
         // assert
-        assertEq(uint256(lReserve0_2), lReserve0);
-        assertEq(uint256(lReserve1_2), lReserve1);
+        assertEq(uint(lReserve0_2), lReserve0);
+        assertEq(uint(lReserve1_2), lReserve1);
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
         assertEq(_manager.getBalance(_pair, address(lToken0)), 10e18);
         assertEq(_manager.getBalance(_pair, address(lToken1)), 10e18);
     }
 
-    function testManageReserves_KStillHolds() external parameterizedTest
-    {
+    function testManageReserves_KStillHolds() external parameterizedTest {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -128,21 +121,20 @@ contract AssetManagedPairTest is BaseTest
         // liquidity prior to adjustManagement
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
-        uint256 lLiq1 = _pair.mint(address(this));
+        uint lLiq1 = _pair.mint(address(this));
 
         _manager.adjustManagement(_pair, 50e18, 50e18);
 
         // act
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
-        uint256 lLiq2 = _pair.mint(address(this));
+        uint lLiq2 = _pair.mint(address(this));
 
         // assert
         assertEq(lLiq1, lLiq2);
     }
 
-    function testSyncManaged_ConstantProduct() external
-    {
+    function testSyncManaged_ConstantProduct() external {
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setManager(_manager);
@@ -153,7 +145,7 @@ contract AssetManagedPairTest is BaseTest
         _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
         _tokenA.mint(address(_constantProductPair), 10e18);
         _tokenB.mint(address(_constantProductPair), 10e18);
-        uint256 lLiq = _constantProductPair.mint(address(this));
+        uint lLiq = _constantProductPair.mint(address(this));
 
         // sanity
         assertEq(lLiq, 10e18); // sqrt 10e18 * 10e18
@@ -175,8 +167,7 @@ contract AssetManagedPairTest is BaseTest
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
-    function testSyncManaged_Stable() external
-    {
+    function testSyncManaged_Stable() external {
         // arrange
         vm.prank(address(_factory));
         _stablePair.setManager(_manager);
@@ -187,7 +178,7 @@ contract AssetManagedPairTest is BaseTest
         _manager.adjustManagement(_stablePair, 20e18, 20e18);
         _tokenA.mint(address(_stablePair), 10e18);
         _tokenB.mint(address(_stablePair), 10e18);
-        uint256 lLiq = _stablePair.mint(address(this));
+        uint lLiq = _stablePair.mint(address(this));
 
         // sanity
         assertEq(lLiq, 20e18); // 10e18 + 10e18
@@ -205,15 +196,14 @@ contract AssetManagedPairTest is BaseTest
         // assert
         assertEq(_manager.getBalance(_stablePair, lToken0), 19e18);
         assertEq(_manager.getBalance(_stablePair, lToken1), 19e18);
-        (uint112 lReserve0, uint112 lReserve1, ) = _stablePair.getReserves();
+        (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
         assertTrue(MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT + 10e18 - 1e18) * 210e18 / 220e18));
         assertTrue(MathUtils.within1(lReserve1, (INITIAL_MINT_AMOUNT + 10e18 - 1e18) * 210e18 / 220e18));
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
-    function testSync() external parameterizedTest
-    {
+    function testSync() external parameterizedTest {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -225,7 +215,7 @@ contract AssetManagedPairTest is BaseTest
         _pair.sync();
 
         // assert
-        (uint112 lReserve0, uint112 lReserve1, ) = _pair.getReserves();
+        (uint112 lReserve0, uint112 lReserve1,) = _pair.getReserves();
         assertEq(_pair.token0Managed(), 25e18);
         assertEq(lReserve0, 105e18);
         assertEq(lReserve1, 106e18);
