@@ -7,7 +7,7 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 contract LogCompressionTest is Test {
     address private _balancerLogCompression = address(200);
 
-    function setUp() public {
+    constructor() {
         // we use getDeployedCode since the library contract is stateless
         bytes memory lBytecode = vm.getDeployedCode(
             "./reference/balancer-v2-monorepo/pkg/solidity-utils/artifacts/contracts/helpers/LogCompressionWrapper.sol/LogCompressionWrapper.json"

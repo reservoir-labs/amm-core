@@ -7,7 +7,7 @@ import { LogExpMath } from "src/libraries/LogExpMath.sol";
 contract LogExpMathTest is Test {
     address private _balancerLogExpMath = address(100);
 
-    function setUp() public {
+    constructor() {
         // we use getDeployedCode since the library contract is stateless
         bytes memory lBytecode = vm.getDeployedCode(
             "./reference/balancer-v2-monorepo/pkg/solidity-utils/artifacts/contracts/math/LogExpMathWrapper.sol/LogExpMathWrapper.json"
