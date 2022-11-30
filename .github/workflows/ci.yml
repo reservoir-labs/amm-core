@@ -112,6 +112,30 @@ jobs:
       - name: Uniswap v2-core regression tests
         run: npm run test:uniswap
 
+  test-differential-balancer:
+    name: Test differential balancer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install js dependencies
+        run: npm run install:balancer
+
+      - name: Build only the artifacts we need
+        run: npm run build:balancer
+
+      - name: Balancer differential tests
+        run: npm run test:balancer
+
+
   check-gas:
     name: Check Gas
     runs-on: ubuntu-latest

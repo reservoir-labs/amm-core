@@ -11,6 +11,13 @@ verbosity = 3
 [profile.integration]
 match_path = "test/integration/*.sol"
 
+[profile.differential]
+fs_permissions = [{ access = "read", path = "./reference/balancer-v2-monorepo" }]
+match_path = "test/differential/*.sol"
+
+[profile.differential.fuzz]
+runs = 10_000
+
 [profile.ci.fuzz]
 runs = 10_000
 
