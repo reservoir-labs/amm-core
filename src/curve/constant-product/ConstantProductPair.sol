@@ -24,8 +24,8 @@ contract ConstantProductPair is ReservoirPair {
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { } // solhint-disable-line
-        // no-empty-blocks
+    // solhint-disable-next-line no-empty-blocks
+    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
 
     function _getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint swapFee)
         internal
