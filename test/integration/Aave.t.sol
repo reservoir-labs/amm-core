@@ -147,6 +147,13 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.getBalance(_pair, address(_tokenA)), 0);
     }
 
+    function testAdjustManagement_NotOwner() public allNetworks allPairs {
+        // act & assert
+        vm.prank(_alice);
+        vm.expectRevert("UNAUTHORIZED");
+        _manager.adjustManagement(_pair, 1, 1);
+    }
+
     function _increaseManagementOneToken(int aAmountToManage) private {
         // arrange
         int lAmountToManage0 = _pair.token0() == USDC ? aAmountToManage : int(0);
@@ -368,7 +375,7 @@ contract AaveIntegrationTest is BaseTest {
         assertTrue(MathUtils.within1(_manager.getBalance(lOtherPair, USDC), uint(lAmountToManageOther)));
     }
 
-    function testGetBalance_AddingAfterExchangeRateChange(uint aAmountToManage1, uint aAmountToManage2, uint aTime)
+    function testGetBalance_AddingAfterProfit(uint aAmountToManage1, uint aAmountToManage2, uint aTime)
         public
         allNetworks
         allPairs
@@ -428,7 +435,55 @@ contract AaveIntegrationTest is BaseTest {
         // assert
         assertEq(lShares, lTotalShares);
         assertEq(lShares, uint(lAmountToManage));
-        assertEq(lTotalShares, uint(lAmountToManage));
+    }
+
+    function testShares_AdjustManagementAfterProfit(uint aAmountToManage1, uint aAmountToManage2)
+        public
+        allNetworks
+        allPairs
+    {
+        // assume
+        (uint lReserve0, uint lReserve1,) = _pair.getReserves();
+        uint lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        int lAmountToManage1 = int(bound(aAmountToManage1, 100, lReserveUSDC / 2));
+        int lAmountToManage2 = int(bound(aAmountToManage2, 100, lReserveUSDC / 2));
+
+        // arrange
+        (address lAaveToken,,) = _dataProvider.getReserveTokensAddresses(USDC);
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? lAmountToManage1 : int(0),
+            _pair.token1() == USDC ? lAmountToManage1 : int(0)
+        );
+
+        // act - go forward in time to simulate accrual of profits
+        skip(30 days);
+        uint lAaveTokenAmt1 = IERC20(lAaveToken).balanceOf(address(_manager));
+        assertGt(lAaveTokenAmt1, uint(lAmountToManage1));
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? lAmountToManage2 : int(0),
+            _pair.token1() == USDC ? lAmountToManage2 : int(0)
+        );
+
+        // assert
+        uint lShares = _manager.shares(_pair, USDC);
+        uint lTotalShares = _manager.totalShares(lAaveToken);
+        assertEq(lShares, lTotalShares);
+        assertLt(lTotalShares, uint(lAmountToManage1 + lAmountToManage2));
+
+        uint lBalance = _manager.getBalance(_pair, USDC);
+        uint lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
+        assertEq(lBalance, lAaveTokenAmt2);
+
+        // pair not yet informed of the profits, so the numbers are less than what it actually has
+        uint lUSDCManaged = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        assertLt(lUSDCManaged, lBalance);
+
+        // after a sync, the pair should have the correct amount
+        _pair.sync();
+        uint lUSDCManagedAfterSync = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        assertEq(lUSDCManagedAfterSync, lBalance);
     }
 
     function testAfterLiquidityEvent_IncreaseInvestmentAfterMint() public allNetworks allPairs {

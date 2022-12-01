@@ -44,6 +44,12 @@ contract AssetManager is IAssetManager {
     // solhint-disable-next-line no-empty-blocks
     function afterLiquidityEvent() external { }
 
-    // solhint-disable-next-line no-empty-blocks
-    function returnAsset(bool aToken0, uint aAmount) external { }
+    function returnAsset(bool aToken0, uint aAmount) external {
+        IERC20(aToken0 ? IAssetManagedPair(msg.sender).token0() : IAssetManagedPair(msg.sender).token1()).approve(
+            address(msg.sender), aAmount
+        );
+        IAssetManagedPair(msg.sender).adjustManagement(
+            aToken0 ? -int(aAmount) : int(0), aToken0 ? int(0) : -int(aAmount)
+        );
+    }
 }

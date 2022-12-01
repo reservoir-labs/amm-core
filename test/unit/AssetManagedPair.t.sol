@@ -14,7 +14,7 @@ contract AssetManagedPairTest is BaseTest {
     IAssetManagedPair[] internal _pairs;
     IAssetManagedPair internal _pair;
 
-    modifier parameterizedTest() {
+    modifier allPairs() {
         for (uint i = 0; i < _pairs.length; ++i) {
             uint lBefore = vm.snapshot();
             _pair = _pairs[i];
@@ -28,7 +28,7 @@ contract AssetManagedPairTest is BaseTest {
         _pairs.push(_stablePair);
     }
 
-    function testSetManager() external parameterizedTest {
+    function testSetManager() external allPairs {
         // sanity
         assertEq(address(_pair.assetManager()), address(0));
 
@@ -40,7 +40,7 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(address(_pair.assetManager()), address(_manager));
     }
 
-    function testSetManager_CannotMigrateWithManaged() external parameterizedTest {
+    function testSetManager_CannotMigrateWithManaged() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -53,7 +53,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(AssetManager(address(0)));
     }
 
-    function testManageReserves() external parameterizedTest {
+    function testAdjustManagement() external allPairs {
         // arrange
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
@@ -70,7 +70,7 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), 20e18);
     }
 
-    function testManageReserves_DecreaseManagement() external parameterizedTest {
+    function testAdjustManagement_DecreaseManagement() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -113,7 +113,7 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_pair, address(lToken1)), 10e18);
     }
 
-    function testManageReserves_KStillHolds() external parameterizedTest {
+    function testAdjustManagement_KStillHolds() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -132,6 +132,99 @@ contract AssetManagedPairTest is BaseTest {
 
         // assert
         assertEq(lLiq1, lLiq2);
+    }
+
+    function testAdjustManagement_AdjustAfterLoss() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+
+        // sanity
+        uint lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
+        assertEq(lTokenAManaged, 7e18);
+
+        // act
+        _manager.adjustManagement(_pair, 20e18, 20e18);
+        lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
+
+        // assert
+        assertEq(lTokenAManaged, 20e18 + 7e18);
+        assertEq(_pair.token0Managed(), 20e18 + 10e18);
+        _pair.sync();
+        assertEq(_pair.token0Managed(), 20e18 + 7e18); // number is updated after sync
+    }
+
+    function testMint_AfterLoss() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
+
+        // act
+        _tokenA.mint(address(_pair), 100e18);
+        _tokenB.mint(address(_pair), 100e18);
+        _pair.mint(address(this));
+
+        // assert - the minter gets more than in the case where the loss didn't happen
+        if (_pair == _constantProductPair) {
+            assertGt(_pair.balanceOf(address(this)), 100e18); // sqrt(100e18 * 100e18)
+        } else if (_pair == _stablePair) {
+            assertGt(_pair.balanceOf(address(this)), 100e18 + 100e18);
+        }
+    }
+
+    function testBurn_AfterLoss() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
+
+        // act
+        uint lLpTokenBal = _pair.balanceOf(_alice);
+        uint lTotalSupply = _pair.totalSupply();
+        vm.prank(_alice);
+        _pair.transfer(address(_pair), lLpTokenBal);
+        _pair.burn(address(this));
+
+        // assert - the burner gets less than in the case where the loss didn't happen
+        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
+    }
+
+    function testSwap_AfterLoss() external allPairs {
+        // arrange
+        int lSwapAmt = 1e18;
+        uint lBefore = vm.snapshot();
+        _tokenA.mint(address(_pair), uint(lSwapAmt));
+        _pair.swap(lSwapAmt, true, address(this), "");
+        uint lNoLossOutAmt = _tokenB.balanceOf(address(this));
+        vm.revertTo(lBefore);
+
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+
+        _pair.sync();
+
+        // act
+        _tokenA.mint(address(_pair), uint(lSwapAmt));
+        _pair.swap(lSwapAmt, true, address(this), "");
+
+        // assert - after losing some token A, it becomes more expensive as it is scarcer so
+        // we get more token B out
+        uint lAfterLossOutAmt = _tokenB.balanceOf(address(this));
+        assertGt(lAfterLossOutAmt, lNoLossOutAmt);
     }
 
     function testSyncManaged_ConstantProduct() external {
@@ -203,7 +296,7 @@ contract AssetManagedPairTest is BaseTest {
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
-    function testSync() external parameterizedTest {
+    function testSync() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
