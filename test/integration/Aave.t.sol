@@ -147,8 +147,7 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.getBalance(_pair, address(_tokenA)), 0);
     }
 
-    function testAdjustManagement_NotOwner() public allNetworks allPairs
-    {
+    function testAdjustManagement_NotOwner() public allNetworks allPairs {
         // act & assert
         vm.prank(_alice);
         vm.expectRevert("UNAUTHORIZED");
@@ -438,49 +437,52 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(lShares, uint(lAmountToManage));
     }
 
-    function testShares_AdjustManagementAfterProfit(uint256 aAmountToManage1, uint256 aAmountToManage2) public allNetworks allPairs
+    function testShares_AdjustManagementAfterProfit(uint aAmountToManage1, uint aAmountToManage2)
+        public
+        allNetworks
+        allPairs
     {
         // assume
-        (uint256 lReserve0, uint256 lReserve1, ) = _pair.getReserves();
-        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 100, lReserveUSDC / 2));
-        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 100, lReserveUSDC / 2));
+        (uint lReserve0, uint lReserve1,) = _pair.getReserves();
+        uint lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        int lAmountToManage1 = int(bound(aAmountToManage1, 100, lReserveUSDC / 2));
+        int lAmountToManage2 = int(bound(aAmountToManage2, 100, lReserveUSDC / 2));
 
         // arrange
-        (address lAaveToken, , ) = _dataProvider.getReserveTokensAddresses(USDC);
+        (address lAaveToken,,) = _dataProvider.getReserveTokensAddresses(USDC);
         _manager.adjustManagement(
             _pair,
-            _pair.token0() == USDC ? lAmountToManage1 : int256(0),
-            _pair.token1() == USDC ? lAmountToManage1 : int256(0)
+            _pair.token0() == USDC ? lAmountToManage1 : int(0),
+            _pair.token1() == USDC ? lAmountToManage1 : int(0)
         );
 
         // act - go forward in time to simulate accrual of profits
         skip(30 days);
-        uint256 lAaveTokenAmt1 = IERC20(lAaveToken).balanceOf(address(_manager));
-        assertGt(lAaveTokenAmt1, uint256(lAmountToManage1));
+        uint lAaveTokenAmt1 = IERC20(lAaveToken).balanceOf(address(_manager));
+        assertGt(lAaveTokenAmt1, uint(lAmountToManage1));
         _manager.adjustManagement(
             _pair,
-            _pair.token0() == USDC ? lAmountToManage2 : int256(0),
-            _pair.token1() == USDC ? lAmountToManage2 : int256(0)
+            _pair.token0() == USDC ? lAmountToManage2 : int(0),
+            _pair.token1() == USDC ? lAmountToManage2 : int(0)
         );
 
         // assert
-        uint256 lShares = _manager.shares(_pair, USDC);
-        uint256 lTotalShares = _manager.totalShares(lAaveToken);
+        uint lShares = _manager.shares(_pair, USDC);
+        uint lTotalShares = _manager.totalShares(lAaveToken);
         assertEq(lShares, lTotalShares);
         assertLt(lTotalShares, uint(lAmountToManage1 + lAmountToManage2));
 
-        uint256 lBalance = _manager.getBalance(_pair, USDC);
-        uint256 lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
+        uint lBalance = _manager.getBalance(_pair, USDC);
+        uint lAaveTokenAmt2 = IERC20(lAaveToken).balanceOf(address(_manager));
         assertEq(lBalance, lAaveTokenAmt2);
 
         // pair not yet informed of the profits, so the numbers are less than what it actually has
-        uint256 lUSDCManaged = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        uint lUSDCManaged = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
         assertLt(lUSDCManaged, lBalance);
 
         // after a sync, the pair should have the correct amount
         _pair.sync();
-        uint256 lUSDCManagedAfterSync = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
+        uint lUSDCManagedAfterSync = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
         assertEq(lUSDCManagedAfterSync, lBalance);
     }
 

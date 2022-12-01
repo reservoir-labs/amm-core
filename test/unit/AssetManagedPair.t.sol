@@ -134,8 +134,7 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(lLiq1, lLiq2);
     }
 
-    function testAdjustManagement_AdjustAfterLoss() external allPairs
-    {
+    function testAdjustManagement_AdjustAfterLoss() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -144,7 +143,7 @@ contract AssetManagedPairTest is BaseTest {
         _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
 
         // sanity
-        uint256 lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
+        uint lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
         assertEq(lTokenAManaged, 7e18);
 
         // act
@@ -193,7 +192,7 @@ contract AssetManagedPairTest is BaseTest {
         uint lLpTokenBal = _pair.balanceOf(_alice);
         uint lTotalSupply = _pair.totalSupply();
         vm.prank(_alice);
-        _pair.transfer(address(_pair) , lLpTokenBal);
+        _pair.transfer(address(_pair), lLpTokenBal);
         _pair.burn(address(this));
 
         // assert - the burner gets less than in the case where the loss didn't happen
@@ -203,11 +202,11 @@ contract AssetManagedPairTest is BaseTest {
 
     function testSwap_AfterLoss() external allPairs {
         // arrange
-        int256 lSwapAmt = 1e18;
-        uint256 lBefore = vm.snapshot();
-        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        int lSwapAmt = 1e18;
+        uint lBefore = vm.snapshot();
+        _tokenA.mint(address(_pair), uint(lSwapAmt));
         _pair.swap(lSwapAmt, true, address(this), "");
-        uint256 lNoLossOutAmt = _tokenB.balanceOf(address(this));
+        uint lNoLossOutAmt = _tokenB.balanceOf(address(this));
         vm.revertTo(lBefore);
 
         vm.prank(address(_factory));
@@ -219,12 +218,12 @@ contract AssetManagedPairTest is BaseTest {
         _pair.sync();
 
         // act
-        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        _tokenA.mint(address(_pair), uint(lSwapAmt));
         _pair.swap(lSwapAmt, true, address(this), "");
 
         // assert - after losing some token A, it becomes more expensive as it is scarcer so
         // we get more token B out
-        uint256 lAfterLossOutAmt = _tokenB.balanceOf(address(this));
+        uint lAfterLossOutAmt = _tokenB.balanceOf(address(this));
         assertGt(lAfterLossOutAmt, lNoLossOutAmt);
     }
 
