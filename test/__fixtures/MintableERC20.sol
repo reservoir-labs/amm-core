@@ -3,16 +3,14 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/token/ERC20/ERC20.sol";
 
-contract MintableERC20 is ERC20
-{
+contract MintableERC20 is ERC20 {
     uint8 private _decimals;
 
-    constructor (string memory aName, string memory aSymbol, uint8 aDecimals) ERC20(aName, aSymbol) {
+    constructor(string memory aName, string memory aSymbol, uint8 aDecimals) ERC20(aName, aSymbol) {
         _decimals = aDecimals;
     }
 
-    function mint(address aReceiver, uint256 aAmount) external
-    {
+    function mint(address aReceiver, uint aAmount) external {
         _mint(aReceiver, aAmount);
     }
 

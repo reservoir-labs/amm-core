@@ -7,7 +7,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     string public constant name = "Uniswap V2";
     string public constant symbol = "UNI-V2";
     uint8 public constant decimals = 18;
-    uint  public totalSupply;
+    uint public totalSupply;
     mapping(address => uint) public balanceOf;
     mapping(address => mapping(address => uint)) public allowance;
 
@@ -67,14 +67,16 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     }
 
     function transferFrom(address from, address to, uint value) external returns (bool) {
-        if (allowance[from][msg.sender] != type(uint256).max) {
+        if (allowance[from][msg.sender] != type(uint).max) {
             allowance[from][msg.sender] = allowance[from][msg.sender] - value;
         }
         _transfer(from, to, value);
         return true;
     }
 
-    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
         // solhint-disable-next-line not-rely-on-time
         require(deadline >= block.timestamp, "CP: EXPIRED");
         bytes32 digest = keccak256(

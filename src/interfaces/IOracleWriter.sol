@@ -21,12 +21,12 @@ interface IOracleWriter {
     function oracleCaller() external view returns (address);
     function updateOracleCaller() external;
 
-    function observation(uint256 aIndex) external view returns (Observation memory rObservation);
+    function observation(uint aIndex) external view returns (Observation memory rObservation);
     function index() external view returns (uint16 rIndex);
 
-    function allowedChangePerSecond() external returns (uint256 rAllowedChangePerSecond);
-    function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external;
+    function allowedChangePerSecond() external returns (uint rAllowedChangePerSecond);
+    function setAllowedChangePerSecond(uint aAllowedChangePerSecond) external;
 
     event OracleCallerChanged(address oldCaller, address newCaller);
-    event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
+    event AllowedChangePerSecondChanged(uint oldAllowedChangePerSecond, uint newAllowedChangePerSecond);
 }

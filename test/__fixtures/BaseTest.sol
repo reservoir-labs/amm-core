@@ -11,38 +11,36 @@ import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
-abstract contract BaseTest is Test
-{
+abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
 
-    uint256 public constant INITIAL_MINT_AMOUNT               = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP               = 3_000;    // 0.3%
-    uint256 public constant DEFAULT_SWAP_FEE_SP               = 100;      // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE              = 250_000;  // 25%
-    uint256 public constant DEFAULT_AMP_COEFF                 = 1_000;
-    uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
+    uint public constant INITIAL_MINT_AMOUNT = 100e18;
+    uint public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
+    uint public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
+    uint public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
+    uint public constant DEFAULT_AMP_COEFF = 1000;
+    uint public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
-    GenericFactory  internal _factory       = new GenericFactory();
+    GenericFactory internal _factory = new GenericFactory();
 
-    address         internal _recoverer     = _makeAddress("recoverer");
-    address         internal _platformFeeTo = _makeAddress("platformFeeTo");
-    address         internal _alice         = _makeAddress("alice");
-    address         internal _bob           = _makeAddress("bob");
-    address         internal _cal           = _makeAddress("cal");
+    address internal _recoverer = _makeAddress("recoverer");
+    address internal _platformFeeTo = _makeAddress("platformFeeTo");
+    address internal _alice = _makeAddress("alice");
+    address internal _bob = _makeAddress("bob");
+    address internal _cal = _makeAddress("cal");
 
-    MintableERC20   internal _tokenA        = new MintableERC20("TokenA", "TA", 18);
-    MintableERC20   internal _tokenB        = new MintableERC20("TokenB", "TB", 18);
-    MintableERC20   internal _tokenC        = new MintableERC20("TokenC", "TC", 18);
-    MintableERC20   internal _tokenD        = new MintableERC20("TokenD", "TD", 6);
-    MintableERC20   internal _tokenE        = new MintableERC20("TokenF", "TF", 25);
+    MintableERC20 internal _tokenA = new MintableERC20("TokenA", "TA", 18);
+    MintableERC20 internal _tokenB = new MintableERC20("TokenB", "TB", 18);
+    MintableERC20 internal _tokenC = new MintableERC20("TokenC", "TC", 18);
+    MintableERC20 internal _tokenD = new MintableERC20("TokenD", "TD", 6);
+    MintableERC20 internal _tokenE = new MintableERC20("TokenF", "TF", 25);
 
-    ConstantProductPair   internal _constantProductPair;
-    StablePair            internal _stablePair;
+    ConstantProductPair internal _constantProductPair;
+    StablePair internal _stablePair;
 
-    OracleCaller    internal _oracleCaller  = new OracleCaller();
+    OracleCaller internal _oracleCaller = new OracleCaller();
 
-    constructor()
-    {
+    constructor() {
         // set shared variables
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::platformFeeTo", _platformFeeTo);
@@ -74,50 +72,39 @@ abstract contract BaseTest is Test
         _stablePair.mint(_alice);
     }
 
-    function _makeAddress(string memory aName) internal returns (address)
-    {
-        address lAddress = address(
-            uint160(uint256(
-                keccak256(abi.encodePacked(aName))
-            ))
-        );
+    function _makeAddress(string memory aName) internal returns (address) {
+        address lAddress = address(uint160(uint(keccak256(abi.encodePacked(aName)))));
         vm.label(lAddress, aName);
 
         return lAddress;
     }
 
-    function _createPair(address aTokenA, address aTokenB, uint256 aCurveId) internal returns (address rPair)
-    {
+    function _createPair(address aTokenA, address aTokenB, uint aCurveId) internal returns (address rPair) {
         rPair = _factory.createPair(aTokenA, aTokenB, aCurveId);
     }
 
-    function _stepTime(uint256 aTime) internal
-    {
+    function _stepTime(uint aTime) internal {
         vm.roll(block.number + 1);
         skip(aTime);
     }
 
     function _writeObservation(
         ReservoirPair aPair,
-        uint256 aIndex,
+        uint aIndex,
         int112 aRawPrice,
         int56 aClampedPrice,
         int56 aLiq,
         uint32 aTime
-    ) internal
-    {
+    ) internal {
         bytes32 lEncoded = bytes32(
             bytes.concat(
-                bytes4(aTime),
-                bytes7(uint56(aLiq)),
-                bytes7(uint56(aClampedPrice)),
-                bytes14(uint112(aRawPrice))
+                bytes4(aTime), bytes7(uint56(aLiq)), bytes7(uint56(aClampedPrice)), bytes14(uint112(aRawPrice))
             )
         );
 
         vm.record();
         _oracleCaller.observation(aPair, aIndex);
-        (bytes32[] memory lAccesses, ) = vm.accesses(address(aPair));
+        (bytes32[] memory lAccesses,) = vm.accesses(address(aPair));
         require(lAccesses.length == 2, "invalid number of accesses");
 
         vm.store(address(aPair), lAccesses[1], lEncoded);

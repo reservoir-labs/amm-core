@@ -20,7 +20,7 @@ import { Math } from "src/libraries/Math.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
 library ConstantProductOracleMath {
-    using FixedPointMathLib for uint256;
+    using FixedPointMathLib for uint;
 
     /**
      * @notice Calculates the spot price of token1/token0 for the constant product pair
@@ -28,29 +28,23 @@ library ConstantProductOracleMath {
      * @param reserve0 should never be 0, as checked by _update()
      * @param reserve1 should never be 0, as checked by _update()
      */
-    function calcLogPrice(
-        uint256 reserve0,
-        uint256 reserve1
-    ) internal pure returns (uint256 spotPrice, int112 logSpotPrice) {
+    function calcLogPrice(uint reserve0, uint reserve1) internal pure returns (uint spotPrice, int112 logSpotPrice) {
         // scaled by 1e18
         // spotPrice will never be zero as we do a divWadUp
         // the minimum price would be 1 wei (1e-18)
         spotPrice = reserve1.divWadUp(reserve0);
 
-        int256 rawResult = LogCompression.toLowResLog(spotPrice);
+        int rawResult = LogCompression.toLowResLog(spotPrice);
         assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
         logSpotPrice = int112(rawResult);
     }
 
     /// @param reserve0 amount in native precision
     /// @param reserve1 amount in native precision
-    function calcLogLiq(
-        uint256 reserve0,
-        uint256 reserve1
-    ) internal pure returns (int112 logLiq) {
-        uint256 sqrtK = Math.sqrt(reserve0 * reserve1);
+    function calcLogLiq(uint reserve0, uint reserve1) internal pure returns (int112 logLiq) {
+        uint sqrtK = Math.sqrt(reserve0 * reserve1);
 
-        int256 rawResult = LogCompression.toLowResLog(sqrtK);
+        int rawResult = LogCompression.toLowResLog(sqrtK);
         assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
         logLiq = int112(rawResult);
     }

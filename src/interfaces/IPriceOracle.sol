@@ -33,21 +33,24 @@ interface IPriceOracle {
     //   DAI and USDC will be close to 1.0, despite DAI having 18 decimals and USDC 6.
     //
     // - INVARIANT: the value of the Pool's invariant, which serves as a measure of its liquidity.
-    enum Variable { PAIR_PRICE, INVARIANT }
+    enum Variable {
+        PAIR_PRICE,
+        INVARIANT
+    }
 
     /**
      * @dev Returns the time average weighted price corresponding to each of `queries`. Prices are represented as 18
      * decimal fixed point values.
      */
     function getTimeWeightedAverage(OracleAverageQuery[] memory queries)
-    external
-    view
-    returns (uint256[] memory results);
+        external
+        view
+        returns (uint[] memory results);
 
     /**
      * @dev Returns latest sample of `variable`. Prices are represented as 18 decimal fixed point values.
      */
-    function getLatest(Variable variable) external view returns (uint256);
+    function getLatest(Variable variable) external view returns (uint);
 
     /**
      * @dev Information for a Time Weighted Average query.
@@ -69,15 +72,15 @@ interface IPriceOracle {
      * If a query has a non-zero `ago` value, then `secs + ago` (the oldest point in time) must be smaller than this
      * value for 'safe' queries.
      */
-    function getLargestSafeQueryWindow() external view returns (uint256);
+    function getLargestSafeQueryWindow() external view returns (uint);
 
     /**
      * @dev Returns the accumulators corresponding to each of `queries`.
      */
     function getPastAccumulators(OracleAccumulatorQuery[] memory queries)
-    external
-    view
-    returns (int256[] memory results);
+        external
+        view
+        returns (int[] memory results);
 
     /**
      * @dev Information for an Accumulator query.

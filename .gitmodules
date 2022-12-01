@@ -10,3 +10,6 @@
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/Rari-Capital/solmate
+[submodule "reference/balancer-v2-monorepo"]
+	path = reference/balancer-v2-monorepo
+	url = git@github.com:Reservoir-Labs/balancer-v2-monorepo.git

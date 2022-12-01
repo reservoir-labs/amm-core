@@ -8,12 +8,10 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-contract GenericFactoryTest is BaseTest
-{
-    function testCreatePair_AllCurves(uint256 aCurveId) public
-    {
+contract GenericFactoryTest is BaseTest {
+    function testCreatePair_AllCurves(uint aCurveId) public {
         // assume
-        uint256 lCurveId = bound(aCurveId, 0, 1);
+        uint lCurveId = bound(aCurveId, 0, 1);
 
         // act
         address lPair = _factory.createPair(address(_tokenA), address(_tokenC), lCurveId);
@@ -22,58 +20,52 @@ contract GenericFactoryTest is BaseTest
         assertEq(_factory.getPair(address(_tokenA), address(_tokenC), lCurveId), address(lPair));
     }
 
-    function testCreatePair_MoreThan18Decimals(uint256 aCurveId) public
-    {
+    function testCreatePair_MoreThan18Decimals(uint aCurveId) public {
         // assume
-        uint256 lCurveId = bound(aCurveId, 0, 1);
+        uint lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
         _createPair(address(_tokenE), address(_tokenA), lCurveId);
     }
 
-    function testCreatePair_ZeroAddress(uint256 aCurveId) public
-    {
+    function testCreatePair_ZeroAddress(uint aCurveId) public {
         // assume
-        uint256 lCurveId = bound(aCurveId, 0, 1);
+        uint lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: ZERO_ADDRESS");
         _createPair(address(0), address(_tokenA), lCurveId);
     }
 
-    function testCreatePair_CurveDoesNotExist(uint256 aCurveId) public
-    {
+    function testCreatePair_CurveDoesNotExist(uint aCurveId) public {
         // assume
-        uint256 lCurveId = bound(aCurveId, 2, type(uint256).max);
+        uint lCurveId = bound(aCurveId, 2, type(uint).max);
 
         // act & assert
         vm.expectRevert(stdError.indexOOBError);
         _createPair(address(_tokenB), address(_tokenD), lCurveId);
     }
 
-    function testCreatePair_IdenticalAddress(uint256 aCurveId) public
-    {
+    function testCreatePair_IdenticalAddress(uint aCurveId) public {
         // assume
-        uint256 lCurveId = bound(aCurveId, 0, 1);
+        uint lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: IDENTICAL_ADDRESSES");
         _createPair(address(_tokenD), address(_tokenD), lCurveId);
     }
 
-    function testCreatePair_PairAlreadyExists(uint256 aCurveId) public
-    {
+    function testCreatePair_PairAlreadyExists(uint aCurveId) public {
         // assume
-        uint256 lCurveId = bound(aCurveId, 0, 1);
+        uint lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: PAIR_EXISTS");
         _createPair(address(_tokenA), address(_tokenB), lCurveId);
     }
 
-    function testAllPairs() public
-    {
+    function testAllPairs() public {
         // arrange
         address lPair3 = _factory.createPair(address(_tokenA), address(_tokenC), 0);
         address lPair4 = _factory.createPair(address(_tokenA), address(_tokenC), 1);
@@ -89,20 +81,18 @@ contract GenericFactoryTest is BaseTest
         assertEq(lAllPairs[3], lPair4);
     }
 
-    function testAddCurve() public
-    {
+    function testAddCurve() public {
         // arrange
         bytes memory lInitCode = bytes("dummy bytes");
 
         // act
-        uint256 lNewCurveId = _factory.addCurve(lInitCode);
+        uint lNewCurveId = _factory.addCurve(lInitCode);
 
         // assert
         assertEq(lNewCurveId, 2);
     }
 
-    function testAddCurve_OnlyOwner() public
-    {
+    function testAddCurve_OnlyOwner() public {
         // arrange
         vm.prank(_alice);
 
@@ -111,8 +101,7 @@ contract GenericFactoryTest is BaseTest
         _factory.addCurve(bytes("random bytes"));
     }
 
-    function testGetPair() public
-    {
+    function testGetPair() public {
         // assert - ensure double mapped
         assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
         assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
