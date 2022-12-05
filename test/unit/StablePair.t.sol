@@ -235,6 +235,25 @@ contract StablePairTest is BaseTest {
         assertEq(lTotalSupply1, lTotalSupply2);
     }
 
+    function _calcExpectedPlatformFee(
+        uint aPlatformFee,
+        StablePair aPair,
+        uint aReserve0,
+        uint aReserve1,
+        uint aTotalSupply,
+        uint aOldLiq
+    ) internal view returns (uint rExpectedPlatformFee, uint rGrowthInLiq) {
+        (uint lReserveC, uint lReserveD) =
+            aPair.token0() == address(_tokenC) ? (aReserve0, aReserve1) : (aReserve1, aReserve0);
+        uint lNewLiq = StableMath._computeLiquidityFromAdjustedBalances(
+            lReserveD * 1e12, lReserveC, 2 * aPair.getCurrentAPrecise()
+        );
+
+        rGrowthInLiq = lNewLiq - aOldLiq;
+        rExpectedPlatformFee = aTotalSupply * rGrowthInLiq * aPlatformFee
+            / ((aPair.FEE_ACCURACY() - aPlatformFee) * lNewLiq + aPlatformFee * aOldLiq);
+    }
+
     function testMintFee_DiffPlatformFees(uint aPlatformFee) public {
         // assume
         uint lPlatformFee = bound(aPlatformFee, 0, _stablePair.MAX_PLATFORM_FEE());
@@ -277,15 +296,8 @@ contract StablePairTest is BaseTest {
         lPair.burn(address(this));
 
         // assert
-        (uint lReserveC, uint lReserveD) =
-            lPair.token0() == address(_tokenC) ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
-        uint lNewLiq = StableMath._computeLiquidityFromAdjustedBalances(
-            lReserveD * 1e12, lReserveC, 2 * lPair.getCurrentAPrecise()
-        );
-        uint lGrowthInLiq = lNewLiq - lOldLiq;
-        uint lExpectedPlatformFee = lTotalSupply * lGrowthInLiq * lPlatformFee
-            / ((lPair.FEE_ACCURACY() - lPlatformFee) * lNewLiq + lPlatformFee * lOldLiq);
-
+        (uint lExpectedPlatformFee, uint lGrowthInLiq) =
+            _calcExpectedPlatformFee(lPlatformFee, lPair, lReserve0, lReserve1, lTotalSupply, lOldLiq);
         assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
         assertApproxEqRel(
             lExpectedPlatformFee * 1e18 / lGrowthInLiq, lPlatformFee * 1e18 / lPair.FEE_ACCURACY(), 0.006e18
