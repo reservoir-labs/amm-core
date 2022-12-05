@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
-import { IConstantProductPair } from "src/interfaces/IConstantProductPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 

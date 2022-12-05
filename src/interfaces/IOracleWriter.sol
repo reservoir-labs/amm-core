@@ -24,9 +24,13 @@ interface IOracleWriter {
     function observation(uint256 aIndex) external view returns (Observation memory rObservation);
     function index() external view returns (uint16 rIndex);
 
+    // TODO: allowedChangePerSecond -> maxChangeRate
     function allowedChangePerSecond() external returns (uint256 rAllowedChangePerSecond);
+    // TODO: setAllowedChangePerSecond -> setMaxChangeRate
     function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) external;
 
+    // TODO: OracleCallerChanged -> OracleCallerUpdated
     event OracleCallerChanged(address oldCaller, address newCaller);
+    // TODO: AllowedChangePerSecondChanged -> MaxChangeRateUpdated
     event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 }
