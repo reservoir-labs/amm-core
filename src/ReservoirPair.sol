@@ -5,12 +5,14 @@ import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 
 abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGuard {
+    // TODO: Convert to natspec.
     // force reserves to match balances
     function sync() external nonReentrant {
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
     }
 
+    // TODO: Convert to natspec.
     // force balances to match reserves
     function skim(address to) external nonReentrant {
         uint256 _reserve0 = reserve0; // gas savings
@@ -40,6 +42,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         }
     }
 
+    // TODO: Convert to natspec.
     // update reserves and, on the first call per block, price and liq accumulators
     function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
         require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");

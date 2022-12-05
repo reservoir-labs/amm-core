@@ -82,6 +82,10 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         if (address(assetManager) == address(0)) {
             return;
         }
+        // TODO: Unsure how I fell about this, probably okay but assetManager
+        // is under our control so not sure if we can't just assume this call
+        // won't fail?
+        //
         // supplying to / withdrawing from 3rd party markets might fail
         try assetManager.afterLiquidityEvent() { } catch { } // solhint-disable-line no-empty-blocks
     }

@@ -43,6 +43,7 @@ library ConstantProductOracleMath {
         logSpotPrice = int112(rawResult);
     }
 
+    // TODO: De-dupe between StableOracleMath and ConstantProductOracleMath
     /// @param reserve0 amount in native precision
     /// @param reserve1 amount in native precision
     function calcLogLiq(uint256 reserve0, uint256 reserve1) internal pure returns (int112 logLiq) {

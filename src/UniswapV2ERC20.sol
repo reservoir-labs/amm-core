@@ -1,16 +1,21 @@
 /* solhint-disable const-name-snakecase */
 pragma solidity ^0.8.0;
 
-import "src/interfaces/IUniswapV2ERC20.sol";
+import { IUniswapV2ERC20 } from "src/interfaces/IUniswapV2ERC20.sol";
 
+// TODO: Is UniswapV2ERC20 still the best ERC-20 to inherit from or should we
+// consider solmate or similar?
 contract UniswapV2ERC20 is IUniswapV2ERC20 {
+    // TODO: Rename to be Reservoir specific.
     string public constant name = "Uniswap V2";
+    // TODO: Rename to be Reservoir specific.
     string public constant symbol = "UNI-V2";
     uint8 public constant decimals = 18;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
+    // PERF: DOMAIN_SEPARATOR can be immutable
     // solhint-disable-next-line var-name-mixedcase
     bytes32 public DOMAIN_SEPARATOR;
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
@@ -78,6 +83,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
         external
     {
         // solhint-disable-next-line not-rely-on-time
+        // TODO: Wrong error code, should be ERC20 or similar.
         require(deadline >= block.timestamp, "CP: EXPIRED");
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -87,6 +93,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
             )
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
+        // TODO: Wrong error code, should be ERC20 or similar.
         require(recoveredAddress != address(0) && recoveredAddress == owner, "CP: INVALID_SIGNATURE");
         _approve(owner, spender, value);
     }

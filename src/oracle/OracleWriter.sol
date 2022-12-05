@@ -64,7 +64,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
         }
 
-        if (_calcPercentageDiff(aCurrRawPrice, aPrevClampedPrice) > allowedChangePerSecond * aTimeElapsed) {
+        if (stdMath.percentDelta(aCurrRawPrice, aPrevClampedPrice) > allowedChangePerSecond * aTimeElapsed) {
             // clamp the price
             if (aCurrRawPrice > aPrevClampedPrice) {
                 rClampedPrice = aPrevClampedPrice * (1e18 + (allowedChangePerSecond * aTimeElapsed)) / 1e18;
@@ -79,16 +79,14 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         }
     }
 
-    function _calcPercentageDiff(uint256 a, uint256 b) private pure returns (uint256) {
-        return stdMath.percentDelta(a, b);
-    }
-
+    // TODO: Use /// instead of /** */
     /**
      * @param _reserve0 in its native precision
      * @param _reserve1 in its native precision
      * @param timeElapsed time since the last oracle observation
      * @param timestampLast the time of the last activity on the pair
      */
+    // TODO: Use aParms consistently.
     function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast)
         internal
         virtual;

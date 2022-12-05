@@ -9,9 +9,7 @@ import { StableMath } from "src/libraries/StableMath.sol";
 library StableOracleMath {
     using FixedPointMathLib for uint256;
 
-    /**
-     * @dev Calculates the spot price of token1/token0 for the stable pair
-     */
+    /// @dev Calculates the spot price of token1/token0 for the stable pair
     function calcLogPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure
@@ -24,28 +22,22 @@ library StableOracleMath {
         logSpotPrice = int112(rawLogSpotPrice);
     }
 
-    /**
-     * @dev Calculates the spot price of token1 in token0
-     */
+    /// @dev Calculates the spot price of token1 in token0
     function calcSpotPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure
         returns (uint256 spotPrice)
     {
-        /**
-         *
-         *     //                                                                                                           //
-         *     //                             2.a.x.y + a.y^2 + b.y                                                         //
-         *     // spot price Y/X = - dx/dy = -----------------------                                                        //
-         *     //                             2.a.x.y + a.x^2 + b.x                                                         //
-         *     //                                                                                                           //
-         *     // n = 2                                                                                                     //
-         *     // a = amp param * n                                                                                         //
-         *     // b = D + a.(S - D)                                                                                         //
-         *     // D = invariant                                                                                             //
-         *     // S = sum of balances but x,y = 0 since x  and y are the only tokens                                        //
-         *
-         */
+        //                                                                    //
+        //                             2.a.x.y + a.y^2 + b.y                  //
+        // spot price Y/X = - dx/dy = -----------------------                 //
+        //                             2.a.x.y + a.x^2 + b.x                  //
+        //                                                                    //
+        // n = 2                                                              //
+        // a = amp param * n                                                  //
+        // b = D + a.(S - D)                                                  //
+        // D = invariant                                                      //
+        // S = sum of balances but x,y = 0 since x  and y are the only tokens //
 
         uint256 invariant =
             StableMath._computeLiquidityFromAdjustedBalances(reserve0, reserve1, 2 * amplificationParameter);
@@ -67,6 +59,7 @@ library StableOracleMath {
         spotPrice = derivativeX.divWadUp(derivativeY);
     }
 
+    // TODO: De-dupe between StableOracleMath and ConstantProductOracleMath
     /// @param reserve0 amount in native precision
     /// @param reserve1 amount in native precision
     function calcLogLiq(uint256 reserve0, uint256 reserve1) internal pure returns (int112 logLiq) {
