@@ -15,15 +15,15 @@ contract LogExpMathTest is Test {
         vm.etch(_balancerLogExpMath, lBytecode);
     }
 
-    function testPow(uint aX, uint aY) external {
+    function testPow(uint256 aX, uint256 aY) external {
         // act
         (bool lSuccess, bytes memory lRes) =
             _balancerLogExpMath.staticcall(abi.encodeWithSignature("pow(uint256,uint256)", aX, aY));
 
         // assert
         if (lSuccess) {
-            uint lLocalRes = LogExpMath.pow(aX, aY);
-            uint lDecoded = abi.decode(lRes, (uint));
+            uint256 lLocalRes = LogExpMath.pow(aX, aY);
+            uint256 lDecoded = abi.decode(lRes, (uint256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
@@ -31,14 +31,14 @@ contract LogExpMathTest is Test {
         }
     }
 
-    function testExp(int aX) external {
+    function testExp(int256 aX) external {
         // act
         (bool lSuccess, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("exp(int256)", aX));
 
         // assert
         if (lSuccess) {
-            int lLocalRes = LogExpMath.exp(aX);
-            int lDecoded = abi.decode(lRes, (int));
+            int256 lLocalRes = LogExpMath.exp(aX);
+            int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
@@ -46,15 +46,15 @@ contract LogExpMathTest is Test {
         }
     }
 
-    function testLog(int aArg, int aBase) external {
+    function testLog(int256 aArg, int256 aBase) external {
         // act
         (bool lSuccess, bytes memory lRes) =
             _balancerLogExpMath.staticcall(abi.encodeWithSignature("log(int256,int256)", aArg, aBase));
 
         // assert
         if (lSuccess) {
-            int lLocalRes = LogExpMath.log(aArg, aBase);
-            int lDecoded = abi.decode(lRes, (int));
+            int256 lLocalRes = LogExpMath.log(aArg, aBase);
+            int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
@@ -62,14 +62,14 @@ contract LogExpMathTest is Test {
         }
     }
 
-    function testLn(int aArg) external {
+    function testLn(int256 aArg) external {
         // act
         (bool lSuccess, bytes memory lRes) = _balancerLogExpMath.staticcall(abi.encodeWithSignature("ln(int256)", aArg));
 
         // assert
         if (lSuccess) {
-            int lLocalRes = LogExpMath.ln(aArg);
-            int lDecoded = abi.decode(lRes, (int));
+            int256 lLocalRes = LogExpMath.ln(aArg);
+            int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();

@@ -14,19 +14,19 @@ contract ReservoirPairTest is BaseTest {
     }
 
     modifier allPairs() {
-        for (uint i = 0; i < _pairs.length; ++i) {
-            uint lBefore = vm.snapshot();
+        for (uint256 i = 0; i < _pairs.length; ++i) {
+            uint256 lBefore = vm.snapshot();
             _pair = _pairs[i];
             _;
             vm.revertTo(lBefore);
         }
     }
 
-    function testSkim(uint aAmountA, uint aAmountB) external allPairs {
+    function testSkim(uint256 aAmountA, uint256 aAmountB) external allPairs {
         // assume - to avoid overflow of the token's total supply
         // we subtract 2 * INITIAL_MINT_AMOUNT as INITIAL_MINT_AMOUNT was minted to both pairs
-        uint lAmountA = bound(aAmountA, 1, type(uint).max - 2 * INITIAL_MINT_AMOUNT);
-        uint lAmountB = bound(aAmountB, 1, type(uint).max - 2 * INITIAL_MINT_AMOUNT);
+        uint256 lAmountA = bound(aAmountA, 1, type(uint256).max - 2 * INITIAL_MINT_AMOUNT);
+        uint256 lAmountB = bound(aAmountB, 1, type(uint256).max - 2 * INITIAL_MINT_AMOUNT);
 
         // arrange
         _tokenA.mint(address(_pair), lAmountA);

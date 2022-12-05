@@ -9,7 +9,7 @@ library MathUtils {
     /// is less than 1 or equal to each other.
     /// @param a uint256 to compare with.
     /// @param b uint256 to compare with.
-    function within1(uint a, uint b) internal pure returns (bool) {
+    function within1(uint256 a, uint256 b) internal pure returns (bool) {
         unchecked {
             if (a > b) {
                 return a - b <= 1;

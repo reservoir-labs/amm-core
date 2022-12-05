@@ -6,8 +6,8 @@ import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 
 library FactoryStoreLib {
     using Bytes32Lib for bool;
-    using Bytes32Lib for uint;
-    using Bytes32Lib for int;
+    using Bytes32Lib for uint256;
+    using Bytes32Lib for int256;
     using Bytes32Lib for address;
 
     function read(IGenericFactory aFactory, string memory aKey) internal view returns (bytes32) {
@@ -18,11 +18,11 @@ library FactoryStoreLib {
         aFactory.set(keccak256(abi.encodePacked(aKey)), aValue.toBytes32());
     }
 
-    function write(IGenericFactory aFactory, string memory aKey, uint aValue) internal {
+    function write(IGenericFactory aFactory, string memory aKey, uint256 aValue) internal {
         aFactory.set(keccak256(abi.encodePacked(aKey)), aValue.toBytes32());
     }
 
-    function write(IGenericFactory aFactory, string memory aKey, int aValue) internal {
+    function write(IGenericFactory aFactory, string memory aKey, int256 aValue) internal {
         aFactory.set(keccak256(abi.encodePacked(aKey)), aValue.toBytes32());
     }
 

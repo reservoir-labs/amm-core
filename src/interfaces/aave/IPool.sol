@@ -20,7 +20,7 @@ interface IPool {
      *
      */
     event Supply(
-        address indexed reserve, address user, address indexed onBehalfOf, uint amount, uint16 indexed referralCode
+        address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode
     );
 
     /**
@@ -35,7 +35,7 @@ interface IPool {
      *   0 if the action is executed directly by the user, without any middle-man
      *
      */
-    function supply(address asset, uint amount, address onBehalfOf, uint16 referralCode) external;
+    function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
 
     /**
      * @notice Supply with transfer approval of asset to be supplied done via permit function
@@ -55,10 +55,10 @@ interface IPool {
      */
     function supplyWithPermit(
         address asset,
-        uint amount,
+        uint256 amount,
         address onBehalfOf,
         uint16 referralCode,
-        uint deadline,
+        uint256 deadline,
         uint8 permitV,
         bytes32 permitR,
         bytes32 permitS
@@ -76,5 +76,5 @@ interface IPool {
      * @return The final amount withdrawn
      *
      */
-    function withdraw(address asset, uint amount, address to) external returns (uint);
+    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
 }

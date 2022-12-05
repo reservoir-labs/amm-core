@@ -19,31 +19,31 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 contract ConstantProductPairTest is BaseTest {
     using stdStorage for StdStorage;
 
-    event Burn(address indexed sender, uint amount0, uint amount1);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
 
     AssetManager private _manager = new AssetManager();
 
-    function _calculateOutput(uint aReserveIn, uint aReserveOut, uint aAmountIn, uint aFee)
+    function _calculateOutput(uint256 aReserveIn, uint256 aReserveOut, uint256 aAmountIn, uint256 aFee)
         private
         view
-        returns (uint rExpectedOut)
+        returns (uint256 rExpectedOut)
     {
-        uint lMaxFee = _constantProductPair.FEE_ACCURACY();
-        uint lAmountInWithFee = aAmountIn * (lMaxFee - aFee);
-        uint lNumerator = lAmountInWithFee * aReserveOut;
-        uint lDenominator = aReserveIn * lMaxFee + lAmountInWithFee;
+        uint256 lMaxFee = _constantProductPair.FEE_ACCURACY();
+        uint256 lAmountInWithFee = aAmountIn * (lMaxFee - aFee);
+        uint256 lNumerator = lAmountInWithFee * aReserveOut;
+        uint256 lDenominator = aReserveIn * lMaxFee + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
     }
 
-    function _calculateInput(uint aReserveIn, uint aReserveOut, uint aAmountOut, uint aFee)
+    function _calculateInput(uint256 aReserveIn, uint256 aReserveOut, uint256 aAmountOut, uint256 aFee)
         private
         view
-        returns (uint rExpectedIn)
+        returns (uint256 rExpectedIn)
     {
-        uint lMaxFee = _constantProductPair.FEE_ACCURACY();
-        uint lNumerator = aReserveIn * aAmountOut * lMaxFee;
-        uint lDenominator = (aReserveOut - aAmountOut) * (lMaxFee - aFee);
+        uint256 lMaxFee = _constantProductPair.FEE_ACCURACY();
+        uint256 lNumerator = aReserveIn * aAmountOut * lMaxFee;
+        uint256 lDenominator = (aReserveOut - aAmountOut) * (lMaxFee - aFee);
         rExpectedIn = lNumerator / lDenominator + 1;
     }
 
@@ -57,9 +57,9 @@ contract ConstantProductPairTest is BaseTest {
 
     function testMint() public {
         // arrange
-        uint lTotalSupplyLpToken = _constantProductPair.totalSupply();
-        uint lLiquidityToAdd = 5e18;
-        (uint reserve0,,) = _constantProductPair.getReserves();
+        uint256 lTotalSupplyLpToken = _constantProductPair.totalSupply();
+        uint256 lLiquidityToAdd = 5e18;
+        (uint256 reserve0,,) = _constantProductPair.getReserves();
 
         // act
         _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
@@ -67,14 +67,14 @@ contract ConstantProductPairTest is BaseTest {
         _constantProductPair.mint(address(this));
 
         // assert
-        uint lAdditionalLpTokens = lLiquidityToAdd * lTotalSupplyLpToken / reserve0;
+        uint256 lAdditionalLpTokens = lLiquidityToAdd * lTotalSupplyLpToken / reserve0;
         assertEq(_constantProductPair.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
     function testMint_InitialMint() public {
         // assert
-        uint lpTokenBalance = _constantProductPair.balanceOf(_alice);
-        uint lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
+        uint256 lpTokenBalance = _constantProductPair.balanceOf(_alice);
+        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
     }
 
@@ -115,8 +115,8 @@ contract ConstantProductPairTest is BaseTest {
 
     function testSwap() public {
         // arrange
-        (uint reserve0, uint reserve1,) = _constantProductPair.getReserves();
-        uint expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, DEFAULT_SWAP_FEE_CP);
+        (uint256 reserve0, uint256 reserve1,) = _constantProductPair.getReserves();
+        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, DEFAULT_SWAP_FEE_CP);
 
         // act
         address token0;
@@ -134,9 +134,9 @@ contract ConstantProductPairTest is BaseTest {
     function testSwap_ExtremeAmounts() public {
         // arrange
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
-        uint lSwapAmount = 1e18;
-        uint lAmountB = type(uint112).max - lSwapAmount;
-        uint lAmountC = type(uint112).max;
+        uint256 lSwapAmount = 1e18;
+        uint256 lAmountB = type(uint112).max - lSwapAmount;
+        uint256 lAmountC = type(uint112).max;
         _tokenB.mint(address(lPair), lAmountB);
         _tokenC.mint(address(lPair), lAmountC);
         lPair.mint(address(this));
@@ -144,7 +144,10 @@ contract ConstantProductPairTest is BaseTest {
         // act
         _tokenB.mint(address(lPair), lSwapAmount);
         lPair.swap(
-            lPair.token0() == address(_tokenB) ? int(lSwapAmount) : -int(lSwapAmount), true, address(this), bytes("")
+            lPair.token0() == address(_tokenB) ? int256(lSwapAmount) : -int256(lSwapAmount),
+            true,
+            address(this),
+            bytes("")
         );
 
         // assert
@@ -155,34 +158,34 @@ contract ConstantProductPairTest is BaseTest {
     function testSwap_ExactOutExceedReserves() public {
         // act & assert
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(int(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(int(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(-int(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(-int(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
     }
 
-    function testSwap_ExactOut(uint aAmountOut) public {
+    function testSwap_ExactOut(uint256 aAmountOut) public {
         // assume
-        uint lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
         // this amount makes the new reserve of the input token stay within uint112 and not overflow
-        uint lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
-        uint lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
+        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        uint256 lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
 
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setCustomSwapFee(0);
-        (uint lReserve0, uint lReserve1,) = _constantProductPair.getReserves();
-        uint lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
+        (uint256 lReserve0, uint256 lReserve1,) = _constantProductPair.getReserves();
+        uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
 
         // act - exact token1 out
         _tokenA.mint(address(_constantProductPair), lAmountIn);
-        uint lActualAmountOut = _constantProductPair.swap(-int(lAmountOut), false, address(this), bytes(""));
+        uint256 lActualAmountOut = _constantProductPair.swap(-int256(lAmountOut), false, address(this), bytes(""));
 
         // assert
         assertGt(lAmountIn, lAmountOut);
@@ -194,25 +197,25 @@ contract ConstantProductPairTest is BaseTest {
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setCustomSwapFee(0);
-        uint lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
-        uint lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         // 1 more than the max
-        uint lAmountOut = lMaxOutputAmt + 1;
-        (uint lReserve0, uint lReserve1,) = _constantProductPair.getReserves();
-        uint lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
+        uint256 lAmountOut = lMaxOutputAmt + 1;
+        (uint256 lReserve0, uint256 lReserve1,) = _constantProductPair.getReserves();
+        uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
 
         // act & assert
         _tokenA.mint(address(_constantProductPair), lAmountIn);
         vm.expectRevert("CP: OVERFLOW");
-        _constantProductPair.swap(-int(lAmountOut), false, address(this), bytes(""));
+        _constantProductPair.swap(-int256(lAmountOut), false, address(this), bytes(""));
     }
 
     function testBurn() public {
         // arrange
         vm.startPrank(_alice);
-        uint lLpTokenBalance = _constantProductPair.balanceOf(_alice);
-        uint lLpTokenTotalSupply = _constantProductPair.totalSupply();
-        (uint lReserve0, uint lReserve1,) = _constantProductPair.getReserves();
+        uint256 lLpTokenBalance = _constantProductPair.balanceOf(_alice);
+        uint256 lLpTokenTotalSupply = _constantProductPair.totalSupply();
+        (uint256 lReserve0, uint256 lReserve1,) = _constantProductPair.getReserves();
 
         // act
         _constantProductPair.transfer(address(_constantProductPair), _constantProductPair.balanceOf(_alice));
@@ -245,11 +248,11 @@ contract ConstantProductPairTest is BaseTest {
     function testOracle_NoWriteInSameTimestamp() public {
         // arrange
         uint16 lInitialIndex = _constantProductPair.index();
-        uint lAmountToSwap = 1e17;
+        uint256 lAmountToSwap = 1e17;
 
         // act
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(int(lAmountToSwap), true, address(this), "");
+        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
 
         vm.prank(_alice);
         _constantProductPair.transfer(address(_constantProductPair), 1e18);
@@ -264,15 +267,15 @@ contract ConstantProductPairTest is BaseTest {
 
     function testOracle_WrapsAroundAfterFull() public {
         // arrange
-        uint lAmountToSwap = 1e17;
-        uint lMaxObservations = 2 ** 16;
+        uint256 lAmountToSwap = 1e17;
+        uint256 lMaxObservations = 2 ** 16;
 
         // act
-        for (uint i = 0; i < lMaxObservations + 4; ++i) {
+        for (uint256 i = 0; i < lMaxObservations + 4; ++i) {
             vm.roll(block.number + 1);
             vm.warp(block.timestamp + 5);
             _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-            _constantProductPair.swap(int(lAmountToSwap), true, address(this), "");
+            _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
         }
 
         // assert
@@ -332,9 +335,9 @@ contract ConstantProductPairTest is BaseTest {
         Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
 
         // act
-        uint lAmountToSwap = 1e18;
+        uint256 lAmountToSwap = 1e18;
         _tokenB.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(-int(lAmountToSwap), true, address(this), "");
+        _constantProductPair.swap(-int256(lAmountToSwap), true, address(this), "");
 
         _stepTime(5);
         _constantProductPair.sync();
@@ -362,21 +365,21 @@ contract ConstantProductPairTest is BaseTest {
 
     function testOracle_CorrectPrice() public {
         // arrange
-        uint lAmountToSwap = 1e18;
+        uint256 lAmountToSwap = 1e18;
         _stepTime(5);
 
         // act
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(int(lAmountToSwap), true, address(this), "");
+        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
 
-        (uint lReserve0_1, uint lReserve1_1,) = _constantProductPair.getReserves();
-        uint lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
+        (uint256 lReserve0_1, uint256 lReserve1_1,) = _constantProductPair.getReserves();
+        uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
         _stepTime(5);
 
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(int(lAmountToSwap), true, address(this), "");
-        (uint lReserve0_2, uint lReserve1_2,) = _constantProductPair.getReserves();
-        uint lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
+        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
+        (uint256 lReserve0_2, uint256 lReserve1_2,) = _constantProductPair.getReserves();
+        uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
 
         _stepTime(5);
         _constantProductPair.sync();
@@ -485,7 +488,7 @@ contract ConstantProductPairTest is BaseTest {
 
     function testOracle_CorrectLiquidity() public {
         // arrange
-        uint lAmountToBurn = 1e18;
+        uint256 lAmountToBurn = 1e18;
 
         // act
         vm.roll(block.number + 1);
@@ -496,7 +499,7 @@ contract ConstantProductPairTest is BaseTest {
 
         // assert
         Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
-        uint lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
+        uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
         // we check that it is within 0.01% of accuracy
         assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
 
@@ -507,13 +510,13 @@ contract ConstantProductPairTest is BaseTest {
 
         // assert
         Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
-        uint lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
+        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
     }
 
     function testOracle_LiquidityAtMaximum() public {
         // arrange
-        uint lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
+        uint256 lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 5);
         _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
@@ -531,7 +534,7 @@ contract ConstantProductPairTest is BaseTest {
         _constantProductPair.sync();
 
         // assert
-        uint lTotalSupply = _constantProductPair.totalSupply();
+        uint256 lTotalSupply = _constantProductPair.totalSupply();
         assertEq(lTotalSupply, type(uint112).max);
 
         Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
@@ -546,9 +549,9 @@ contract ConstantProductPairTest is BaseTest {
     function testOracle_ClampedPrice_NoDiffWithinLimit() external {
         // arrange
         _stepTime(5);
-        uint lSwapAmt = 0.12e18;
+        uint256 lSwapAmt = 0.12e18;
         _tokenB.mint(address(_constantProductPair), lSwapAmt);
-        _constantProductPair.swap(-int(lSwapAmt), true, address(this), bytes(""));
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
         // sanity
         assertEq(_constantProductPair.prevClampedPrice(), 1e18);
@@ -568,9 +571,9 @@ contract ConstantProductPairTest is BaseTest {
         // arrange
         _stepTime(5);
         // this swap amount would be such that the resulting spot price would be right at the limit of the clamp
-        uint lSwapAmt = 0.125109637135501e18;
+        uint256 lSwapAmt = 0.125109637135501e18;
         _tokenB.mint(address(_constantProductPair), lSwapAmt);
-        _constantProductPair.swap(-int(lSwapAmt), true, address(this), bytes(""));
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
         // sanity
         assertEq(_constantProductPair.prevClampedPrice(), 1e18);
@@ -590,9 +593,9 @@ contract ConstantProductPairTest is BaseTest {
         // arrange
         _stepTime(5);
         // this swap amount would be such that the resulting spot price would be just over the limit of the clamp
-        uint lSwapAmt = 0.127809637135502e18;
+        uint256 lSwapAmt = 0.127809637135502e18;
         _tokenB.mint(address(_constantProductPair), lSwapAmt);
-        _constantProductPair.swap(-int(lSwapAmt), true, address(this), bytes(""));
+        _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
         // sanity
         assertEq(_constantProductPair.prevClampedPrice(), 1e18);

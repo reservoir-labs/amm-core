@@ -24,8 +24,8 @@ import "src/libraries/LogExpMath.sol";
  * 128 bit values may be encoded in a word by assigning one an offset of 0, and the other an offset of 128.
  */
 library LogCompression {
-    int private constant _LOG_COMPRESSION_FACTOR = 1e14;
-    int private constant _HALF_LOG_COMPRESSION_FACTOR = 0.5e14;
+    int256 private constant _LOG_COMPRESSION_FACTOR = 1e14;
+    int256 private constant _HALF_LOG_COMPRESSION_FACTOR = 0.5e14;
 
     /**
      * @dev Returns the natural logarithm of `value`, dropping most of the decimal places to arrive at a value that,
@@ -38,12 +38,12 @@ library LogCompression {
      * Because so much precision is lost, the logarithmic values can be stored using much fewer bits than the original
      * value required.
      */
-    function toLowResLog(uint value) internal pure returns (int) {
+    function toLowResLog(uint256 value) internal pure returns (int256) {
         unchecked {
-            int ln = LogExpMath.ln(int(value));
+            int256 ln = LogExpMath.ln(int256(value));
 
             // Rounding division for signed numerator
-            int lnWithError = (ln > 0 ? ln + _HALF_LOG_COMPRESSION_FACTOR : ln - _HALF_LOG_COMPRESSION_FACTOR);
+            int256 lnWithError = (ln > 0 ? ln + _HALF_LOG_COMPRESSION_FACTOR : ln - _HALF_LOG_COMPRESSION_FACTOR);
             return lnWithError / _LOG_COMPRESSION_FACTOR;
         }
     }
@@ -52,9 +52,9 @@ library LogCompression {
      * @dev Restores `value` from logarithmic space. `value` is expected to be the result of a call to `toLowResLog`,
      * any other function that returns 4 decimals fixed point logarithms, or the sum of such values.
      */
-    function fromLowResLog(int value) internal pure returns (uint) {
+    function fromLowResLog(int256 value) internal pure returns (uint256) {
         unchecked {
-            return uint(LogExpMath.exp(value * _LOG_COMPRESSION_FACTOR));
+            return uint256(LogExpMath.exp(value * _LOG_COMPRESSION_FACTOR));
         }
     }
 }

@@ -11,7 +11,7 @@ contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
     event OracleCallerChanged(address oldCaller, address newCaller);
-    event AllowedChangePerSecondChanged(uint oldAllowedChangePerSecond, uint newAllowedChangePerSecond);
+    event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 
     IOracleWriter[] internal _pairs;
     IOracleWriter internal _pair;
@@ -22,17 +22,17 @@ contract OracleWriterTest is BaseTest {
     }
 
     modifier allPairs() {
-        for (uint i = 0; i < _pairs.length; ++i) {
-            uint lBefore = vm.snapshot();
+        for (uint256 i = 0; i < _pairs.length; ++i) {
+            uint256 lBefore = vm.snapshot();
             _pair = _pairs[i];
             _;
             vm.revertTo(lBefore);
         }
     }
 
-    function testObservation_NotOracleCaller(uint aIndex) external allPairs {
+    function testObservation_NotOracleCaller(uint256 aIndex) external allPairs {
         // assume
-        uint lIndex = bound(aIndex, 0, type(uint16).max);
+        uint256 lIndex = bound(aIndex, 0, type(uint16).max);
 
         // act & assert
         vm.expectRevert("OW: NOT_ORACLE_CALLER");
@@ -88,9 +88,9 @@ contract OracleWriterTest is BaseTest {
         _pair.setAllowedChangePerSecond(0);
     }
 
-    function testSetAllowedChangePerSecond_TooHigh(uint aAllowedChangePerSecond) external allPairs {
+    function testSetAllowedChangePerSecond_TooHigh(uint256 aAllowedChangePerSecond) external allPairs {
         // assume
-        uint lAllowedChangePerSecond = bound(aAllowedChangePerSecond, 0.01e18 + 1, type(uint).max);
+        uint256 lAllowedChangePerSecond = bound(aAllowedChangePerSecond, 0.01e18 + 1, type(uint256).max);
 
         // act & assert
         vm.prank(address(_factory));
@@ -109,8 +109,8 @@ contract OracleWriterTest is BaseTest {
         // assert
         Observation memory lObsCP = _oracleCaller.observation(_constantProductPair, 0);
         Observation memory lObsSP = _oracleCaller.observation(_stablePair, 0);
-        uint lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
-        uint lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
         assertEq(lUncompressedLiqSP, lUncompressedLiqCP);
         assertEq(lObsCP.logAccRawPrice, lObsSP.logAccRawPrice);
     }
@@ -136,8 +136,8 @@ contract OracleWriterTest is BaseTest {
         // assert
         Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
         Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
-        uint lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
-        uint lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
+        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
+        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
         assertEq(lUncompressedLiqCP, lUncompressedLiqSP);
         if (lCP.token0() == address(_tokenB)) {
             assertGt(lObsSP.logAccRawPrice, lObsCP.logAccRawPrice);
@@ -167,8 +167,8 @@ contract OracleWriterTest is BaseTest {
         lSP.sync();
         Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
         Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
-        uint lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
-        uint lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
+        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
+        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
         assertGt(lObsCP.logAccLiquidity, lObsSP.logAccLiquidity);
     }
@@ -193,8 +193,8 @@ contract OracleWriterTest is BaseTest {
         lSP.sync();
         Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
         Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
-        uint lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
-        uint lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
+        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
+        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
         assertEq(lObsCP.logAccLiquidity, lObsSP.logAccLiquidity);
     }

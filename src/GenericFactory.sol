@@ -26,7 +26,7 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender) {
 
     address[] private _getByteCode;
 
-    function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint rCurveId) {
+    function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint256 rCurveId) {
         rCurveId = _getByteCode.length;
 
         _getByteCode.push(SSTORE2.write(aInitCode));
@@ -36,9 +36,9 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender) {
                                     PAIRS
     //////////////////////////////////////////////////////////////////////////*/
 
-    event PairCreated(address indexed token0, address indexed token1, uint curveId, address pair);
+    event PairCreated(address indexed token0, address indexed token1, uint256 curveId, address pair);
 
-    mapping(address => mapping(address => mapping(uint => address))) public getPair;
+    mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
     address[] private _allPairs;
 
     function allPairs() external view returns (address[] memory) {
@@ -49,7 +49,7 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender) {
         (r0, r1) = a < b ? (a, b) : (b, a);
     }
 
-    function createPair(address aTokenA, address aTokenB, uint aCurveId) external returns (address rPair) {
+    function createPair(address aTokenA, address aTokenB, uint256 aCurveId) external returns (address rPair) {
         require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
         require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
@@ -89,7 +89,7 @@ contract GenericFactory is IGenericFactory, Owned(msg.sender) {
                                     EXECUTE
     //////////////////////////////////////////////////////////////////////////*/
 
-    function rawCall(address aTarget, bytes calldata aCalldata, uint aValue)
+    function rawCall(address aTarget, bytes calldata aCalldata, uint256 aValue)
         external
         onlyOwner
         returns (bytes memory)

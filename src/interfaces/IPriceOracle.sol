@@ -45,12 +45,12 @@ interface IPriceOracle {
     function getTimeWeightedAverage(OracleAverageQuery[] memory queries)
         external
         view
-        returns (uint[] memory results);
+        returns (uint256[] memory results);
 
     /**
      * @dev Returns latest sample of `variable`. Prices are represented as 18 decimal fixed point values.
      */
-    function getLatest(Variable variable) external view returns (uint);
+    function getLatest(Variable variable) external view returns (uint256);
 
     /**
      * @dev Information for a Time Weighted Average query.
@@ -72,7 +72,7 @@ interface IPriceOracle {
      * If a query has a non-zero `ago` value, then `secs + ago` (the oldest point in time) must be smaller than this
      * value for 'safe' queries.
      */
-    function getLargestSafeQueryWindow() external view returns (uint);
+    function getLargestSafeQueryWindow() external view returns (uint256);
 
     /**
      * @dev Returns the accumulators corresponding to each of `queries`.
@@ -80,7 +80,7 @@ interface IPriceOracle {
     function getPastAccumulators(OracleAccumulatorQuery[] memory queries)
         external
         view
-        returns (int[] memory results);
+        returns (int256[] memory results);
 
     /**
      * @dev Information for an Accumulator query.

@@ -8,7 +8,7 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 contract ConstantProductMathTest is BaseTest {
     function testConstantProductOracleMath() external {
         // assert
-        (uint lSpotPrice, int lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(1e18, 1e18);
+        (uint256 lSpotPrice, int256 lLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(1e18, 1e18);
         assertEq(lSpotPrice, 1e18);
         assertEq(lLogSpotPrice, LogCompression.toLowResLog(1e18));
 
@@ -65,10 +65,10 @@ contract ConstantProductMathTest is BaseTest {
         assertApproxEqRel(lLogSpotPrice, LogCompression.toLowResLog(1e18 * 1e18), 0.1e18);
     }
 
-    function testCalcLogPrice_ReturnsOneWeiWhenPriceDiffGreaterThan1e18(uint aReserve0, uint aReserve1) public {
+    function testCalcLogPrice_ReturnsOneWeiWhenPriceDiffGreaterThan1e18(uint256 aReserve0, uint256 aReserve1) public {
         // arrange
-        uint lReserve1 = bound(aReserve0, 1, type(uint112).max / 1e18);
-        uint lReserve0 = bound(aReserve1, lReserve1 * 1e18, type(uint112).max);
+        uint256 lReserve1 = bound(aReserve0, 1, type(uint112).max / 1e18);
+        uint256 lReserve0 = bound(aReserve1, lReserve1 * 1e18, type(uint112).max);
 
         // act
         (, int112 lLogPrice) = ConstantProductOracleMath.calcLogPrice(lReserve0, lReserve1);

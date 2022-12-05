@@ -13,20 +13,24 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
 
     // force balances to match reserves
     function skim(address to) external nonReentrant {
-        uint _reserve0 = reserve0; // gas savings
-        uint _reserve1 = reserve1;
+        uint256 _reserve0 = reserve0; // gas savings
+        uint256 _reserve1 = reserve1;
 
         _checkedTransfer(token0, to, _totalToken0() - _reserve0, _reserve0, _reserve1);
         _checkedTransfer(token1, to, _totalToken1() - _reserve1, _reserve0, _reserve1);
     }
 
-    function _checkedTransfer(address aToken, address aDestination, uint aAmount, uint aReserve0, uint aReserve1)
-        internal
-    {
+    function _checkedTransfer(
+        address aToken,
+        address aDestination,
+        uint256 aAmount,
+        uint256 aReserve0,
+        uint256 aReserve1
+    ) internal {
         // if transfer fails for whatever reason
         if (!_safeTransfer(aToken, aDestination, aAmount)) {
-            uint tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
-            uint reserveOut = aToken == token0 ? aReserve0 : aReserve1;
+            uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
+            uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
             if (reserveOut - tokenOutManaged < aAmount) {
                 assetManager.returnAsset(aToken == token0, aAmount - (reserveOut - tokenOutManaged));
                 require(_safeTransfer(aToken, aDestination, aAmount), "RP: TRANSFER_FAILED");
@@ -37,7 +41,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
     }
 
     // update reserves and, on the first call per block, price and liq accumulators
-    function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) internal override {
+    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
         require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
 
         uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);

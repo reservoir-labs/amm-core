@@ -9,9 +9,9 @@ import { StablePair } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract GenericFactoryTest is BaseTest {
-    function testCreatePair_AllCurves(uint aCurveId) public {
+    function testCreatePair_AllCurves(uint256 aCurveId) public {
         // assume
-        uint lCurveId = bound(aCurveId, 0, 1);
+        uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act
         address lPair = _factory.createPair(address(_tokenA), address(_tokenC), lCurveId);
@@ -20,45 +20,45 @@ contract GenericFactoryTest is BaseTest {
         assertEq(_factory.getPair(address(_tokenA), address(_tokenC), lCurveId), address(lPair));
     }
 
-    function testCreatePair_MoreThan18Decimals(uint aCurveId) public {
+    function testCreatePair_MoreThan18Decimals(uint256 aCurveId) public {
         // assume
-        uint lCurveId = bound(aCurveId, 0, 1);
+        uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: DEPLOY_FAILED");
         _createPair(address(_tokenE), address(_tokenA), lCurveId);
     }
 
-    function testCreatePair_ZeroAddress(uint aCurveId) public {
+    function testCreatePair_ZeroAddress(uint256 aCurveId) public {
         // assume
-        uint lCurveId = bound(aCurveId, 0, 1);
+        uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: ZERO_ADDRESS");
         _createPair(address(0), address(_tokenA), lCurveId);
     }
 
-    function testCreatePair_CurveDoesNotExist(uint aCurveId) public {
+    function testCreatePair_CurveDoesNotExist(uint256 aCurveId) public {
         // assume
-        uint lCurveId = bound(aCurveId, 2, type(uint).max);
+        uint256 lCurveId = bound(aCurveId, 2, type(uint256).max);
 
         // act & assert
         vm.expectRevert(stdError.indexOOBError);
         _createPair(address(_tokenB), address(_tokenD), lCurveId);
     }
 
-    function testCreatePair_IdenticalAddress(uint aCurveId) public {
+    function testCreatePair_IdenticalAddress(uint256 aCurveId) public {
         // assume
-        uint lCurveId = bound(aCurveId, 0, 1);
+        uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: IDENTICAL_ADDRESSES");
         _createPair(address(_tokenD), address(_tokenD), lCurveId);
     }
 
-    function testCreatePair_PairAlreadyExists(uint aCurveId) public {
+    function testCreatePair_PairAlreadyExists(uint256 aCurveId) public {
         // assume
-        uint lCurveId = bound(aCurveId, 0, 1);
+        uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act & assert
         vm.expectRevert("FACTORY: PAIR_EXISTS");
@@ -86,7 +86,7 @@ contract GenericFactoryTest is BaseTest {
         bytes memory lInitCode = bytes("dummy bytes");
 
         // act
-        uint lNewCurveId = _factory.addCurve(lInitCode);
+        uint256 lNewCurveId = _factory.addCurve(lInitCode);
 
         // assert
         assertEq(lNewCurveId, 2);

@@ -33,12 +33,12 @@ library LogExpMath {
     // two numbers, and multiply by ONE when dividing them.
 
     // All arguments and return values are 18 decimal fixed point numbers.
-    int constant ONE_18 = 1e18;
+    int256 constant ONE_18 = 1e18;
 
     // Internally, intermediate values are computed with higher precision as 20 decimal fixed point numbers, and in the
     // case of ln36, 36 decimals.
-    int constant ONE_20 = 1e20;
-    int constant ONE_36 = 1e36;
+    int256 constant ONE_20 = 1e20;
+    int256 constant ONE_36 = 1e36;
 
     // The domain of natural exponentiation is bound by the word size and number of decimals used.
     //
@@ -47,55 +47,55 @@ library LogExpMath {
     // The smallest possible result is 10^(-18), which makes largest negative argument
     // ln(10^(-18)) = -41.446531673892822312.
     // We use 130.0 and -41.0 to have some safety margin.
-    int constant MAX_NATURAL_EXPONENT = 130e18;
-    int constant MIN_NATURAL_EXPONENT = -41e18;
+    int256 constant MAX_NATURAL_EXPONENT = 130e18;
+    int256 constant MIN_NATURAL_EXPONENT = -41e18;
 
     // Bounds for ln_36's argument. Both ln(0.9) and ln(1.1) can be represented with 36 decimal places in a fixed point
     // 256 bit integer.
-    int constant LN_36_LOWER_BOUND = ONE_18 - 1e17;
-    int constant LN_36_UPPER_BOUND = ONE_18 + 1e17;
+    int256 constant LN_36_LOWER_BOUND = ONE_18 - 1e17;
+    int256 constant LN_36_UPPER_BOUND = ONE_18 + 1e17;
 
-    uint constant MILD_EXPONENT_BOUND = 2 ** 254 / uint(ONE_20);
+    uint256 constant MILD_EXPONENT_BOUND = 2 ** 254 / uint256(ONE_20);
 
     // 18 decimal constants
-    int constant x0 = 128_000_000_000_000_000_000; // 2ˆ7
-    int constant a0 = 38_877_084_059_945_950_922_200_000_000_000_000_000_000_000_000_000_000_000; // eˆ(x0) (no
+    int256 constant x0 = 128_000_000_000_000_000_000; // 2ˆ7
+    int256 constant a0 = 38_877_084_059_945_950_922_200_000_000_000_000_000_000_000_000_000_000_000; // eˆ(x0) (no
         // decimals)
-    int constant x1 = 64_000_000_000_000_000_000; // 2ˆ6
-    int constant a1 = 6_235_149_080_811_616_882_910_000_000; // eˆ(x1) (no decimals)
+    int256 constant x1 = 64_000_000_000_000_000_000; // 2ˆ6
+    int256 constant a1 = 6_235_149_080_811_616_882_910_000_000; // eˆ(x1) (no decimals)
 
     // 20 decimal constants
-    int constant x2 = 3_200_000_000_000_000_000_000; // 2ˆ5
-    int constant a2 = 7_896_296_018_268_069_516_100_000_000_000_000; // eˆ(x2)
-    int constant x3 = 1_600_000_000_000_000_000_000; // 2ˆ4
-    int constant a3 = 888_611_052_050_787_263_676_000_000; // eˆ(x3)
-    int constant x4 = 800_000_000_000_000_000_000; // 2ˆ3
-    int constant a4 = 298_095_798_704_172_827_474_000; // eˆ(x4)
-    int constant x5 = 400_000_000_000_000_000_000; // 2ˆ2
-    int constant a5 = 5_459_815_003_314_423_907_810; // eˆ(x5)
-    int constant x6 = 200_000_000_000_000_000_000; // 2ˆ1
-    int constant a6 = 738_905_609_893_065_022_723; // eˆ(x6)
-    int constant x7 = 100_000_000_000_000_000_000; // 2ˆ0
-    int constant a7 = 271_828_182_845_904_523_536; // eˆ(x7)
-    int constant x8 = 50_000_000_000_000_000_000; // 2ˆ-1
-    int constant a8 = 164_872_127_070_012_814_685; // eˆ(x8)
-    int constant x9 = 25_000_000_000_000_000_000; // 2ˆ-2
-    int constant a9 = 128_402_541_668_774_148_407; // eˆ(x9)
-    int constant x10 = 12_500_000_000_000_000_000; // 2ˆ-3
-    int constant a10 = 113_314_845_306_682_631_683; // eˆ(x10)
-    int constant x11 = 6_250_000_000_000_000_000; // 2ˆ-4
-    int constant a11 = 106_449_445_891_785_942_956; // eˆ(x11)
+    int256 constant x2 = 3_200_000_000_000_000_000_000; // 2ˆ5
+    int256 constant a2 = 7_896_296_018_268_069_516_100_000_000_000_000; // eˆ(x2)
+    int256 constant x3 = 1_600_000_000_000_000_000_000; // 2ˆ4
+    int256 constant a3 = 888_611_052_050_787_263_676_000_000; // eˆ(x3)
+    int256 constant x4 = 800_000_000_000_000_000_000; // 2ˆ3
+    int256 constant a4 = 298_095_798_704_172_827_474_000; // eˆ(x4)
+    int256 constant x5 = 400_000_000_000_000_000_000; // 2ˆ2
+    int256 constant a5 = 5_459_815_003_314_423_907_810; // eˆ(x5)
+    int256 constant x6 = 200_000_000_000_000_000_000; // 2ˆ1
+    int256 constant a6 = 738_905_609_893_065_022_723; // eˆ(x6)
+    int256 constant x7 = 100_000_000_000_000_000_000; // 2ˆ0
+    int256 constant a7 = 271_828_182_845_904_523_536; // eˆ(x7)
+    int256 constant x8 = 50_000_000_000_000_000_000; // 2ˆ-1
+    int256 constant a8 = 164_872_127_070_012_814_685; // eˆ(x8)
+    int256 constant x9 = 25_000_000_000_000_000_000; // 2ˆ-2
+    int256 constant a9 = 128_402_541_668_774_148_407; // eˆ(x9)
+    int256 constant x10 = 12_500_000_000_000_000_000; // 2ˆ-3
+    int256 constant a10 = 113_314_845_306_682_631_683; // eˆ(x10)
+    int256 constant x11 = 6_250_000_000_000_000_000; // 2ˆ-4
+    int256 constant a11 = 106_449_445_891_785_942_956; // eˆ(x11)
 
     /**
      * @dev Exponentiation (x^y) with unsigned 18 decimal fixed point base and exponent.
      *
      * Reverts if ln(x) * y is smaller than `MIN_NATURAL_EXPONENT`, or larger than `MAX_NATURAL_EXPONENT`.
      */
-    function pow(uint x, uint y) internal pure returns (uint) {
+    function pow(uint256 x, uint256 y) internal pure returns (uint256) {
         unchecked {
             if (y == 0) {
                 // We solve the 0^0 indetermination by making it equal one.
-                return uint(ONE_18);
+                return uint256(ONE_18);
             }
 
             if (x == 0) {
@@ -108,7 +108,7 @@ library LogExpMath {
 
             // The ln function takes a signed value, so we need to make sure x fits in the signed 256 bit range.
             require(x < 2 ** 255, "EM: X_OUT_OF_BOUNDS");
-            int x_int256 = int(x);
+            int256 x_int256 = int256(x);
 
             // We will compute y * ln(x) in a single step. Depending on the value of x, we can either use ln or ln_36. In
             // both cases, we leave the division by ONE_18 (due to fixed point multiplication) to the end.
@@ -116,11 +116,11 @@ library LogExpMath {
             // This prevents y * ln(x) from overflowing, and at the same time guarantees y fits in the signed 256 bit
             // range.
             require(y < MILD_EXPONENT_BOUND, "EM: Y_OUT_OF_BOUNDS");
-            int y_int256 = int(y);
+            int256 y_int256 = int256(y);
 
-            int logx_times_y;
+            int256 logx_times_y;
             if (LN_36_LOWER_BOUND < x_int256 && x_int256 < LN_36_UPPER_BOUND) {
-                int ln_36_x = _ln_36(x_int256);
+                int256 ln_36_x = _ln_36(x_int256);
 
                 // ln_36_x has 36 decimal places, so multiplying by y_int256 isn't as straightforward, since we can't
                 // just
@@ -139,7 +139,7 @@ library LogExpMath {
                 "EM: PRODUCT_OUT_OF_BOUNDS"
             );
 
-            return uint(exp(logx_times_y));
+            return uint256(exp(logx_times_y));
         }
     }
 
@@ -148,7 +148,7 @@ library LogExpMath {
      *
      * Reverts if `x` is smaller than MIN_NATURAL_EXPONENT, or larger than `MAX_NATURAL_EXPONENT`.
      */
-    function exp(int x) internal pure returns (int) {
+    function exp(int256 x) internal pure returns (int256) {
         unchecked {
             require(x >= MIN_NATURAL_EXPONENT && x <= MAX_NATURAL_EXPONENT, "EM: INVALID_EXPONENT");
             if (x < 0) {
@@ -180,7 +180,7 @@ library LogExpMath {
             // deduct
             // it and compute the accumulated product.
 
-            int firstAN;
+            int256 firstAN;
             if (x >= x0) {
                 x -= x0;
                 firstAN = a0;
@@ -198,7 +198,7 @@ library LogExpMath {
             // `product` is the accumulated product of all a_n (except a0 and a1), which starts at 20 decimal fixed
             // point
             // one. Recall that fixed point multiplication requires dividing by ONE_20.
-            int product = ONE_20;
+            int256 product = ONE_20;
 
             if (x >= x2) {
                 x -= x2;
@@ -239,8 +239,8 @@ library LogExpMath {
             // series
             // expansion for e^x: 1 + x + (x^2 / 2!) + (x^3 / 3!) + ... + (x^n / n!).
 
-            int seriesSum = ONE_20; // The initial one in the sum, with 20 decimal places.
-            int term; // Each term in the sum, where the nth term is (x^n / n!).
+            int256 seriesSum = ONE_20; // The initial one in the sum, with 20 decimal places.
+            int256 term; // Each term in the sum, where the nth term is (x^n / n!).
 
             // The first term is simply x.
             term = x;
@@ -298,21 +298,21 @@ library LogExpMath {
     /**
      * @dev Logarithm (log(arg, base), with signed 18 decimal fixed point base and argument.
      */
-    function log(int arg, int base) internal pure returns (int) {
+    function log(int256 arg, int256 base) internal pure returns (int256) {
         unchecked {
             // This performs a simple base change: log(arg, base) = ln(arg) / ln(base).
 
             // Both logBase and logArg are computed as 36 decimal fixed point numbers, either by using ln_36, or by
             // upscaling.
 
-            int logBase;
+            int256 logBase;
             if (LN_36_LOWER_BOUND < base && base < LN_36_UPPER_BOUND) {
                 logBase = _ln_36(base);
             } else {
                 logBase = _ln(base) * ONE_18;
             }
 
-            int logArg;
+            int256 logArg;
             if (LN_36_LOWER_BOUND < arg && arg < LN_36_UPPER_BOUND) {
                 logArg = _ln_36(arg);
             } else {
@@ -327,7 +327,7 @@ library LogExpMath {
     /**
      * @dev Natural logarithm (ln(a)) with signed 18 decimal fixed point argument.
      */
-    function ln(int a) internal pure returns (int) {
+    function ln(int256 a) internal pure returns (int256) {
         unchecked {
             // The real natural logarithm is not defined for negative numbers or zero.
             require(a > 0, "EM: OUT_OF_BOUNDS");
@@ -343,7 +343,7 @@ library LogExpMath {
     /**
      * @dev Internal natural logarithm (ln(a)) with signed 18 decimal fixed point argument.
      */
-    function _ln(int a) private pure returns (int) {
+    function _ln(int256 a) private pure returns (int256) {
         unchecked {
             if (a < ONE_18) {
                 // Since ln(a^k) = k * ln(a), we can compute ln(a) as ln(a) = ln((1/a)^(-1)) = - ln((1/a)). If a is less
@@ -374,7 +374,7 @@ library LogExpMath {
             // divide
             // by it and compute the accumulated sum.
 
-            int sum = 0;
+            int256 sum = 0;
             if (a >= a0 * ONE_18) {
                 a /= a0; // Integer, not fixed point division
                 sum += x0;
@@ -450,14 +450,14 @@ library LogExpMath {
 
             // Recall that 20 digit fixed point division requires multiplying by ONE_20, and multiplication requires
             // division by ONE_20.
-            int z = ((a - ONE_20) * ONE_20) / (a + ONE_20);
-            int z_squared = (z * z) / ONE_20;
+            int256 z = ((a - ONE_20) * ONE_20) / (a + ONE_20);
+            int256 z_squared = (z * z) / ONE_20;
 
             // num is the numerator of the series: the z^(2 * n + 1) term
-            int num = z;
+            int256 num = z;
 
             // seriesSum holds the accumulated sum of each term in the series, starting with the initial z
-            int seriesSum = num;
+            int256 seriesSum = num;
 
             // In each step, the numerator is multiplied by z^2
             num = (num * z_squared) / ONE_20;
@@ -496,7 +496,7 @@ library LogExpMath {
      *
      * Should only be used if x is between LN_36_LOWER_BOUND and LN_36_UPPER_BOUND.
      */
-    function _ln_36(int x) private pure returns (int) {
+    function _ln_36(int256 x) private pure returns (int256) {
         unchecked {
             // Since ln(1) = 0, a value of x close to one will yield a very small result, which makes using 36 digits
             // worthwhile.
@@ -509,14 +509,14 @@ library LogExpMath {
 
             // Recall that 36 digit fixed point division requires multiplying by ONE_36, and multiplication requires
             // division by ONE_36.
-            int z = ((x - ONE_36) * ONE_36) / (x + ONE_36);
-            int z_squared = (z * z) / ONE_36;
+            int256 z = ((x - ONE_36) * ONE_36) / (x + ONE_36);
+            int256 z_squared = (z * z) / ONE_36;
 
             // num is the numerator of the series: the z^(2 * n + 1) term
-            int num = z;
+            int256 num = z;
 
             // seriesSum holds the accumulated sum of each term in the series, starting with the initial z
-            int seriesSum = num;
+            int256 seriesSum = num;
 
             // In each step, the numerator is multiplied by z^2
             num = (num * z_squared) / ONE_36;

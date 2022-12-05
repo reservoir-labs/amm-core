@@ -14,7 +14,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     using Bytes32Lib for bytes32;
 
     // 100 basis points per second which is 60% per minute
-    uint internal constant MAX_CHANGE_PER_SEC = 0.01e18;
+    uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
     string internal constant ALLOWED_CHANGE_NAME = "Shared::allowedChangePerSecond";
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
@@ -23,8 +23,8 @@ abstract contract OracleWriter is Pair, IOracleWriter {
 
     // maximum allowed rate of change of price per second
     // to mitigate oracle manipulation attacks in the face of post-merge ETH
-    uint public allowedChangePerSecond;
-    uint public prevClampedPrice;
+    uint256 public allowedChangePerSecond;
+    uint256 public prevClampedPrice;
 
     address public oracleCaller;
 
@@ -33,7 +33,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         setAllowedChangePerSecond(factory.read(ALLOWED_CHANGE_NAME).toUint256());
     }
 
-    function observation(uint aIndex) external view returns (Observation memory rObservation) {
+    function observation(uint256 aIndex) external view returns (Observation memory rObservation) {
         require(msg.sender == oracleCaller, "OW: NOT_ORACLE_CALLER");
         rObservation = _observations[aIndex];
     }
@@ -46,7 +46,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         }
     }
 
-    function setAllowedChangePerSecond(uint aAllowedChangePerSecond) public onlyFactory {
+    function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) public onlyFactory {
         require(
             0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC,
             "OW: INVALID_CHANGE_PER_SECOND"
@@ -55,10 +55,10 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         allowedChangePerSecond = aAllowedChangePerSecond;
     }
 
-    function _calcClampedPrice(uint aCurrRawPrice, uint aPrevClampedPrice, uint aTimeElapsed)
+    function _calcClampedPrice(uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed)
         internal
         virtual
-        returns (uint rClampedPrice, int112 rClampedLogPrice)
+        returns (uint256 rClampedPrice, int112 rClampedLogPrice)
     {
         if (aPrevClampedPrice == 0) {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
@@ -79,7 +79,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         }
     }
 
-    function _calcPercentageDiff(uint a, uint b) private pure returns (uint) {
+    function _calcPercentageDiff(uint256 a, uint256 b) private pure returns (uint256) {
         return stdMath.percentDelta(a, b);
     }
 
@@ -89,5 +89,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
      * @param timeElapsed time since the last oracle observation
      * @param timestampLast the time of the last activity on the pair
      */
-    function _updateOracle(uint _reserve0, uint _reserve1, uint32 timeElapsed, uint32 timestampLast) internal virtual;
+    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast)
+        internal
+        virtual;
 }

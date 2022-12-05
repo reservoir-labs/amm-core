@@ -29,4 +29,4 @@ polygon = "https://polygon-rpc.com"
 bracket_spacing = true
 wrap_comments = false
 number_underscore = "thousands"
-int_types = "short"
+int_types = "long"

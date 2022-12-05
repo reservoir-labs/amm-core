@@ -16,9 +16,9 @@ contract ConstantProductPair is ReservoirPair {
 
     // Accuracy^2:
     // 10_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
-    uint public constant SQUARED_ACCURACY = 1e76;
+    uint256 public constant SQUARED_ACCURACY = 1e76;
     // Accuracy: 100_000_000_000_000_000_000_000_000_000_000_000_000
-    uint public constant ACCURACY = 1e38;
+    uint256 public constant ACCURACY = 1e38;
 
     string private constant PAIR_SWAP_FEE_NAME = "CP::swapFee";
 
@@ -27,30 +27,30 @@ contract ConstantProductPair is ReservoirPair {
     // solhint-disable-next-line no-empty-blocks
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
 
-    function _getAmountOut(uint amountIn, uint reserveIn, uint reserveOut, uint swapFee)
+    function _getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut, uint256 swapFee)
         internal
         pure
-        returns (uint amountOut)
+        returns (uint256 amountOut)
     {
         require(amountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
 
-        uint amountInWithFee = amountIn * (FEE_ACCURACY - swapFee);
-        uint numerator = amountInWithFee * reserveOut;
-        uint denominator = reserveIn * FEE_ACCURACY + amountInWithFee;
+        uint256 amountInWithFee = amountIn * (FEE_ACCURACY - swapFee);
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * FEE_ACCURACY + amountInWithFee;
         amountOut = numerator / denominator;
     }
 
-    function _getAmountIn(uint amountOut, uint reserveIn, uint reserveOut, uint swapFee)
+    function _getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut, uint256 swapFee)
         internal
         pure
-        returns (uint amountIn)
+        returns (uint256 amountIn)
     {
         require(amountOut > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
 
-        uint numerator = reserveIn * amountOut * FEE_ACCURACY;
-        uint denominator = (reserveOut - amountOut) * (FEE_ACCURACY - swapFee);
+        uint256 numerator = reserveIn * amountOut * FEE_ACCURACY;
+        uint256 denominator = (reserveOut - amountOut) * (FEE_ACCURACY - swapFee);
         amountIn = numerator / denominator + 1;
     }
 
@@ -74,19 +74,19 @@ contract ConstantProductPair is ReservoirPair {
      * A reader of the whitepaper will note that this equation is not a literally the same as equation (6), however
      * with some straight-forward algebraic manipulation they can be shown to be mathematically equivalent.
      */
-    function _calcFee(uint _sqrtNewK, uint _sqrtOldK, uint _platformFee, uint _circulatingShares)
+    function _calcFee(uint256 _sqrtNewK, uint256 _sqrtOldK, uint256 _platformFee, uint256 _circulatingShares)
         internal
         pure
-        returns (uint _sharesToIssue)
+        returns (uint256 _sharesToIssue)
     {
         // Assert newK & oldK        < uint112
         // Assert _platformFee       < FEE_ACCURACY
         // Assert _circulatingShares < uint112
 
         // perf: can be unchecked
-        uint _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK; // ASSERT: < UINT256
-        uint _scaledMultiplier = ACCURACY - (SQUARED_ACCURACY / _scaledGrowth); // ASSERT: < UINT128
-        uint _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
+        uint256 _scaledGrowth = _sqrtNewK * ACCURACY / _sqrtOldK; // ASSERT: < UINT256
+        uint256 _scaledMultiplier = ACCURACY - (SQUARED_ACCURACY / _scaledGrowth); // ASSERT: < UINT128
+        uint256 _scaledTargetOwnership = _scaledMultiplier * _platformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
 
         _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT: _scaledTargetOwnership < ACCURACY
     }
@@ -95,13 +95,13 @@ contract ConstantProductPair is ReservoirPair {
         feeOn = platformFee > 0;
 
         if (feeOn) {
-            uint _sqrtOldK = Math.sqrt(kLast); // gas savings
+            uint256 _sqrtOldK = Math.sqrt(kLast); // gas savings
 
             if (_sqrtOldK != 0) {
-                uint _sqrtNewK = Math.sqrt(uint(_reserve0) * _reserve1);
+                uint256 _sqrtNewK = Math.sqrt(uint256(_reserve0) * _reserve1);
 
                 if (_sqrtNewK > _sqrtOldK) {
-                    uint _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
+                    uint256 _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
 
                     address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
                     if (_sharesToIssue > 0) _mint(platformFeeTo, _sharesToIssue);
@@ -113,17 +113,17 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function mint(address to) external nonReentrant returns (uint liquidity) {
+    function mint(address to) external nonReentrant returns (uint256 liquidity) {
         _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint balance0 = _totalToken0();
-        uint balance1 = _totalToken1();
-        uint amount0 = balance0 - _reserve0;
-        uint amount1 = balance1 - _reserve1;
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
+        uint256 amount0 = balance0 - _reserve0;
+        uint256 amount1 = balance1 - _reserve1;
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
-        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
             liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
@@ -141,16 +141,16 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function burn(address to) external nonReentrant returns (uint amount0, uint amount1) {
+    function burn(address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged(); // check asset-manager pnl
 
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint balance0 = _totalToken0();
-        uint balance1 = _totalToken1();
-        uint liquidity = balanceOf[address(this)];
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
+        uint256 liquidity = balanceOf[address(this)];
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
-        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
         _burn(address(this), liquidity);
@@ -169,14 +169,14 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     /// @inheritdoc IPair
-    function swap(int amount, bool inOrOut, address to, bytes calldata data)
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
         external
         nonReentrant
-        returns (uint amountOut)
+        returns (uint256 amountOut)
     {
         require(amount != 0, "CP: AMOUNT_ZERO");
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        uint amountIn;
+        uint256 amountIn;
         address tokenOut;
 
         // exact in
@@ -184,13 +184,13 @@ contract ConstantProductPair is ReservoirPair {
             // swap token0 exact in for token1 variable out
             if (amount > 0) {
                 tokenOut = token1;
-                amountIn = uint(amount);
+                amountIn = uint256(amount);
                 amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, swapFee);
             }
             // swap token1 exact in for token0 variable out
             else {
                 tokenOut = token0;
-                amountIn = uint(-amount);
+                amountIn = uint256(-amount);
                 amountOut = _getAmountOut(amountIn, _reserve1, _reserve0, swapFee);
             }
         }
@@ -198,14 +198,14 @@ contract ConstantProductPair is ReservoirPair {
         else {
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
-                amountOut = uint(amount);
+                amountOut = uint256(amount);
                 require(amountOut < _reserve0, "CP: NOT_ENOUGH_LIQ");
                 tokenOut = token0;
                 amountIn = _getAmountIn(amountOut, _reserve1, _reserve0, swapFee);
             }
             // swap token0 variable in for token1 exact out
             else {
-                amountOut = uint(-amount);
+                amountOut = uint256(-amount);
                 require(amountOut < _reserve1, "CP: NOT_ENOUGH_LIQ");
                 tokenOut = token1;
                 amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, swapFee);
@@ -222,10 +222,10 @@ contract ConstantProductPair is ReservoirPair {
         }
 
         // perf: investigate if it is possible/safe to only do one call instead of two
-        uint balance0 = _totalToken0();
-        uint balance1 = _totalToken1();
+        uint256 balance0 = _totalToken0();
+        uint256 balance1 = _totalToken1();
 
-        uint actualAmountIn = tokenOut == token0 ? balance1 - _reserve1 : balance0 - _reserve0;
+        uint256 actualAmountIn = tokenOut == token0 ? balance1 - _reserve1 : balance0 - _reserve0;
         require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -236,28 +236,28 @@ contract ConstantProductPair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint _reserve0, uint _reserve1, uint32 timeElapsed, uint32 timestampLast)
+    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast)
         internal
         override
     {
         Observation storage previous = _observations[index];
 
-        (uint currRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
+        (uint256 currRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
             _reserve0 * token0PrecisionMultiplier, _reserve1 * token1PrecisionMultiplier
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
-        (uint currClampedPrice, int112 currLogClampedPrice) =
+        (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, timeElapsed);
         int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(_reserve0, _reserve1);
         prevClampedPrice = currClampedPrice;
 
         // overflow is okay
         unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int(uint(timeElapsed)));
+            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(timeElapsed)));
             int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int(uint(timeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int(uint(timeElapsed)));
+                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
+            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
             index += 1;
             _observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
         }

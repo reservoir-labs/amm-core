@@ -10,7 +10,7 @@ contract MintableERC20 is ERC20 {
         _decimals = aDecimals;
     }
 
-    function mint(address aReceiver, uint aAmount) external {
+    function mint(address aReceiver, uint256 aAmount) external {
         _mint(aReceiver, aAmount);
     }
 

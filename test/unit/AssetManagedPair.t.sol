@@ -15,8 +15,8 @@ contract AssetManagedPairTest is BaseTest {
     IAssetManagedPair internal _pair;
 
     modifier allPairs() {
-        for (uint i = 0; i < _pairs.length; ++i) {
-            uint lBefore = vm.snapshot();
+        for (uint256 i = 0; i < _pairs.length; ++i) {
+            uint256 lBefore = vm.snapshot();
             _pair = _pairs[i];
             _;
             vm.revertTo(lBefore);
@@ -80,17 +80,17 @@ contract AssetManagedPairTest is BaseTest {
 
         // sanity
         (uint112 lReserve0, uint112 lReserve1,) = _pair.getReserves();
-        uint lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
-        uint lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
+        uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
+        uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
 
         _manager.adjustManagement(_pair, 20e18, 20e18);
 
         (uint112 lReserve0_1, uint112 lReserve1_1,) = _pair.getReserves();
-        uint lBal0After = IERC20(lToken0).balanceOf(address(_pair));
-        uint lBal1After = IERC20(lToken1).balanceOf(address(_pair));
+        uint256 lBal0After = IERC20(lToken0).balanceOf(address(_pair));
+        uint256 lBal1After = IERC20(lToken1).balanceOf(address(_pair));
 
-        assertEq(uint(lReserve0_1), lReserve0);
-        assertEq(uint(lReserve1_1), lReserve1);
+        assertEq(uint256(lReserve0_1), lReserve0);
+        assertEq(uint256(lReserve1_1), lReserve1);
         assertEq(lBal0Before - lBal0After, 20e18);
         assertEq(lBal1Before - lBal1After, 20e18);
 
@@ -105,8 +105,8 @@ contract AssetManagedPairTest is BaseTest {
         (uint112 lReserve0_2, uint112 lReserve1_2,) = _pair.getReserves();
 
         // assert
-        assertEq(uint(lReserve0_2), lReserve0);
-        assertEq(uint(lReserve1_2), lReserve1);
+        assertEq(uint256(lReserve0_2), lReserve0);
+        assertEq(uint256(lReserve1_2), lReserve1);
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
         assertEq(_manager.getBalance(_pair, address(lToken0)), 10e18);
@@ -121,14 +121,14 @@ contract AssetManagedPairTest is BaseTest {
         // liquidity prior to adjustManagement
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
-        uint lLiq1 = _pair.mint(address(this));
+        uint256 lLiq1 = _pair.mint(address(this));
 
         _manager.adjustManagement(_pair, 50e18, 50e18);
 
         // act
         _tokenA.mint(address(_pair), 50e18);
         _tokenB.mint(address(_pair), 50e18);
-        uint lLiq2 = _pair.mint(address(this));
+        uint256 lLiq2 = _pair.mint(address(this));
 
         // assert
         assertEq(lLiq1, lLiq2);
@@ -143,7 +143,7 @@ contract AssetManagedPairTest is BaseTest {
         _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
 
         // sanity
-        uint lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
+        uint256 lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
         assertEq(lTokenAManaged, 7e18);
 
         // act
@@ -189,8 +189,8 @@ contract AssetManagedPairTest is BaseTest {
         _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
 
         // act
-        uint lLpTokenBal = _pair.balanceOf(_alice);
-        uint lTotalSupply = _pair.totalSupply();
+        uint256 lLpTokenBal = _pair.balanceOf(_alice);
+        uint256 lTotalSupply = _pair.totalSupply();
         vm.prank(_alice);
         _pair.transfer(address(_pair), lLpTokenBal);
         _pair.burn(address(this));
@@ -202,11 +202,11 @@ contract AssetManagedPairTest is BaseTest {
 
     function testSwap_AfterLoss() external allPairs {
         // arrange
-        int lSwapAmt = 1e18;
-        uint lBefore = vm.snapshot();
-        _tokenA.mint(address(_pair), uint(lSwapAmt));
+        int256 lSwapAmt = 1e18;
+        uint256 lBefore = vm.snapshot();
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
         _pair.swap(lSwapAmt, true, address(this), "");
-        uint lNoLossOutAmt = _tokenB.balanceOf(address(this));
+        uint256 lNoLossOutAmt = _tokenB.balanceOf(address(this));
         vm.revertTo(lBefore);
 
         vm.prank(address(_factory));
@@ -218,12 +218,12 @@ contract AssetManagedPairTest is BaseTest {
         _pair.sync();
 
         // act
-        _tokenA.mint(address(_pair), uint(lSwapAmt));
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
         _pair.swap(lSwapAmt, true, address(this), "");
 
         // assert - after losing some token A, it becomes more expensive as it is scarcer so
         // we get more token B out
-        uint lAfterLossOutAmt = _tokenB.balanceOf(address(this));
+        uint256 lAfterLossOutAmt = _tokenB.balanceOf(address(this));
         assertGt(lAfterLossOutAmt, lNoLossOutAmt);
     }
 
@@ -238,7 +238,7 @@ contract AssetManagedPairTest is BaseTest {
         _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
         _tokenA.mint(address(_constantProductPair), 10e18);
         _tokenB.mint(address(_constantProductPair), 10e18);
-        uint lLiq = _constantProductPair.mint(address(this));
+        uint256 lLiq = _constantProductPair.mint(address(this));
 
         // sanity
         assertEq(lLiq, 10e18); // sqrt 10e18 * 10e18
@@ -271,7 +271,7 @@ contract AssetManagedPairTest is BaseTest {
         _manager.adjustManagement(_stablePair, 20e18, 20e18);
         _tokenA.mint(address(_stablePair), 10e18);
         _tokenB.mint(address(_stablePair), 10e18);
-        uint lLiq = _stablePair.mint(address(this));
+        uint256 lLiq = _stablePair.mint(address(this));
 
         // sanity
         assertEq(lLiq, 20e18); // 10e18 + 10e18

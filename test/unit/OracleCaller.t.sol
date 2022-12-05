@@ -16,17 +16,17 @@ contract OracleCallerTest is BaseTest {
     }
 
     modifier allPairs() {
-        for (uint i = 0; i < _pairs.length; ++i) {
-            uint lBefore = vm.snapshot();
+        for (uint256 i = 0; i < _pairs.length; ++i) {
+            uint256 lBefore = vm.snapshot();
             _pair = _pairs[i];
             _;
             vm.revertTo(lBefore);
         }
     }
 
-    function testObservation_NotWhitelisted(uint aIndex) external allPairs {
+    function testObservation_NotWhitelisted(uint256 aIndex) external allPairs {
         // assume
-        uint lIndex = bound(aIndex, 0, type(uint16).max);
+        uint256 lIndex = bound(aIndex, 0, type(uint16).max);
         vm.startPrank(_alice);
 
         // act & assert

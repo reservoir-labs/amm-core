@@ -15,15 +15,15 @@ contract LogCompressionTest is Test {
         vm.etch(_balancerLogCompression, lBytecode);
     }
 
-    function testToLowResLog(uint aValue) external {
+    function testToLowResLog(uint256 aValue) external {
         // act
         (bool lSuccess, bytes memory lRes) =
             _balancerLogCompression.staticcall(abi.encodeWithSignature("toLowResLog(uint256)", aValue));
 
         // assert
         if (lSuccess) {
-            int lLocalRes = LogCompression.toLowResLog(aValue);
-            int lDecoded = abi.decode(lRes, (int));
+            int256 lLocalRes = LogCompression.toLowResLog(aValue);
+            int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
@@ -31,15 +31,15 @@ contract LogCompressionTest is Test {
         }
     }
 
-    function testFromLowResLog(int aValue) external {
+    function testFromLowResLog(int256 aValue) external {
         // act
         (bool lSuccess, bytes memory lRes) =
             _balancerLogCompression.staticcall(abi.encodeWithSignature("fromLowResLog(int256)", aValue));
 
         // assert
         if (lSuccess) {
-            uint lLocalRes = LogCompression.fromLowResLog(aValue);
-            uint lDecoded = abi.decode(lRes, (uint));
+            uint256 lLocalRes = LogCompression.fromLowResLog(aValue);
+            uint256 lDecoded = abi.decode(lRes, (uint256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();

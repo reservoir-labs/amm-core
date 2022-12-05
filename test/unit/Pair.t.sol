@@ -7,8 +7,8 @@ import { IPair } from "src/interfaces/IPair.sol";
 contract PairTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
-    event SwapFeeChanged(uint oldSwapFee, uint newSwapFee);
-    event PlatformFeeChanged(uint oldPlatformFee, uint newPlatformFee);
+    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
+    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
 
     IPair[] internal _pairs;
     IPair internal _pair;
@@ -19,8 +19,8 @@ contract PairTest is BaseTest {
     }
 
     modifier allPairs() {
-        for (uint i = 0; i < _pairs.length; ++i) {
-            uint lBefore = vm.snapshot();
+        for (uint256 i = 0; i < _pairs.length; ++i) {
+            uint256 lBefore = vm.snapshot();
             _pair = _pairs[i];
             _;
             vm.revertTo(lBefore);
@@ -59,7 +59,7 @@ contract PairTest is BaseTest {
 
     function testCustomSwapFee_OffByDefault() public allPairs {
         // assert
-        assertEq(_pair.customSwapFee(), type(uint).max);
+        assertEq(_pair.customSwapFee(), type(uint256).max);
     }
 
     function testSetSwapFeeForPair() public allPairs {
@@ -76,10 +76,10 @@ contract PairTest is BaseTest {
         _factory.rawCall(address(_pair), abi.encodeWithSignature("setCustomSwapFee(uint256)", 10_000), 0);
 
         // act
-        _factory.rawCall(address(_pair), abi.encodeWithSignature("setCustomSwapFee(uint256)", type(uint).max), 0);
+        _factory.rawCall(address(_pair), abi.encodeWithSignature("setCustomSwapFee(uint256)", type(uint256).max), 0);
 
         // assert
-        assertEq(_pair.customSwapFee(), type(uint).max);
+        assertEq(_pair.customSwapFee(), type(uint256).max);
         if (_pair == _constantProductPair) {
             assertEq(_pair.swapFee(), DEFAULT_SWAP_FEE_CP);
         } else if (_pair == _stablePair) {
@@ -87,9 +87,9 @@ contract PairTest is BaseTest {
         }
     }
 
-    function testSetSwapFeeForPair_BreachMaximum(uint aCustomSwapFee) public allPairs {
+    function testSetSwapFeeForPair_BreachMaximum(uint256 aCustomSwapFee) public allPairs {
         // assume
-        uint lCustomSwapFee = bound(aCustomSwapFee, _pair.MAX_SWAP_FEE() + 1, type(uint).max - 1);
+        uint256 lCustomSwapFee = bound(aCustomSwapFee, _pair.MAX_SWAP_FEE() + 1, type(uint256).max - 1);
 
         // act & assert
         vm.expectRevert("P: INVALID_SWAP_FEE");
@@ -98,7 +98,7 @@ contract PairTest is BaseTest {
 
     function testCustomPlatformFee_OffByDefault() public allPairs {
         // assert
-        assertEq(_pair.customPlatformFee(), type(uint).max);
+        assertEq(_pair.customPlatformFee(), type(uint256).max);
         assertEq(_pair.platformFee(), DEFAULT_PLATFORM_FEE);
     }
 
@@ -116,16 +116,16 @@ contract PairTest is BaseTest {
         _factory.rawCall(address(_pair), abi.encodeWithSignature("setCustomPlatformFee(uint256)", 10_000), 0);
 
         // act
-        _factory.rawCall(address(_pair), abi.encodeWithSignature("setCustomPlatformFee(uint256)", type(uint).max), 0);
+        _factory.rawCall(address(_pair), abi.encodeWithSignature("setCustomPlatformFee(uint256)", type(uint256).max), 0);
 
         // assert
-        assertEq(_pair.customPlatformFee(), type(uint).max);
+        assertEq(_pair.customPlatformFee(), type(uint256).max);
         assertEq(_pair.platformFee(), DEFAULT_PLATFORM_FEE);
     }
 
-    function testSetPlatformFeeForPair_BreachMaximum(uint aPlatformFee) public allPairs {
+    function testSetPlatformFeeForPair_BreachMaximum(uint256 aPlatformFee) public allPairs {
         // assume - max is type(uint256).max - 1 as type(uint256).max is used to indicate absence of custom platformFee
-        uint lPlatformFee = bound(aPlatformFee, _pair.MAX_PLATFORM_FEE() + 1, type(uint).max - 1);
+        uint256 lPlatformFee = bound(aPlatformFee, _pair.MAX_PLATFORM_FEE() + 1, type(uint256).max - 1);
 
         // act & assert
         vm.expectRevert("P: INVALID_PLATFORM_FEE");
@@ -134,8 +134,8 @@ contract PairTest is BaseTest {
 
     function testUpdateDefaultFees() public allPairs {
         // arrange
-        uint lNewDefaultSwapFee = 200;
-        uint lNewDefaultPlatformFee = 5000;
+        uint256 lNewDefaultSwapFee = 200;
+        uint256 lNewDefaultPlatformFee = 5000;
         _factory.write("CP::swapFee", lNewDefaultSwapFee);
         _factory.write("SP::swapFee", lNewDefaultSwapFee);
         _factory.write("Shared::platformFee", lNewDefaultPlatformFee);
@@ -158,7 +158,7 @@ contract PairTest is BaseTest {
 
     function testRecoverToken() public allPairs {
         // arrange
-        uint lAmountToRecover = 1e18;
+        uint256 lAmountToRecover = 1e18;
         _tokenC.mint(address(_pair), 1e18);
 
         // act

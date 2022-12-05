@@ -14,12 +14,12 @@ import { OracleCaller } from "src/oracle/OracleCaller.sol";
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
 
-    uint public constant INITIAL_MINT_AMOUNT = 100e18;
-    uint public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
-    uint public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
-    uint public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
-    uint public constant DEFAULT_AMP_COEFF = 1000;
-    uint public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
+    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
+    uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
+    uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
+    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
+    uint256 public constant DEFAULT_AMP_COEFF = 1000;
+    uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
     GenericFactory internal _factory = new GenericFactory();
 
@@ -73,24 +73,24 @@ abstract contract BaseTest is Test {
     }
 
     function _makeAddress(string memory aName) internal returns (address) {
-        address lAddress = address(uint160(uint(keccak256(abi.encodePacked(aName)))));
+        address lAddress = address(uint160(uint256(keccak256(abi.encodePacked(aName)))));
         vm.label(lAddress, aName);
 
         return lAddress;
     }
 
-    function _createPair(address aTokenA, address aTokenB, uint aCurveId) internal returns (address rPair) {
+    function _createPair(address aTokenA, address aTokenB, uint256 aCurveId) internal returns (address rPair) {
         rPair = _factory.createPair(aTokenA, aTokenB, aCurveId);
     }
 
-    function _stepTime(uint aTime) internal {
+    function _stepTime(uint256 aTime) internal {
         vm.roll(block.number + 1);
         skip(aTime);
     }
 
     function _writeObservation(
         ReservoirPair aPair,
-        uint aIndex,
+        uint256 aIndex,
         int112 aRawPrice,
         int56 aClampedPrice,
         int56 aLiq,
