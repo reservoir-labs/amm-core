@@ -8,13 +8,13 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
     /// @notice Force reserves to match balances.
     function sync() external nonReentrant {
         _syncManaged();
-        _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
+        _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
     }
 
     /// @notice Force balances to match reserves.
     function skim(address aTo) external nonReentrant {
-        uint256 lReserve0 = reserve0; // gas savings
-        uint256 lReserve1 = reserve1;
+        uint256 lReserve0 = _reserve0; // gas savings
+        uint256 lReserve1 = _reserve1;
 
         _checkedTransfer(token0, aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
         _checkedTransfer(token1, aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
@@ -48,15 +48,16 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         uint32 lBlockTimestamp = uint32(block.timestamp % 2 ** 32);
         uint32 lTimeElapsed;
         unchecked {
-            lTimeElapsed = lBlockTimestamp - blockTimestampLast; // overflow is desired
+            lTimeElapsed = lBlockTimestamp - _blockTimestampLast; // overflow is desired
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            _updateOracle(aReserve0, aReserve1, lTimeElapsed, blockTimestampLast);
+            _updateOracle(aReserve0, aReserve1, lTimeElapsed, _blockTimestampLast);
         }
 
-        reserve0 = uint112(aBalance0);
-        reserve1 = uint112(aBalance1);
-        blockTimestampLast = lBlockTimestamp;
-        emit Sync(reserve0, reserve1);
+        _reserve0 = uint112(aBalance0);
+        _reserve1 = uint112(aBalance1);
+        _blockTimestampLast = lBlockTimestamp;
+        // PERF: Does this use SLOADs?
+        emit Sync(_reserve0, _reserve1);
     }
 }

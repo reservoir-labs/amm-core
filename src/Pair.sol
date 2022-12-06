@@ -35,9 +35,9 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     uint128 internal immutable token0PrecisionMultiplier;
     uint128 internal immutable token1PrecisionMultiplier;
 
-    uint112 internal reserve0;
-    uint112 internal reserve1;
-    uint32 internal blockTimestampLast;
+    uint112 internal _reserve0;
+    uint112 internal _reserve1;
+    uint32 internal _blockTimestampLast;
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint256).max;
@@ -64,10 +64,10 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
     }
 
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
-        _reserve0 = reserve0;
-        _reserve1 = reserve1;
-        _blockTimestampLast = blockTimestampLast;
+    function getReserves() public view returns (uint112 rReserve0, uint112 rReserve1, uint32 rBlockTimestampLast) {
+        rReserve0 = _reserve0;
+        rReserve1 = _reserve1;
+        rBlockTimestampLast = _blockTimestampLast;
     }
 
     function setCustomSwapFee(uint256 _customSwapFee) external onlyFactory {

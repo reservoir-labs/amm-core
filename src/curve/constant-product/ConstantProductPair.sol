@@ -93,14 +93,14 @@ contract ConstantProductPair is ReservoirPair {
         _sharesToIssue = _scaledTargetOwnership * _circulatingShares / (ACCURACY - _scaledTargetOwnership); // ASSERT: _scaledTargetOwnership < ACCURACY
     }
 
-    function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
+    function _mintFee(uint112 lReserve0, uint112 lReserve1) private returns (bool feeOn) {
         feeOn = platformFee > 0;
 
         if (feeOn) {
             uint256 _sqrtOldK = Math.sqrt(kLast); // gas savings
 
             if (_sqrtOldK != 0) {
-                uint256 _sqrtNewK = Math.sqrt(uint256(_reserve0) * _reserve1);
+                uint256 _sqrtNewK = Math.sqrt(uint256(lReserve0) * lReserve1);
 
                 if (_sqrtNewK > _sqrtOldK) {
                     uint256 _sharesToIssue = _calcFee(_sqrtNewK, _sqrtOldK, platformFee, totalSupply);
@@ -118,25 +118,25 @@ contract ConstantProductPair is ReservoirPair {
     function mint(address to) external nonReentrant returns (uint256 liquidity) {
         _syncManaged(); // check asset-manager pnl
 
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        (uint112 lReserve0, uint112 lReserve1,) = getReserves(); // gas savings
         uint256 balance0 = _totalToken0();
         uint256 balance1 = _totalToken1();
-        uint256 amount0 = balance0 - _reserve0;
-        uint256 amount1 = balance1 - _reserve1;
+        uint256 amount0 = balance0 - lReserve0;
+        uint256 amount1 = balance1 - lReserve1;
 
-        bool feeOn = _mintFee(_reserve0, _reserve1);
+        bool feeOn = _mintFee(lReserve0, lReserve1);
         uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
             liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            liquidity = Math.min(amount0 * _totalSupply / _reserve0, amount1 * _totalSupply / _reserve1);
+            liquidity = Math.min(amount0 * _totalSupply / lReserve0, amount1 * _totalSupply / lReserve1);
         }
         require(liquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
 
-        _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        _update(balance0, balance1, lReserve0, lReserve1);
+        if (feeOn) kLast = uint224(_reserve0) * _reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
@@ -146,25 +146,25 @@ contract ConstantProductPair is ReservoirPair {
     function burn(address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged(); // check asset-manager pnl
 
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        (uint112 lReserve0, uint112 lReserve1,) = getReserves(); // gas savings
         uint256 balance0 = _totalToken0();
         uint256 balance1 = _totalToken1();
         uint256 liquidity = balanceOf[address(this)];
 
-        bool feeOn = _mintFee(_reserve0, _reserve1);
+        bool feeOn = _mintFee(lReserve0, lReserve1);
         uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity * balance0 / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity * balance1 / _totalSupply; // using balances ensures pro-rata distribution
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
-        _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
+        _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
+        _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
 
         balance0 = _totalToken0();
         balance1 = _totalToken1();
 
-        _update(balance0, balance1, _reserve0, _reserve1);
-        if (feeOn) kLast = uint224(reserve0) * reserve1; // reserve0 and reserve1 are up-to-date
+        _update(balance0, balance1, lReserve0, lReserve1);
+        if (feeOn) kLast = uint224(_reserve0) * _reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
@@ -177,7 +177,7 @@ contract ConstantProductPair is ReservoirPair {
         returns (uint256 amountOut)
     {
         require(amount != 0, "CP: AMOUNT_ZERO");
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        (uint112 lReserve0, uint112 lReserve1,) = getReserves(); // gas savings
         uint256 amountIn;
         address tokenOut;
 
@@ -187,13 +187,13 @@ contract ConstantProductPair is ReservoirPair {
             if (amount > 0) {
                 tokenOut = token1;
                 amountIn = uint256(amount);
-                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, swapFee);
+                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, swapFee);
             }
             // swap token1 exact in for token0 variable out
             else {
                 tokenOut = token0;
                 amountIn = uint256(-amount);
-                amountOut = _getAmountOut(amountIn, _reserve1, _reserve0, swapFee);
+                amountOut = _getAmountOut(amountIn, lReserve1, lReserve0, swapFee);
             }
         }
         // exact out
@@ -201,21 +201,21 @@ contract ConstantProductPair is ReservoirPair {
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
                 amountOut = uint256(amount);
-                require(amountOut < _reserve0, "CP: NOT_ENOUGH_LIQ");
+                require(amountOut < lReserve0, "CP: NOT_ENOUGH_LIQ");
                 tokenOut = token0;
-                amountIn = _getAmountIn(amountOut, _reserve1, _reserve0, swapFee);
+                amountIn = _getAmountIn(amountOut, lReserve1, lReserve0, swapFee);
             }
             // swap token0 variable in for token1 exact out
             else {
                 amountOut = uint256(-amount);
-                require(amountOut < _reserve1, "CP: NOT_ENOUGH_LIQ");
+                require(amountOut < lReserve1, "CP: NOT_ENOUGH_LIQ");
                 tokenOut = token1;
-                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, swapFee);
+                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, swapFee);
             }
         }
 
         // optimistically transfers tokens
-        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
+        _checkedTransfer(tokenOut, to, amountOut, lReserve0, lReserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -227,10 +227,10 @@ contract ConstantProductPair is ReservoirPair {
         uint256 balance0 = _totalToken0();
         uint256 balance1 = _totalToken1();
 
-        uint256 actualAmountIn = tokenOut == token0 ? balance1 - _reserve1 : balance0 - _reserve0;
+        uint256 actualAmountIn = tokenOut == token0 ? balance1 - lReserve1 : balance0 - lReserve0;
         require(amountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
 
-        _update(balance0, balance1, _reserve0, _reserve1);
+        _update(balance0, balance1, lReserve0, lReserve1);
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
@@ -238,20 +238,20 @@ contract ConstantProductPair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast)
+    function _updateOracle(uint256 lReserve0, uint256 lReserve1, uint32 timeElapsed, uint32 timestampLast)
         internal
         override
     {
         Observation storage previous = _observations[index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
-            _reserve0 * token0PrecisionMultiplier, _reserve1 * token1PrecisionMultiplier
+            lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, timeElapsed);
-        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(_reserve0, _reserve1);
+        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(lReserve0, lReserve1);
         prevClampedPrice = currClampedPrice;
 
         // overflow is okay

@@ -96,18 +96,18 @@ contract StablePair is ReservoirPair {
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
-    function _nonOptimalMintFee(uint256 _amount0, uint256 _amount1, uint256 _reserve0, uint256 _reserve1)
+    function _nonOptimalMintFee(uint256 _amount0, uint256 _amount1, uint256 lReserve0, uint256 lReserve1)
         internal
         view
         returns (uint256 token0Fee, uint256 token1Fee)
     {
-        if (_reserve0 == 0 || _reserve1 == 0) return (0, 0);
-        uint256 amount1Optimal = (_amount0 * _reserve1) / _reserve0;
+        if (lReserve0 == 0 || lReserve1 == 0) return (0, 0);
+        uint256 amount1Optimal = (_amount0 * lReserve1) / lReserve0;
 
         if (amount1Optimal <= _amount1) {
             token1Fee = (swapFee * (_amount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
         } else {
-            uint256 amount0Optimal = (_amount1 * _reserve0) / _reserve1;
+            uint256 amount0Optimal = (_amount1 * lReserve0) / lReserve1;
             token0Fee = (swapFee * (_amount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
         }
         require(token0Fee <= type(uint112).max && token1Fee <= type(uint112).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
@@ -118,18 +118,18 @@ contract StablePair is ReservoirPair {
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves();
+        (uint112 lReserve0, uint112 lReserve1,) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
-        uint256 amount0 = balance0 - _reserve0;
-        uint256 amount1 = balance1 - _reserve1;
+        uint256 amount0 = balance0 - lReserve0;
+        uint256 amount1 = balance1 - lReserve1;
 
-        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, _reserve0, _reserve1);
-        _reserve0 += uint112(fee0);
-        _reserve1 += uint112(fee1);
+        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, lReserve0, lReserve1);
+        lReserve0 += uint112(fee0);
+        lReserve1 += uint112(fee1);
 
-        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(_reserve0, _reserve1);
+        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
 
         if (_totalSupply == 0) {
             require(amount0 > 0 && amount1 > 0, "SP: INVALID_AMOUNTS");
@@ -140,12 +140,13 @@ contract StablePair is ReservoirPair {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        _update(balance0, balance1, _reserve0, _reserve1);
+        _update(balance0, balance1, lReserve0, lReserve1);
 
         // casting is safe as the max invariant would be 2 * uint112 (* uint60 in the case of tokens with 0 decimal
         // places)
         // which results in 112 + 60 + 1 = 173 bits
         // which fits into uint192
+        // TODO: Why does lastInvariant get set to newLiq? Not symmetric with burn?
         lastInvariant = uint192(newLiq);
         lastInvariantAmp = _getCurrentAPrecise();
 
@@ -158,22 +159,22 @@ contract StablePair is ReservoirPair {
     function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
-        (uint256 _reserve0, uint256 _reserve1,) = getReserves();
+        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
         uint256 liquidity = balanceOf[address(this)];
 
-        (uint256 _totalSupply,) = _mintFee(_reserve0, _reserve1);
+        (uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
 
-        amount0 = (liquidity * _reserve0) / _totalSupply;
-        amount1 = (liquidity * _reserve1) / _totalSupply;
+        amount0 = (liquidity * lReserve0) / _totalSupply;
+        amount1 = (liquidity * lReserve1) / _totalSupply;
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, to, amount0, _reserve0, _reserve1);
-        _checkedTransfer(token1, to, amount1, _reserve0, _reserve1);
+        _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
+        _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
 
-        _update(_totalToken0(), _totalToken1(), uint112(_reserve0), uint112(_reserve1));
+        _update(_totalToken0(), _totalToken1(), uint112(lReserve0), uint112(lReserve1));
 
-        lastInvariant = uint192(_computeLiquidity(reserve0, reserve1));
+        lastInvariant = uint192(_computeLiquidity(_reserve0, _reserve1));
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
@@ -188,7 +189,7 @@ contract StablePair is ReservoirPair {
         returns (uint256 amountOut)
     {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint112 _reserve0, uint112 _reserve1,) = getReserves();
+        (uint112 lReserve0, uint112 lReserve1,) = getReserves();
         uint256 amountIn;
         address tokenOut;
 
@@ -198,13 +199,13 @@ contract StablePair is ReservoirPair {
             if (amount > 0) {
                 tokenOut = token1;
                 amountIn = uint256(amount);
-                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, true);
             }
             // swap token1 exact in for token0 variable out
             else {
                 tokenOut = token0;
                 amountIn = uint256(-amount);
-                amountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, false);
             }
         }
         // exact out
@@ -212,20 +213,20 @@ contract StablePair is ReservoirPair {
             // swap token1 variable in for token0 exact out
             if (amount > 0) {
                 amountOut = uint256(amount);
-                require(amountOut < _reserve0, "SP: NOT_ENOUGH_LIQ");
+                require(amountOut < lReserve0, "SP: NOT_ENOUGH_LIQ");
                 tokenOut = token0;
-                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, true);
+                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, true);
             }
             // swap token0 variable in for token1 exact out
             else {
                 amountOut = uint256(-amount);
-                require(amountOut < _reserve1, "SP: NOT_ENOUGH_LIQ");
+                require(amountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
                 tokenOut = token1;
-                amountIn = _getAmountIn(amountOut, _reserve0, _reserve1, false);
+                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, false);
             }
         }
 
-        _checkedTransfer(tokenOut, to, amountOut, _reserve0, _reserve1);
+        _checkedTransfer(tokenOut, to, amountOut, lReserve0, lReserve1);
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
@@ -236,10 +237,10 @@ contract StablePair is ReservoirPair {
         uint256 balance0 = _totalToken0();
         uint256 balance1 = _totalToken1();
 
-        uint256 actualAmountIn = tokenOut == token0 ? balance1 - _reserve1 : balance0 - _reserve0;
+        uint256 actualAmountIn = tokenOut == token0 ? balance1 - lReserve1 : balance0 - lReserve0;
         require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
-        _update(balance0, balance1, _reserve0, _reserve1);
+        _update(balance0, balance1, lReserve0, lReserve1);
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
@@ -248,15 +249,15 @@ contract StablePair is ReservoirPair {
         balance1 = _totalToken1();
     }
 
-    function _getAmountOut(uint256 amountIn, uint256 _reserve0, uint256 _reserve1, bool token0In)
+    function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)
         internal
         view
         returns (uint256)
     {
         return StableMath._getAmountOut(
             amountIn,
-            _reserve0,
-            _reserve1,
+            lReserve0,
+            lReserve1,
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
             token0In,
@@ -265,15 +266,15 @@ contract StablePair is ReservoirPair {
         );
     }
 
-    function _getAmountIn(uint256 amountOut, uint256 _reserve0, uint256 _reserve1, bool token0Out)
+    function _getAmountIn(uint256 amountOut, uint256 lReserve0, uint256 lReserve1, bool token0Out)
         internal
         view
         returns (uint256)
     {
         return StableMath._getAmountIn(
             amountOut,
-            _reserve0,
-            _reserve1,
+            lReserve0,
+            lReserve1,
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
             token0Out,
@@ -287,20 +288,20 @@ contract StablePair is ReservoirPair {
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
     /// @return liquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 _reserve0, uint256 _reserve1) internal view returns (uint256 liquidity) {
+    function _computeLiquidity(uint256 lReserve0, uint256 lReserve1) internal view returns (uint256 liquidity) {
         unchecked {
-            uint256 adjustedReserve0 = _reserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = _reserve1 * token1PrecisionMultiplier;
+            uint256 adjustedReserve0 = lReserve0 * token0PrecisionMultiplier;
+            uint256 adjustedReserve1 = lReserve1 * token1PrecisionMultiplier;
             liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
         }
     }
 
-    function _mintFee(uint256 _reserve0, uint256 _reserve1) internal returns (uint256 _totalSupply, uint256 d) {
+    function _mintFee(uint256 lReserve0, uint256 lReserve1) internal returns (uint256 _totalSupply, uint256 d) {
         _totalSupply = totalSupply;
         uint256 _dLast = lastInvariant;
         if (_dLast != 0) {
             d = StableMath._computeLiquidityFromAdjustedBalances(
-                _reserve0 * token0PrecisionMultiplier, _reserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
+                lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
             );
             if (d > _dLast) {
                 // @dev `platformFee` % of increase in liquidity.
@@ -356,19 +357,19 @@ contract StablePair is ReservoirPair {
     }
 
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 _reserve0, uint256 _reserve1,) = getReserves();
+        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
 
         if (tokenIn == token0) {
-            finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, true);
+            finalAmountOut = _getAmountOut(amountIn, lReserve0, lReserve1, true);
         } else {
             require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            finalAmountOut = _getAmountOut(amountIn, _reserve0, _reserve1, false);
+            finalAmountOut = _getAmountOut(amountIn, lReserve0, lReserve1, false);
         }
     }
 
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 _reserve0, uint256 _reserve1,) = getReserves();
-        uint256 d = _computeLiquidity(_reserve0, _reserve1);
+        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
+        uint256 d = _computeLiquidity(lReserve0, lReserve1);
         virtualPrice = (d * (uint256(10) ** decimals)) / totalSupply;
     }
 
@@ -376,20 +377,20 @@ contract StablePair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast)
+    function _updateOracle(uint256 lReserve0, uint256 lReserve1, uint32 timeElapsed, uint32 timestampLast)
         internal
         override
     {
         Observation storage previous = _observations[index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), _reserve0 * token0PrecisionMultiplier, _reserve1 * token1PrecisionMultiplier
+            _getCurrentAPrecise(), lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, timeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(_reserve0, _reserve1);
+        int112 currLogLiq = StableOracleMath.calcLogLiq(lReserve0, lReserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {
