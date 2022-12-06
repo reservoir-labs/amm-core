@@ -79,15 +79,7 @@ abstract contract OracleWriter is Pair, IOracleWriter {
         }
     }
 
-    // TODO: Use /// instead of /** */
-    /**
-     * @param _reserve0 in its native precision
-     * @param _reserve1 in its native precision
-     * @param timeElapsed time since the last oracle observation
-     * @param timestampLast the time of the last activity on the pair
-     */
-    // TODO: Use aParms consistently.
-    function _updateOracle(uint256 _reserve0, uint256 _reserve1, uint32 timeElapsed, uint32 timestampLast)
+    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast)
         internal
         virtual;
 }

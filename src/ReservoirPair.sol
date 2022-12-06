@@ -5,23 +5,23 @@ import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 
 abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGuard {
-    // TODO: Convert to natspec.
-    // force reserves to match balances
+    /// @notice Force reserves to match balances.
     function sync() external nonReentrant {
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), reserve0, reserve1);
     }
 
-    // TODO: Convert to natspec.
-    // force balances to match reserves
-    function skim(address to) external nonReentrant {
-        uint256 _reserve0 = reserve0; // gas savings
-        uint256 _reserve1 = reserve1;
+    /// @notice Force balances to match reserves.
+    function skim(address aTo) external nonReentrant {
+        uint256 lReserve0 = reserve0; // gas savings
+        uint256 lReserve1 = reserve1;
 
-        _checkedTransfer(token0, to, _totalToken0() - _reserve0, _reserve0, _reserve1);
-        _checkedTransfer(token1, to, _totalToken1() - _reserve1, _reserve0, _reserve1);
+        _checkedTransfer(token0, aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
+        _checkedTransfer(token1, aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
     }
 
+    // performs a transfer, if it fails, it attempts to retrieve assets from the
+    // AssetManager before retrying the transfer
     function _checkedTransfer(
         address aToken,
         address aDestination,
@@ -29,7 +29,6 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         uint256 aReserve0,
         uint256 aReserve1
     ) internal {
-        // if transfer fails for whatever reason
         if (!_safeTransfer(aToken, aDestination, aAmount)) {
             uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
             uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
@@ -42,23 +41,22 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
         }
     }
 
-    // TODO: Convert to natspec.
     // update reserves and, on the first call per block, price and liq accumulators
-    function _update(uint256 balance0, uint256 balance1, uint112 _reserve0, uint112 _reserve1) internal override {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "CP: OVERFLOW");
+    function _update(uint256 aBalance0, uint256 aBalance1, uint112 aReserve0, uint112 aReserve1) internal override {
+        require(aBalance0 <= type(uint112).max && aBalance1 <= type(uint112).max, "CP: OVERFLOW");
 
-        uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
-        uint32 timeElapsed;
+        uint32 lBlockTimestamp = uint32(block.timestamp % 2 ** 32);
+        uint32 lTimeElapsed;
         unchecked {
-            timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+            lTimeElapsed = lBlockTimestamp - blockTimestampLast; // overflow is desired
         }
-        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-            _updateOracle(_reserve0, _reserve1, timeElapsed, blockTimestampLast);
+        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
+            _updateOracle(aReserve0, aReserve1, lTimeElapsed, blockTimestampLast);
         }
 
-        reserve0 = uint112(balance0);
-        reserve1 = uint112(balance1);
-        blockTimestampLast = blockTimestamp;
+        reserve0 = uint112(aBalance0);
+        reserve1 = uint112(aBalance1);
+        blockTimestampLast = lBlockTimestamp;
         emit Sync(reserve0, reserve1);
     }
 }
