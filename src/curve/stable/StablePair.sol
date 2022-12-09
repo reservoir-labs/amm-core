@@ -57,42 +57,42 @@ contract StablePair is ReservoirPair {
         );
     }
 
-    function rampA(uint64 futureARaw, uint64 futureATime) external onlyFactory {
-        require(futureARaw >= StableMath.MIN_A && futureARaw <= StableMath.MAX_A, "SP: INVALID_A");
+    function rampA(uint64 aFutureARaw, uint64 aFutureATime) external onlyFactory {
+        require(aFutureARaw >= StableMath.MIN_A && aFutureARaw <= StableMath.MAX_A, "SP: INVALID_A");
 
-        uint64 futureAPrecise = futureARaw * uint64(StableMath.A_PRECISION);
+        uint64 lFutureAPrecise = aFutureARaw * uint64(StableMath.A_PRECISION);
 
-        uint256 duration = futureATime - block.timestamp;
+        uint256 duration = aFutureATime - block.timestamp;
         require(duration >= StableMath.MIN_RAMP_TIME, "SP: INVALID_DURATION");
 
-        uint64 currentAPrecise = _getCurrentAPrecise();
+        uint64 lCurrentAPrecise = _getCurrentAPrecise();
 
         // daily rate = (futureA / currentA) / duration * 1 day
         // we do multiplication first before division to avoid
         // losing precision
-        uint256 dailyRate = futureAPrecise > currentAPrecise
-            ? Math.ceilDiv(futureAPrecise * 1 days, currentAPrecise * duration)
-            : Math.ceilDiv(currentAPrecise * 1 days, futureAPrecise * duration);
+        uint256 dailyRate = lFutureAPrecise > lCurrentAPrecise
+            ? Math.ceilDiv(lFutureAPrecise * 1 days, lCurrentAPrecise * duration)
+            : Math.ceilDiv(lCurrentAPrecise * 1 days, lFutureAPrecise * duration);
         require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "SP: AMP_RATE_TOO_HIGH");
 
-        ampData.initialA = currentAPrecise;
-        ampData.futureA = futureAPrecise;
+        ampData.initialA = lCurrentAPrecise;
+        ampData.futureA = lFutureAPrecise;
         ampData.initialATime = uint64(block.timestamp);
-        ampData.futureATime = futureATime;
+        ampData.futureATime = aFutureATime;
 
-        emit RampA(currentAPrecise, futureAPrecise, uint64(block.timestamp), futureATime);
+        emit RampA(lCurrentAPrecise, lFutureAPrecise, uint64(block.timestamp), aFutureATime);
     }
 
     function stopRampA() external onlyFactory {
-        uint64 currentAPrecise = _getCurrentAPrecise();
+        uint64 lCurrentAPrecise = _getCurrentAPrecise();
 
-        ampData.initialA = currentAPrecise;
-        ampData.futureA = currentAPrecise;
-        uint64 timestamp = uint64(block.timestamp);
-        ampData.initialATime = timestamp;
-        ampData.futureATime = timestamp;
+        ampData.initialA = lCurrentAPrecise;
+        ampData.futureA = lCurrentAPrecise;
+        uint64 lTimestamp = uint64(block.timestamp);
+        ampData.initialATime = lTimestamp;
+        ampData.futureATime = lTimestamp;
 
-        emit StopRampA(currentAPrecise, timestamp);
+        emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
