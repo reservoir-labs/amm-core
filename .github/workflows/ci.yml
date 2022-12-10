@@ -11,147 +11,99 @@ env:
 
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Run build
-        run: forge build
+      - run: forge build
 
   lint:
-    name: Lint
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Use configured NodeJS
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-
-      - name: Install js dependencies
-        run: npm ci
-
-      - name: Run lint check
-        run: npm run lint:check
+      - run: npm ci
+      - run: npm run lint:check
 
   test-unit:
-    name: Test Unit
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Run unit tests
-        run: npm run test:unit
+      - run: npm run test:unit
 
   test-integration:
-    name: Test Integration
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Run integration tests
-        run: npm run test:integration
+      - run: npm run test:integration
 
   test-uniswap-v2:
-    name: Test Uniswap V2
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Use configured NodeJS
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-
-      - name: Install js dependencies
-        run: npm ci
-
-      - name: Run build
-        run: forge build
-
-      - name: Setup Uniswap V2
-        run: npm run install:uniswap
-
-      - name: Uniswap v2-core regression tests
-        run: npm run test:uniswap
+      - run: npm ci
+      - run: forge build
+      - run: npm run install:uniswap
+      - run: npm run test:uniswap
 
   test-differential-balancer:
-    name: Test differential balancer
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Install js dependencies
-        run: npm run install:balancer
-
-      - name: Build only the artifacts we need
-        run: npm run build:balancer
-
-      - name: Balancer differential tests
-        run: npm run test:balancer
+      - run: npm run install:balancer
+      - run: npm run build:balancer
+      - run: npm run test:balancer
 
 
   check-gas:
-    name: Check Gas
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
-      - name: Check gas snapshot
-        run: npm run gas:check
+      - run: forge snapshot --check
+        env:
+          FOUNDRY_PROFILE: default
 
   coverage:
     runs-on: ubuntu-latest
@@ -168,25 +120,3 @@ jobs:
         with:
           fail_ci_if_error: true
           files: ./lcov.info
-
-  # slither:
-  #   name: Scan with Slither
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         submodules: recursive
-
-  #     - name: Install Foundry
-  #       uses: foundry-rs/foundry-toolchain@v1
-  #       with:
-  #         version: nightly
-
-  #     - name: Build contracts with extra output
-  #       run: forge build --extra-output abi --extra-output userdoc --extra-output devdoc --extra-output evm.methodIdentifiers --force
-
-  #     - name: Run Slither analysis
-  #       uses: crytic/slither-action@v0.1.1
-  #       with:
-  #         ignore-compile: true
