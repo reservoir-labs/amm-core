@@ -121,25 +121,24 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_pair, address(lToken1)), 20e18 - uint256(-lAmount0Decrease));
     }
 
-    function testAdjustManagement_KStillHolds(uint256 aToken0MintAmt, uint256 aToken1MintAmt) external allPairs {
+    function testAdjustManagement_KStillHolds(uint256 aMintAmt) external allPairs {
         // assume
-        uint256 lToken0MintAmt = bound(aToken0MintAmt, 1000, type(uint112).max / 3);
-        uint256 lToken1MintAmt = bound(aToken1MintAmt, 1000, type(uint112).max / 3);
+        uint256 lMintAmt = bound(aMintAmt, 1, type(uint112).max / 3);
 
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
         // liquidity prior to adjustManagement
-        _tokenA.mint(address(_pair), lToken0MintAmt);
-        _tokenB.mint(address(_pair), lToken1MintAmt);
+        _tokenA.mint(address(_pair), lMintAmt);
+        _tokenB.mint(address(_pair), lMintAmt);
         uint256 lLiq1 = _pair.mint(address(this));
 
-        _manager.adjustManagement(_pair, int256(lToken0MintAmt), int256(lToken1MintAmt));
+        _manager.adjustManagement(_pair, int256(lMintAmt), int256(lMintAmt));
 
         // act
-        _tokenA.mint(address(_pair), lToken0MintAmt);
-        _tokenB.mint(address(_pair), lToken1MintAmt);
+        _tokenA.mint(address(_pair), lMintAmt);
+        _tokenB.mint(address(_pair), lMintAmt);
         uint256 lLiq2 = _pair.mint(address(this));
 
         // assert
@@ -253,7 +252,11 @@ contract AssetManagedPairTest is BaseTest {
         assertGt(lAfterLossOutAmt, lNoLossOutAmt);
     }
 
-    function testSyncManaged_ConstantProduct() external {
+    function testSyncManaged_ConstantProduct(uint256 aNewManagedBalance0, uint256 aNewManagedBalance1) external {
+        // assume - make them lose at least 1e18
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 19e18);
+        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 19e18);
+
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setManager(_manager);
@@ -274,19 +277,23 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_constantProductPair, lToken1), 20e18);
 
         // act
-        _manager.adjustBalance(_constantProductPair, lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(_constantProductPair, lToken1, 19e18); // 1e18 lost
+        _manager.adjustBalance(_constantProductPair, lToken0, uint112(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_constantProductPair, lToken1, uint112(lNewManagedBalance1)); // some amount lost
         _constantProductPair.transfer(address(_constantProductPair), 10e18);
         _constantProductPair.burn(address(this));
 
         // assert
-        assertEq(_manager.getBalance(_constantProductPair, lToken0), 19e18);
-        assertEq(_manager.getBalance(_constantProductPair, lToken1), 19e18);
+        assertEq(_manager.getBalance(_constantProductPair, lToken0), lNewManagedBalance0);
+        assertEq(_manager.getBalance(_constantProductPair, lToken1), lNewManagedBalance1);
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
 
-    function testSyncManaged_Stable() external {
+    function testSyncManaged_Stable(uint256 aNewManagedBalance0, uint256 aNewManagedBalance1) external {
+        // assume - make them lose at least 1e18
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 19e18);
+        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 19e18);
+
         // arrange
         vm.prank(address(_factory));
         _stablePair.setManager(_manager);
@@ -307,17 +314,17 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_stablePair, lToken1), 20e18);
 
         // act
-        _manager.adjustBalance(_stablePair, lToken0, 19e18); // 1e18 lost
-        _manager.adjustBalance(_stablePair, lToken1, 19e18); // 1e18 lost
+        _manager.adjustBalance(_stablePair, lToken0, uint112(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_stablePair, lToken1, uint112(lNewManagedBalance1)); // some amount lost
         _stablePair.transfer(address(_stablePair), 10e18);
         _stablePair.burn(address(this));
 
         // assert
-        assertEq(_manager.getBalance(_stablePair, lToken0), 19e18);
-        assertEq(_manager.getBalance(_stablePair, lToken1), 19e18);
+        assertEq(_manager.getBalance(_stablePair, lToken0), lNewManagedBalance0);
+        assertEq(_manager.getBalance(_stablePair, lToken1), lNewManagedBalance1);
         (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
-        assertTrue(MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT + 10e18 - 1e18) * 210e18 / 220e18));
-        assertTrue(MathUtils.within1(lReserve1, (INITIAL_MINT_AMOUNT + 10e18 - 1e18) * 210e18 / 220e18));
+        assertTrue(MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18));
+        assertTrue(MathUtils.within1(lReserve1, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18));
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
