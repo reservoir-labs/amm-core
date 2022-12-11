@@ -74,7 +74,11 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), uint256(lAmount1));
     }
 
-    function testAdjustManagement_DecreaseManagement() external allPairs {
+    function testAdjustManagement_DecreaseManagement(uint256 aAmount0Decrease, uint256 aAmount1Decrease) external allPairs {
+        // assume
+        int256 lAmount0Decrease = -int256(bound(aAmount0Decrease, 1, 20e18));
+        int256 lAmount1Decrease = -int256(bound(aAmount0Decrease, 1, 20e18));
+
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -104,71 +108,82 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_pair, address(lToken1)), 20e18);
 
         // act
-        _manager.adjustManagement(_pair, -10e18, -10e18);
+        _manager.adjustManagement(_pair, lAmount0Decrease, lAmount1Decrease);
 
         (uint112 lReserve0_2, uint112 lReserve1_2,) = _pair.getReserves();
 
         // assert
         assertEq(uint256(lReserve0_2), lReserve0);
         assertEq(uint256(lReserve1_2), lReserve1);
-        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 10e18);
-        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 10e18);
-        assertEq(_manager.getBalance(_pair, address(lToken0)), 10e18);
-        assertEq(_manager.getBalance(_pair, address(lToken1)), 10e18);
+        assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18 - uint256(-lAmount0Decrease));
+        assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18 - uint256(-lAmount1Decrease));
+        assertEq(_manager.getBalance(_pair, address(lToken0)), 20e18 - uint256(-lAmount0Decrease));
+        assertEq(_manager.getBalance(_pair, address(lToken1)), 20e18 - uint256(-lAmount0Decrease));
     }
 
-    function testAdjustManagement_KStillHolds() external allPairs {
+    function testAdjustManagement_KStillHolds(uint256 aToken0MintAmt, uint256 aToken1MintAmt) external allPairs {
+        // assume
+        uint256 lToken0MintAmt = bound(aToken0MintAmt, 1000, type(uint112).max / 3);
+        uint256 lToken1MintAmt = bound(aToken1MintAmt, 1000, type(uint112).max / 3);
+
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
         // liquidity prior to adjustManagement
-        _tokenA.mint(address(_pair), 50e18);
-        _tokenB.mint(address(_pair), 50e18);
+        _tokenA.mint(address(_pair), lToken0MintAmt);
+        _tokenB.mint(address(_pair), lToken1MintAmt);
         uint256 lLiq1 = _pair.mint(address(this));
 
-        _manager.adjustManagement(_pair, 50e18, 50e18);
+        _manager.adjustManagement(_pair, int256(lToken0MintAmt), int256(lToken1MintAmt));
 
         // act
-        _tokenA.mint(address(_pair), 50e18);
-        _tokenB.mint(address(_pair), 50e18);
+        _tokenA.mint(address(_pair), lToken0MintAmt);
+        _tokenB.mint(address(_pair), lToken1MintAmt);
         uint256 lLiq2 = _pair.mint(address(this));
 
         // assert
         assertEq(lLiq1, lLiq2);
     }
 
-    function testAdjustManagement_AdjustAfterLoss() external allPairs {
+    function testAdjustManagement_AdjustAfterLoss(uint256 aNewManagedBalance0) external allPairs {
+        // assume
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
+
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenA), uint112(lNewManagedBalance0)); // some amount lost
 
         // sanity
         uint256 lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
-        assertEq(lTokenAManaged, 7e18);
+        assertEq(lTokenAManaged, lNewManagedBalance0);
 
         // act
         _manager.adjustManagement(_pair, 20e18, 20e18);
         lTokenAManaged = _manager.getBalance(_pair, address(_tokenA));
 
         // assert
-        assertEq(lTokenAManaged, 20e18 + 7e18);
+        assertEq(lTokenAManaged, 20e18 + lNewManagedBalance0);
         assertEq(_pair.token0Managed(), 20e18 + 10e18);
         _pair.sync();
-        assertEq(_pair.token0Managed(), 20e18 + 7e18); // number is updated after sync
+        assertEq(_pair.token0Managed(), 20e18 + lNewManagedBalance0); // number is updated after sync
     }
 
-    function testMint_AfterLoss() external allPairs {
+    function testMint_AfterLoss(uint256 aNewManagedBalance0, uint256 aNewManagedBalance1) external allPairs {
+        // assume
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
+        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 10e18);
+
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
-        _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenA), uint112(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, address(_tokenB), uint112(lNewManagedBalance1)); // some amount lost
 
         // act
         _tokenA.mint(address(_pair), 100e18);
@@ -183,14 +198,18 @@ contract AssetManagedPairTest is BaseTest {
         }
     }
 
-    function testBurn_AfterLoss() external allPairs {
+    function testBurn_AfterLoss(uint256 aNewManagedBalance0, uint256 aNewManagedBalance1) external allPairs {
+        // assume
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
+        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 10e18);
+
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
-        _manager.adjustBalance(_pair, address(_tokenB), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenA), uint112(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, address(_tokenB), uint112(lNewManagedBalance1)); // some amount lost
 
         // act
         uint256 lLpTokenBal = _pair.balanceOf(_alice);
@@ -204,7 +223,10 @@ contract AssetManagedPairTest is BaseTest {
         assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
     }
 
-    function testSwap_AfterLoss() external allPairs {
+    function testSwap_AfterLoss(uint256 aNewManagedBalance0) external allPairs {
+        // assume
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
+
         // arrange
         int256 lSwapAmt = 1e18;
         uint256 lBefore = vm.snapshot();
@@ -217,7 +239,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, address(_tokenA), 7e18); // 3e18 lost
+        _manager.adjustBalance(_pair, address(_tokenA), uint112(lNewManagedBalance0)); // some amount lost
 
         _pair.sync();
 
