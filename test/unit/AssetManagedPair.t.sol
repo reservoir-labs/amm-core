@@ -77,7 +77,7 @@ contract AssetManagedPairTest is BaseTest {
     function testAdjustManagement_DecreaseManagement(uint256 aAmount0Decrease, uint256 aAmount1Decrease) external allPairs {
         // assume
         int256 lAmount0Decrease = -int256(bound(aAmount0Decrease, 1, 20e18));
-        int256 lAmount1Decrease = -int256(bound(aAmount0Decrease, 1, 20e18));
+        int256 lAmount1Decrease = -int256(bound(aAmount1Decrease, 1, 20e18));
 
         // arrange
         vm.prank(address(_factory));
@@ -118,7 +118,7 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(IERC20(lToken0).balanceOf(address(_manager)), 20e18 - uint256(-lAmount0Decrease));
         assertEq(IERC20(lToken1).balanceOf(address(_manager)), 20e18 - uint256(-lAmount1Decrease));
         assertEq(_manager.getBalance(_pair, address(lToken0)), 20e18 - uint256(-lAmount0Decrease));
-        assertEq(_manager.getBalance(_pair, address(lToken1)), 20e18 - uint256(-lAmount0Decrease));
+        assertEq(_manager.getBalance(_pair, address(lToken1)), 20e18 - uint256(-lAmount1Decrease));
     }
 
     function testAdjustManagement_KStillHolds(uint256 aMintAmt) external allPairs {
