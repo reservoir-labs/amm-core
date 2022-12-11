@@ -21,7 +21,7 @@ abstract contract BaseTest is Test {
     uint256 public constant DEFAULT_AMP_COEFF = 1000;
     uint256 public constant DEFAULT_ALLOWED_CHANGE_PER_SECOND = 0.0005e18;
 
-    GenericFactory internal _factory = new GenericFactory();
+    GenericFactory internal _factory = new GenericFactory(address(this));
 
     address internal _recoverer = _makeAddress("recoverer");
     address internal _platformFeeTo = _makeAddress("platformFeeTo");

@@ -7,7 +7,8 @@ import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
-contract GenericFactory is IGenericFactory, Owned(msg.sender) {
+contract GenericFactory is IGenericFactory, Owned {
+    constructor(address aOwner) Owned(aOwner) {}
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG
     //////////////////////////////////////////////////////////////////////////*/
