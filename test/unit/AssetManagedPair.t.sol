@@ -74,7 +74,10 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), uint256(lAmount1));
     }
 
-    function testAdjustManagement_DecreaseManagement(uint256 aAmount0Decrease, uint256 aAmount1Decrease) external allPairs {
+    function testAdjustManagement_DecreaseManagement(uint256 aAmount0Decrease, uint256 aAmount1Decrease)
+        external
+        allPairs
+    {
         // assume
         int256 lAmount0Decrease = -int256(bound(aAmount0Decrease, 1, 20e18));
         int256 lAmount1Decrease = -int256(bound(aAmount1Decrease, 1, 20e18));
@@ -323,8 +326,12 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_stablePair, lToken0), lNewManagedBalance0);
         assertEq(_manager.getBalance(_stablePair, lToken1), lNewManagedBalance1);
         (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
-        assertTrue(MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18));
-        assertTrue(MathUtils.within1(lReserve1, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18));
+        assertTrue(
+            MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18)
+        );
+        assertTrue(
+            MathUtils.within1(lReserve1, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18)
+        );
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);
     }
