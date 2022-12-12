@@ -6,6 +6,9 @@ import { Owned } from "solmate/auth/Owned.sol";
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
+import { Math } from "src/libraries/Math.sol";
+
+uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
     constructor(address aOwner) Owned(aOwner) {}
@@ -23,12 +26,66 @@ contract GenericFactory is IGenericFactory, Owned {
                                     CURVES
     //////////////////////////////////////////////////////////////////////////*/
 
-    address[] private _getByteCode;
+    /// @notice 2D array storing each curve's initCode chunks.
+    address[][] private _getByteCode;
 
     function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint256 rCurveId) {
         rCurveId = _getByteCode.length;
+        _getByteCode.push();
 
-        _getByteCode.push(SSTORE2.write(aInitCode));
+        uint256 lChunk = 0;
+        uint256 lInitCodePointer = 0;
+        while (lInitCodePointer < aInitCode.length) {
+            // Cut the initCode into chunks at most 24kb (EIP-170). The stored
+            // data is prefixed with STOP, so we must store 1 less than max.
+            uint256 lChunkEnd = Math.min(aInitCode.length, lInitCodePointer + MAX_SSTORE_SIZE);
+
+            _getByteCode[rCurveId].push(SSTORE2.write(aInitCode[lInitCodePointer:lChunkEnd]));
+
+            lChunk += 1;
+            lInitCodePointer = lChunkEnd;
+        }
+    }
+
+    function _loadCurve(uint256 aCurveId, address aToken0, address aToken1) private view returns (bytes memory) {
+        address[] storage lByteCode = _getByteCode[aCurveId];
+
+        bytes memory lInitCode;
+        uint256 lFreeMem;
+        assembly {
+            lInitCode := mload(0x40)
+            lFreeMem := add(lInitCode, 0x20)
+        }
+
+        uint256 lByteCodeLength = 0;
+        for (uint256 i = 0; i < lByteCode.length; ++i) {
+            address lPointer = lByteCode[i];
+            uint256 lSize = lPointer.code.length - 0x01;
+
+            // TODO: Go check/annotate all asm for memory safety.
+            assembly {
+                // Copy the entire chunk to memory.
+                extcodecopy(lPointer, lFreeMem, 0x01, lSize)
+            }
+
+            lFreeMem += lSize;
+            // TODO: Do we need to pad to 32 bytes?
+            lByteCodeLength += lSize;
+        }
+
+        // TODO: Releasing back to solidity after the loop is not memory safe.
+        // Write the copied size & update free_mem.
+        assembly {
+            // Store the two tokens as cstr args.
+            mstore(lFreeMem, aToken0)
+            mstore(add(lFreeMem, 0x20), aToken1)
+
+            // Write initCode length and update free mem.
+            mstore(lInitCode, add(lByteCodeLength, 0x40))
+            mstore(0x40, add(lFreeMem, 0x40))
+        }
+
+        return lInitCode;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -52,11 +109,11 @@ contract GenericFactory is IGenericFactory, Owned {
         require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
         require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
-        address lCodePointer = _getByteCode[aCurveId];
 
         (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
 
-        bytes memory lInitCode = abi.encodePacked(SSTORE2.read(lCodePointer), abi.encode(lToken0, lToken1));
+        // TODO: Test that _loadCurve errors for invalid indexes.
+        bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 
         assembly {
             // create2 the pair, uniqueness guaranteed by args
