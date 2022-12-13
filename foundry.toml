@@ -1,19 +1,17 @@
 [profile.default]
-solc = "0.8.17"
-bytecode_hash = "none"
+solc           = "0.8.17"
+bytecode_hash  = "none"
 optimizer_runs = 1_000_000
-remappings = [
-    "@openzeppelin/=lib/openzeppelin-contracts/contracts/",
-]
-match_path = "test/unit/*.sol"
-verbosity = 3
+remappings     = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
+match_path     = "test/unit/*.sol"
+verbosity      = 3
 
 [profile.integration]
 match_path = "test/integration/*.sol"
 
 [profile.differential]
 fs_permissions = [{ access = "read", path = "./reference/balancer-v2-monorepo" }]
-match_path = "test/differential/*.sol"
+match_path     = "test/differential/*.sol"
 
 [profile.differential.fuzz]
 runs = 10_000
@@ -23,10 +21,10 @@ runs = 10_000
 
 [rpc_endpoints]
 avalanche = "https://api.avax.network/ext/bc/C/rpc"
-polygon = "https://polygon-rpc.com"
+polygon   = "https://polygon-rpc.com"
 
 [fmt]
-bracket_spacing = true
-wrap_comments = false
+bracket_spacing   = true
+wrap_comments     = false
 number_underscore = "thousands"
-int_types = "long"
+int_types         = "long"

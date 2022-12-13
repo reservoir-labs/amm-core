@@ -17,11 +17,6 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         assetManager = manager;
     }
 
-    modifier onlyManager() {
-        require(msg.sender == address(assetManager), "AMP: AUTH_NOT_ASSET_MANAGER");
-        _;
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                 ASSET MANAGEMENT
 
@@ -90,20 +85,21 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         try assetManager.afterLiquidityEvent() { } catch { } // solhint-disable-line no-empty-blocks
     }
 
-    function adjustManagement(int256 token0Change, int256 token1Change) external onlyManager {
+    function adjustManagement(int256 token0Change, int256 token1Change) external {
+        require(msg.sender == address(assetManager), "AMP: AUTH_NOT_MANAGER");
         require(token0Change != type(int256).min && token1Change != type(int256).min, "AMP: CAST_WOULD_OVERFLOW");
 
         if (token0Change > 0) {
             uint112 lDelta = uint112(uint256(int256(token0Change)));
             token0Managed += lDelta;
-            IERC20(token0).transfer(address(assetManager), lDelta);
+            IERC20(token0).transfer(msg.sender, lDelta);
         } else if (token0Change < 0) {
             uint112 lDelta = uint112(uint256(int256(-token0Change)));
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            IERC20(token0).transferFrom(address(assetManager), address(this), lDelta);
+            IERC20(token0).transferFrom(msg.sender, address(this), lDelta);
         }
 
         if (token1Change > 0) {
@@ -112,14 +108,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            IERC20(token1).transfer(address(assetManager), lDelta);
+            IERC20(token1).transfer(msg.sender, lDelta);
         } else if (token1Change < 0) {
             uint112 lDelta = uint112(uint256(int256(-token1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            IERC20(token1).transferFrom(address(assetManager), address(this), lDelta);
+            IERC20(token1).transferFrom(msg.sender, address(this), lDelta);
         }
     }
 }

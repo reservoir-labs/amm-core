@@ -107,6 +107,7 @@ contract ConstantProductPair is ReservoirPair {
                 if (aSqrtNewK > aSqrtOldK) {
                     uint256 lSharesToIssue = _calcFee(aSqrtNewK, aSqrtOldK, platformFee, totalSupply);
 
+                    // TODO: What happens if no PLATFORM_FEE_TO is set
                     address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
                     if (lSharesToIssue > 0) _mint(platformFeeTo, lSharesToIssue);
                 }

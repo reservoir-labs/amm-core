@@ -142,7 +142,7 @@ contract StablePair is ReservoirPair {
         _mint(to, liquidity);
         _update(balance0, balance1, lReserve0, lReserve1);
 
-        // casting is safe as the max invariant would be 2 * uint112 (* uint60 in the case of tokens with 0 decimal
+        // casting is safe as the max invariant would be 2 * uint112 * uint60 (in the case of tokens with 0 decimal
         // places)
         // which results in 112 + 60 + 1 = 173 bits
         // which fits into uint192
