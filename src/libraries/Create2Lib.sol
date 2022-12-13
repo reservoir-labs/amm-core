@@ -14,8 +14,8 @@ library Create2Lib {
     ///                     pair.
     /// @return The address of the contract given the arguments.
     function computeAddress(address aDeployer, bytes memory aInitCode, bytes32 aSalt) internal pure returns (address) {
-        bytes32 lAddress = keccak256(abi.encodePacked(hex"ff", aDeployer, aSalt, keccak256(aInitCode)));
+        bytes32 lAddress = keccak256(abi.encodePacked(bytes1(0xff), aDeployer, aSalt, keccak256(aInitCode)));
 
-        return address(uint160(uint256(lAddress)));
+        return address(bytes20(lAddress << 96));
     }
 }

@@ -22,8 +22,8 @@ contract VaultScript is BaseScript
     {
         _setup();
 
-        // set shared variables
         vm.startBroadcast();
+        // set shared variables
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         // _factory.write("Shared::platformFeeTo", _platformFeeTo);
         // _factory.write("Shared::defaultRecoverer", _recoverer);
@@ -39,6 +39,7 @@ contract VaultScript is BaseScript
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
         _factory.createPair(0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844, 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6, 0);
+        _factory.createPair(0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844, 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6, 1);
         vm.stopBroadcast();
     }
 }

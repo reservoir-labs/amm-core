@@ -11,7 +11,8 @@ import { Math } from "src/libraries/Math.sol";
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
-    constructor(address aOwner) Owned(aOwner) {}
+    constructor(address aOwner) Owned(aOwner) { }
+
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG
     //////////////////////////////////////////////////////////////////////////*/
