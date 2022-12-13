@@ -5,16 +5,18 @@ pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
 
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-
-import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { IPair, Pair } from "src/Pair.sol";
+import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
-import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
-import { IPair, Pair } from "src/Pair.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -31,6 +33,9 @@ contract StablePair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
+    // solhint-disable-next-line var-name-mixedcase
+    address private immutable MINT_BURN_LOGIC;
+
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
     string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
 
@@ -45,6 +50,11 @@ contract StablePair is ReservoirPair {
     uint64 private lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
+        MINT_BURN_LOGIC = factory.deploy(
+            abi.encodePacked(type(StableMintBurn).creationCode, abi.encode(aToken0, aToken1)), bytes32(0)
+        );
+        assert(MINT_BURN_LOGIC != address(0));
+
         ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);
@@ -113,73 +123,45 @@ contract StablePair is ReservoirPair {
         require(token0Fee <= type(uint112).max && token1Fee <= type(uint112).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
+    // TODO: Test re-entrancy.
+    // TODO: Should we use fallback?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) public nonReentrant returns (uint256 liquidity) {
-        _syncManaged();
+    function mint(address) public returns (uint256) {
+        // DELEGATE TO StableMintBurn
+        address lTarget = MINT_BURN_LOGIC;
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
-        (uint112 lReserve0, uint112 lReserve1,) = getReserves();
-        (uint256 balance0, uint256 balance1) = _balance();
+            if success {
+                returndatacopy(0, 0, returndatasize())
+                return(0, returndatasize())
+            }
 
-        uint256 newLiq = _computeLiquidity(balance0, balance1);
-        uint256 amount0 = balance0 - lReserve0;
-        uint256 amount1 = balance1 - lReserve1;
-
-        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, lReserve0, lReserve1);
-        lReserve0 += uint112(fee0);
-        lReserve1 += uint112(fee1);
-
-        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
-
-        if (_totalSupply == 0) {
-            require(amount0 > 0 && amount1 > 0, "SP: INVALID_AMOUNTS");
-            liquidity = newLiq - MINIMUM_LIQUIDITY;
-            _mint(address(0), MINIMUM_LIQUIDITY);
-        } else {
-            liquidity = ((newLiq - oldLiq) * _totalSupply) / oldLiq;
+            returndatacopy(0, 0, returndatasize())
+            revert(0, returndatasize())
         }
-        require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
-        _mint(to, liquidity);
-        _update(balance0, balance1, lReserve0, lReserve1);
-
-        // casting is safe as the max invariant would be 2 * uint112 * uint60 (in the case of tokens with 0 decimal
-        // places)
-        // which results in 112 + 60 + 1 = 173 bits
-        // which fits into uint192
-        // TODO: Why does lastInvariant get set to newLiq? Not symmetric with burn?
-        lastInvariant = uint192(newLiq);
-        lastInvariantAmp = _getCurrentAPrecise();
-
-        emit Mint(msg.sender, amount0, amount1);
-
-        _managerCallback();
     }
 
+    // TODO: Test re-entrancy.
+    // TODO: Should we use fallback?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
-        _syncManaged();
+    function burn(address) public returns (uint256, uint256) {
+        // DELEGATE TO StableMintBurn
+        address lTarget = MINT_BURN_LOGIC;
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
-        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
-        uint256 liquidity = balanceOf[address(this)];
+            if success {
+                returndatacopy(0, 0, returndatasize())
+                return(0, returndatasize())
+            }
 
-        (uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
-
-        amount0 = (liquidity * lReserve0) / _totalSupply;
-        amount1 = (liquidity * lReserve1) / _totalSupply;
-
-        _burn(address(this), liquidity);
-
-        _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
-
-        _update(_totalToken0(), _totalToken1(), uint112(lReserve0), uint112(lReserve1));
-
-        lastInvariant = uint192(_computeLiquidity(_reserve0, _reserve1));
-        lastInvariantAmp = _getCurrentAPrecise();
-
-        emit Burn(msg.sender, amount0, amount1);
-
-        _managerCallback();
+            returndatacopy(0, 0, returndatasize())
+            revert(0, returndatasize())
+        }
     }
 
     /// @inheritdoc IPair
@@ -356,6 +338,7 @@ contract StablePair is ReservoirPair {
         return _getCurrentAPrecise();
     }
 
+    // TODO: Is this function needed?
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
         (uint256 lReserve0, uint256 lReserve1,) = getReserves();
 
@@ -367,6 +350,7 @@ contract StablePair is ReservoirPair {
         }
     }
 
+    // TODO: Do we need this function?
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
         (uint256 lReserve0, uint256 lReserve1,) = getReserves();
         uint256 d = _computeLiquidity(lReserve0, lReserve1);

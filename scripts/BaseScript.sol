@@ -16,7 +16,7 @@ contract BaseScript is Script {
         _factory = GenericFactory(
             Create2Lib.computeAddress(
                 _create2Factory,
-                abi.encodePacked(type(GenericFactory).creationCode, bytes32(0x0000000000000000000000001337189159842d4b3fd854745d4ed321bb390466)),
+                abi.encodePacked(type(GenericFactory).creationCode, abi.encode(msg.sender)),
                 bytes32(uint256(0))
             )
         );

@@ -38,8 +38,8 @@ contract VaultScript is BaseScript
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
-        _factory.createPair(0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844, 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6, 0);
-        _factory.createPair(0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844, 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6, 1);
+        _factory.createPair(0x51fCe89b9f6D4c530698f181167043e1bB4abf89, 0xb16F35c0Ae2912430DAc15764477E179D9B9EbEa, 0);
+        _factory.createPair(0x51fCe89b9f6D4c530698f181167043e1bB4abf89, 0xb16F35c0Ae2912430DAc15764477E179D9B9EbEa, 1);
         vm.stopBroadcast();
     }
 }
