@@ -117,8 +117,9 @@ jobs:
           version: nightly
       - run: forge coverage --report lcov
       - run: sudo apt install -y lcov
-      - run: lcov -r lcov.info "src/libraries/*" -o lcov-filtered.info
+      - run: lcov -r lcov.info "src/libraries/*" -o lcov.info
+      - run: lcov -r lcov.info "test/*" -o lcov.info
       - uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
-          files: ./lcov-filtered.info
+          files: ./lcov.info
