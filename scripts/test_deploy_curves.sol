@@ -5,6 +5,7 @@ import "scripts/BaseScript.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 
 uint256 constant INITIAL_MINT_AMOUNT = 100e18;
@@ -34,6 +35,7 @@ contract VaultScript is BaseScript
         _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
 
         // add stable curve
+        _factory.addBytecode(type(StableMintBurn).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);

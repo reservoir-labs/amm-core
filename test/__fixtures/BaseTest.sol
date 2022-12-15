@@ -8,6 +8,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
@@ -53,6 +54,7 @@ abstract contract BaseTest is Test {
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
+        _factory.addBytecode(type(StableMintBurn).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 

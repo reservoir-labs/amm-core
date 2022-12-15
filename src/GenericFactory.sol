@@ -26,16 +26,14 @@ contract GenericFactory is IGenericFactory, Owned {
     }
 
     /*//////////////////////////////////////////////////////////////////////////
-                                    CURVES
+                                    BYTECODES
     //////////////////////////////////////////////////////////////////////////*/
 
-    /// @notice 2D array storing each curve's initCode chunks.
-    address[][] private _getByteCode;
+    /// @notice Mapping storing the bytecodes (as chunked pointers) this factory
+    ///         can deploy.
+    mapping(bytes32 => address[]) private _getByteCode;
 
-    function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint256 rCurveId) {
-        rCurveId = _getByteCode.length;
-        _getByteCode.push();
-
+    function _writeBytecode(bytes32 aCodeKey, bytes calldata aInitCode) internal {
         uint256 lChunk = 0;
         uint256 lInitCodePointer = 0;
         while (lInitCodePointer < aInitCode.length) {
@@ -43,15 +41,15 @@ contract GenericFactory is IGenericFactory, Owned {
             // data is prefixed with STOP, so we must store 1 less than max.
             uint256 lChunkEnd = Math.min(aInitCode.length, lInitCodePointer + MAX_SSTORE_SIZE);
 
-            _getByteCode[rCurveId].push(SSTORE2.write(aInitCode[lInitCodePointer:lChunkEnd]));
+            _getByteCode[aCodeKey].push(SSTORE2.write(aInitCode[lInitCodePointer:lChunkEnd]));
 
             lChunk += 1;
             lInitCodePointer = lChunkEnd;
         }
     }
 
-    function _loadCurve(uint256 aCurveId, address aToken0, address aToken1) private view returns (bytes memory) {
-        address[] storage lByteCode = _getByteCode[aCurveId];
+    function getBytecode(bytes32 aCodeKey, address aToken0, address aToken1) public view returns (bytes memory) {
+        address[] storage lByteCode = _getByteCode[aCodeKey];
 
         bytes memory lInitCode;
         uint256 lFreeMem;
@@ -89,6 +87,36 @@ contract GenericFactory is IGenericFactory, Owned {
         }
 
         return lInitCode;
+    }
+
+    function addBytecode(bytes calldata aInitCode) external onlyOwner returns (bytes32 rCodeKey) {
+        rCodeKey = keccak256(aInitCode);
+
+        _writeBytecode(rCodeKey, aInitCode);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    CURVES
+    //////////////////////////////////////////////////////////////////////////*/
+
+    bytes32[] public _curves;
+
+    function curves() external view returns (bytes32[] memory) {
+        return _curves;
+    }
+
+    function addCurve(bytes calldata aInitCode) external onlyOwner returns (uint256 rCurveId, bytes32 rCodeKey) {
+        rCurveId = _curves.length;
+        rCodeKey = keccak256(aInitCode);
+        _curves.push(rCodeKey);
+
+        _writeBytecode(rCodeKey, aInitCode);
+    }
+
+    function _loadCurve(uint256 aCurveId, address aToken0, address aToken1) private view returns (bytes memory) {
+        bytes32 lCodeKey = _curves[aCurveId];
+
+        return getBytecode(lCodeKey, aToken0, aToken1);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -158,23 +186,21 @@ contract GenericFactory is IGenericFactory, Owned {
         return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
     }
 
-    event Deployed(address aAddress, bytes32 aSalt);
+    event Deployed(bytes32 codeId, address _address);
 
-    /// @notice Deploys a given contract and salt using CREATE2.
-    /// @param  aInitCode   The contract init code to deploy.
-    /// @param  aSalt       A user-provided value that can be used to produce
-    ///                     varying addresses for the same init code.
-    /// @return rContract The address of the newly deployed contract.
-    function deploy(bytes memory aInitCode, bytes32 aSalt) external payable returns (address rContract) {
+    /// @notice Deploys a given bytecode with provided token0 & token1 args.
+    function deploy(bytes32 aCodeKey, address aToken0, address aToken1) external payable returns (address rContract) {
         require(_deployInProgress, "FACTORY: ONLY_CHILDREN_CAN_CALL");
+
+        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
         assembly {
             // sanity checked against OZ implementation:
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            rContract := create2(callvalue(), add(aInitCode, 0x20), mload(aInitCode), aSalt)
+            rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
 
             if iszero(extcodesize(rContract)) { revert(0, 0) }
         }
 
-        emit Deployed(rContract, aSalt);
+        emit Deployed(aCodeKey, rContract);
     }
 }

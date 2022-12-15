@@ -85,6 +85,7 @@ contract AaveIntegrationTest is BaseTest {
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::allowedChangePerSecond", DEFAULT_ALLOWED_CHANGE_PER_SECOND);
         _factory.addCurve(type(ConstantProductPair).creationCode);
+        _factory.addBytecode(type(StableMintBurn).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 

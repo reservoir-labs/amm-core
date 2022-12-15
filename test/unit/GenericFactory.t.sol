@@ -87,10 +87,11 @@ contract GenericFactoryTest is BaseTest {
         bytes memory lInitCode = bytes("dummy bytes");
 
         // act
-        uint256 lNewCurveId = _factory.addCurve(lInitCode);
+        (uint256 lNewCurveId, bytes32 lCodeKey) = _factory.addCurve(lInitCode);
 
         // assert
         assertEq(lNewCurveId, 2);
+        assertEq(lCodeKey, keccak256(lInitCode));
     }
 
     function testAddCurve_OnlyOwner() public {
