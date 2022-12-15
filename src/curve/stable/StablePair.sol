@@ -105,24 +105,6 @@ contract StablePair is ReservoirPair {
         emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
-    /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
-    function _nonOptimalMintFee(uint256 _amount0, uint256 _amount1, uint256 lReserve0, uint256 lReserve1)
-        internal
-        view
-        returns (uint256 token0Fee, uint256 token1Fee)
-    {
-        if (lReserve0 == 0 || lReserve1 == 0) return (0, 0);
-        uint256 amount1Optimal = (_amount0 * lReserve1) / lReserve0;
-
-        if (amount1Optimal <= _amount1) {
-            token1Fee = (swapFee * (_amount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
-        } else {
-            uint256 amount0Optimal = (_amount1 * lReserve0) / lReserve1;
-            token0Fee = (swapFee * (_amount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
-        }
-        require(token0Fee <= type(uint112).max && token1Fee <= type(uint112).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
-    }
-
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
@@ -226,11 +208,6 @@ contract StablePair is ReservoirPair {
         emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
     }
 
-    function _balance() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = _totalToken0();
-        balance1 = _totalToken1();
-    }
-
     function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)
         internal
         view
@@ -275,30 +252,6 @@ contract StablePair is ReservoirPair {
             uint256 adjustedReserve0 = lReserve0 * token0PrecisionMultiplier;
             uint256 adjustedReserve1 = lReserve1 * token1PrecisionMultiplier;
             liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
-        }
-    }
-
-    function _mintFee(uint256 lReserve0, uint256 lReserve1) internal returns (uint256 _totalSupply, uint256 d) {
-        _totalSupply = totalSupply;
-        uint256 _dLast = lastInvariant;
-        if (_dLast != 0) {
-            d = StableMath._computeLiquidityFromAdjustedBalances(
-                lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
-            );
-            if (d > _dLast) {
-                // @dev `platformFee` % of increase in liquidity.
-                uint256 _platformFee = platformFee;
-                uint256 numerator = _totalSupply * (d - _dLast) * _platformFee;
-                uint256 denominator = (FEE_ACCURACY - _platformFee) * d + _platformFee * _dLast;
-                uint256 liquidity = numerator / denominator;
-
-                if (liquidity != 0) {
-                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
-
-                    _mint(platformFeeTo, liquidity);
-                    _totalSupply += liquidity;
-                }
-            }
         }
     }
 
