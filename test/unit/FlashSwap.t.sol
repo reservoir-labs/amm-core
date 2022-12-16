@@ -23,7 +23,12 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
         _pairs.push(_stablePair);
     }
 
+    // solhint-disable-next-line no-unused-vars
     function reservoirCall(address aSender, int256 aAmount0, int256 aAmount1, bytes calldata aData) external {
+        if (keccak256(aData) == keccak256("no pay")) {
+            return;
+        }
+
         if (aAmount0 < 0) {
             _tokenA.mint(msg.sender, uint256(-aAmount0));
         } else if (aAmount1 < 0) {
@@ -51,5 +56,14 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
 
         // assert
         assertEq(_tokenB.balanceOf(address(this)), uint256(-lSwapAmt));
+    }
+
+    function testSwap_FlashSwap_NoPay(uint256 aSwapAmt) external allPairs {
+        // assume
+        int256 lSwapAmt = int256(bound(aSwapAmt, 1, type(uint112).max / 2));
+
+        // act & assert
+        vm.expectRevert();
+        _pair.swap(lSwapAmt, true, address(this), "no pay");
     }
 }
