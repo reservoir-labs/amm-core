@@ -11,27 +11,25 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
         } else if (aAmount1 < 0) {
             _tokenB.mint(msg.sender, uint256(-aAmount1));
         }
-
-        console.logInt(aAmount0);
     }
 
-    function testSwap_FlashSwap_ExactIn() external {
-        // arrange
-        int256 lSwapAmt = 1e18;
+    function testSwap_FlashSwap_ExactIn(uint256 aSwapAmt) external {
+        // assume
+        int256 lSwapAmt = int256(bound(aSwapAmt, 1, type(uint112).max / 2));
 
         // act
-        uint256 lAmtOut = _constantProductPair.swap(lSwapAmt, true, address(this), "123123");
+        uint256 lAmtOut = _constantProductPair.swap(lSwapAmt, true, address(this), "some bytes");
 
         // assert
         assertEq(_tokenB.balanceOf(address(this)), lAmtOut);
     }
 
-    function testSwap_FlashSwap_ExactOut() external {
-        // arrange
-        int256 lSwapAmt = -50e18;
+    function testSwap_FlashSwap_ExactOut(uint256 aSwapAmt) external {
+        // assume
+        int256 lSwapAmt = -int256(bound(aSwapAmt, 1, INITIAL_MINT_AMOUNT / 2));
 
         // act
-        _constantProductPair.swap(lSwapAmt, false, address(this), "123123");
+        _constantProductPair.swap(lSwapAmt, false, address(this), "some bytes");
 
         // assert
         assertEq(_tokenB.balanceOf(address(this)), uint256(-lSwapAmt));
