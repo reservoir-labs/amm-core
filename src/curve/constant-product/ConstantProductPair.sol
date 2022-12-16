@@ -220,7 +220,10 @@ contract ConstantProductPair is ReservoirPair {
 
         if (aData.length > 0) {
             IReservoirCallee(aTo).reservoirCall(
-                msg.sender, lTokenOut == token0 ? rAmountOut : 0, lTokenOut == token1 ? rAmountOut : 0, aData
+                msg.sender,
+                lTokenOut == token0 ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token1 ? int256(rAmountOut) : -int256(lAmountIn),
+                aData
             );
         }
 
