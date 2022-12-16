@@ -192,7 +192,10 @@ contract StablePair is ReservoirPair {
 
         if (data.length > 0) {
             IReservoirCallee(to).reservoirCall(
-                msg.sender, tokenOut == token0 ? amountOut : 0, tokenOut == token1 ? amountOut : 0, data
+                msg.sender,
+                tokenOut == token0 ? int256(amountOut) : -int256(amountIn),
+                tokenOut == token1 ? int256(amountOut) : -int256(amountIn),
+                data
             );
         }
 
