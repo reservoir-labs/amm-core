@@ -25,6 +25,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     uint256 public constant MAX_SWAP_FEE = 20_000; //   2%
 
     GenericFactory public immutable factory;
+    // TODO: Make token0 & token1 IERC20.
     address public immutable token0;
     address public immutable token1;
 

@@ -99,13 +99,13 @@ contract ConstantProductPair is ReservoirPair {
         rFeeOn = platformFee > 0;
 
         if (rFeeOn) {
-            uint256 aSqrtOldK = Math.sqrt(kLast); // gas savings
+            uint256 lSqrtOldK = Math.sqrt(kLast); // gas savings
 
-            if (aSqrtOldK != 0) {
-                uint256 aSqrtNewK = Math.sqrt(uint256(aReserve0) * aReserve1);
+            if (lSqrtOldK != 0) {
+                uint256 lSqrtNewK = Math.sqrt(uint256(aReserve0) * aReserve1);
 
-                if (aSqrtNewK > aSqrtOldK) {
-                    uint256 lSharesToIssue = _calcFee(aSqrtNewK, aSqrtOldK, platformFee, totalSupply);
+                if (lSqrtNewK > lSqrtOldK) {
+                    uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
 
                     // TODO: What happens if no PLATFORM_FEE_TO is set
                     address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();

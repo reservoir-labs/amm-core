@@ -609,4 +609,43 @@ contract ConstantProductPairTest is BaseTest {
         assertGt(lObs1.logAccRawPrice, lObs1.logAccClampedPrice);
         assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
+
+    function testDisablePlatformFee() external {
+        // sanity
+        _constantProductPair.sync();
+        IERC20 lToken0 = IERC20(_constantProductPair.token0());
+        IERC20 lToken1 = IERC20(_constantProductPair.token1());
+        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // swap lSwapAmount back and forth
+        lToken0.transfer(address(_constantProductPair), lSwapAmount);
+        uint256 lAmountOut = _constantProductPair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _constantProductPair.sync();
+        assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
+
+        _constantProductPair.burn(address(this));
+        uint256 lPlatformShares = _constantProductPair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomPlatformFee(0);
+
+        // act
+        lToken0.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_constantProductPair), lAmountOut);
+        _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _constantProductPair.burn(address(this));
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+    }
 }
