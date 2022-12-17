@@ -24,7 +24,7 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
     }
 
     // solhint-disable-next-line no-unused-vars
-    function reservoirCall(address aSender, int256 aAmount0, int256 aAmount1, bytes calldata aData) external {
+    function reservoirCall(address, int256 aAmount0, int256 aAmount1, bytes calldata aData) external {
         if (keccak256(aData) == keccak256("no pay")) {
             return;
         }
