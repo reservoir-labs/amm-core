@@ -610,7 +610,7 @@ contract ConstantProductPairTest is BaseTest {
         assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
     }
 
-    function testDisablePlatformFee() external {
+    function testPlatformFee_Disable() external {
         // sanity
         _constantProductPair.sync();
         IERC20 lToken0 = IERC20(_constantProductPair.token0());
@@ -647,5 +647,62 @@ contract ConstantProductPairTest is BaseTest {
         // assert
         _constantProductPair.burn(address(this));
         assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+    }
+
+    function testPlatformFee_DisableReenable() external {
+        // sanity
+        _constantProductPair.sync();
+        IERC20 lToken0 = IERC20(_constantProductPair.token0());
+        IERC20 lToken1 = IERC20(_constantProductPair.token1());
+        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // act - swap once with platform fee.
+        lToken0.transfer(address(_constantProductPair), lSwapAmount);
+        uint256 lAmountOut = _constantProductPair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _constantProductPair.sync();
+        assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
+
+        _constantProductPair.burn(address(this));
+        uint256 lPlatformShares = _constantProductPair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomPlatformFee(0);
+
+        // act - swap twice with no platform fee.
+        lToken0.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+        lToken0.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _constantProductPair.burn(address(this));
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+
+        // act - swap once at half volume, again with platform fee.
+        vm.prank(address(_factory));
+        _constantProductPair.setCustomPlatformFee(type(uint256).max);
+        lToken0.transfer(address(_constantProductPair), lAmountOut / 2);
+        lAmountOut = _constantProductPair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
+        lToken1.transfer(address(_constantProductPair), lAmountOut);
+        lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert - we shouldn't have received more than the first time because
+        //          we disabled fees for the high volume.
+        _constantProductPair.burn(address(this));
+        uint256 lNewShares = _constantProductPair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
+        assertLt(lNewShares, lPlatformShares);
     }
 }
