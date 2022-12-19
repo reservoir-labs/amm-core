@@ -8,54 +8,69 @@ contract StablePairGas is BaseTest {
     StablePair private _oraclePair;
 
     function setUp() external {
-        _freshPair = StablePair(_factory.createPair(address(_tokenA), address(_tokenC), 1));
         _tokenA.mint(address(this), 100e18);
         _tokenB.mint(address(this), 100e18);
         _tokenC.mint(address(this), 100e18);
+        _tokenD.mint(address(this), 100e18);
 
-        _oraclePair = StablePair(_factory.createPair(address(_tokenB), address(_tokenC), 1));
-        _tokenB.mint(address(_oraclePair), 100e18);
+        // This pair measures initial mint cost.
+        _freshPair = StablePair(_factory.createPair(address(_tokenA), address(_tokenD), 1));
+
+        // This pair measures oracle writing cost.
+        _oraclePair = StablePair(_factory.createPair(address(_tokenA), address(_tokenC), 1));
+        _tokenA.mint(address(_oraclePair), 100e18);
         _tokenC.mint(address(_oraclePair), 100e18);
         _oraclePair.mint(_bob);
-        _tokenB.transfer(address(_oraclePair), 50e18);
-        _oraclePair.swap(int256(-50e18), true, address(_bob), bytes(""));
+
+        // Take some recordings to unzero the oracle pair slots.
+        vm.roll(10);
+        skip(100);
+        _tokenA.transfer(address(_oraclePair), 50e18);
+        uint256 lOut = _oraclePair.swap(int256(50e18), true, address(_bob), bytes(""));
+        vm.roll(10);
+        skip(100);
+        _tokenC.transfer(address(_oraclePair), lOut);
+        _oraclePair.swap(-int256(lOut), true, address(_bob), bytes(""));
+        vm.roll(10);
+        skip(100);
+        _oraclePair.burn(address(this));
     }
 
     function testGasMint() external {
-        _tokenA.transfer(address(_stablePair), 50e18);
-        _tokenB.transfer(address(_stablePair), 50e18);
-        _stablePair.mint(address(this));
+        _tokenA.transfer(address(_oraclePair), 50e18);
+        _tokenC.transfer(address(_oraclePair), 50e18);
+        _oraclePair.mint(address(this));
     }
 
     function testGasMint_Initial() external {
         _tokenA.transfer(address(_freshPair), 50e18);
-        _tokenC.transfer(address(_freshPair), 50e18);
+        _tokenD.transfer(address(_freshPair), 50e18);
         _freshPair.mint(address(this));
     }
 
     function testGasSwap() external {
-        _tokenA.transfer(address(_stablePair), 50e18);
-        _stablePair.swap(int256(50e18), true, address(this), bytes(""));
+        _tokenA.transfer(address(_oraclePair), 50e18);
+        _oraclePair.swap(int256(50e18), true, address(_bob), bytes(""));
     }
 
     function testGasSwap_UpdateOracle() external {
         vm.roll(100);
         skip(10_000);
-        _tokenB.transfer(address(_oraclePair), 0.1e18);
-        _oraclePair.swap(int256(-0.1e18), true, address(_bob), bytes(""));
+        _tokenA.transfer(address(_oraclePair), 0.1e18);
+        _oraclePair.swap(int256(0.1e18), true, address(_bob), bytes(""));
     }
 
     function testGasSwap_UpdateOracleClamped() external {
         vm.roll(100);
         skip(10_000);
-        _tokenB.transfer(address(_oraclePair), 50e18);
-        _oraclePair.swap(int256(-50e18), true, address(_bob), bytes(""));
+        _tokenA.transfer(address(_oraclePair), 50e18);
+        _oraclePair.swap(int256(50e18), true, address(_bob), bytes(""));
     }
 
     function testGasBurn() external {
-        vm.prank(_alice);
-        _stablePair.transfer(address(_stablePair), INITIAL_MINT_AMOUNT / 2);
-        _stablePair.burn(address(this));
+        vm.prank(_bob);
+        _oraclePair.transfer(address(_oraclePair), INITIAL_MINT_AMOUNT / 2);
+        _oraclePair.burn(address(this));
     }
 }
 
