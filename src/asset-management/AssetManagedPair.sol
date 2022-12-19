@@ -28,8 +28,8 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    uint112 public token0Managed;
-    uint112 public token1Managed;
+    uint104 public token0Managed;
+    uint104 public token1Managed;
 
     function _totalToken0() internal view returns (uint256) {
         return IERC20(token0).balanceOf(address(this)) + uint256(token0Managed);
@@ -39,17 +39,17 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(address token, uint112 prevBalance, uint112 newBalance) internal {
+    function _handleReport(address token, uint104 prevBalance, uint104 newBalance) internal {
         if (newBalance > prevBalance) {
             // report profit
-            uint112 lProfit = newBalance - prevBalance;
+            uint104 lProfit = newBalance - prevBalance;
 
             emit ProfitReported(token, lProfit);
 
             token == token0 ? _reserve0 += lProfit : _reserve1 += lProfit;
         } else if (newBalance < prevBalance) {
             // report loss
-            uint112 lLoss = prevBalance - newBalance;
+            uint104 lLoss = prevBalance - newBalance;
 
             emit LossReported(token, lLoss);
 
@@ -63,8 +63,8 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
             return;
         }
 
-        uint112 lToken0Managed = assetManager.getBalance(this, token0);
-        uint112 lToken1Managed = assetManager.getBalance(this, token1);
+        uint104 lToken0Managed = assetManager.getBalance(this, token0);
+        uint104 lToken1Managed = assetManager.getBalance(this, token1);
 
         _handleReport(token0, token0Managed, lToken0Managed);
         _handleReport(token1, token1Managed, lToken1Managed);
@@ -90,11 +90,11 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         require(token0Change != type(int256).min && token1Change != type(int256).min, "AMP: CAST_WOULD_OVERFLOW");
 
         if (token0Change > 0) {
-            uint112 lDelta = uint112(uint256(int256(token0Change)));
+            uint104 lDelta = uint104(uint256(int256(token0Change)));
             token0Managed += lDelta;
             IERC20(token0).transfer(msg.sender, lDelta);
         } else if (token0Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token0Change)));
+            uint104 lDelta = uint104(uint256(int256(-token0Change)));
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
@@ -103,14 +103,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         }
 
         if (token1Change > 0) {
-            uint112 lDelta = uint112(uint256(int256(token1Change)));
+            uint104 lDelta = uint104(uint256(int256(token1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
             IERC20(token1).transfer(msg.sender, lDelta);
         } else if (token1Change < 0) {
-            uint112 lDelta = uint112(uint256(int256(-token1Change)));
+            uint104 lDelta = uint104(uint256(int256(-token1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;

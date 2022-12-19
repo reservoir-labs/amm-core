@@ -151,7 +151,7 @@ contract StablePair is ReservoirPair {
         returns (uint256 amountOut)
     {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint112 lReserve0, uint112 lReserve1,) = getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = getReserves();
         uint256 amountIn;
         address tokenOut;
 

@@ -7,27 +7,27 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 
 contract AssetManager is IAssetManager {
-    mapping(IAssetManagedPair => mapping(address => uint112)) public getBalance;
+    mapping(IAssetManagedPair => mapping(address => uint104)) public getBalance;
 
     function adjustManagement(IAssetManagedPair aPair, int256 aToken0Amount, int256 aToken1Amount) external {
         require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "AM: OVERFLOW");
 
         if (aToken0Amount >= 0) {
-            uint112 lAbs = uint112(uint256(int256(aToken0Amount)));
+            uint104 lAbs = uint104(uint256(int256(aToken0Amount)));
 
             getBalance[aPair][aPair.token0()] += lAbs;
         } else {
-            uint112 lAbs = uint112(uint256(int256(-aToken0Amount)));
+            uint104 lAbs = uint104(uint256(int256(-aToken0Amount)));
 
             IERC20(aPair.token0()).approve(address(aPair), lAbs);
             getBalance[aPair][aPair.token0()] -= lAbs;
         }
         if (aToken1Amount >= 0) {
-            uint112 lAbs = uint112(uint256(int256(aToken1Amount)));
+            uint104 lAbs = uint104(uint256(int256(aToken1Amount)));
 
             getBalance[aPair][aPair.token1()] += lAbs;
         } else {
-            uint112 lAbs = uint112(uint256(int256(-aToken1Amount)));
+            uint104 lAbs = uint104(uint256(int256(-aToken1Amount)));
 
             IERC20(aPair.token1()).approve(address(aPair), lAbs);
             getBalance[aPair][aPair.token1()] -= lAbs;
@@ -36,7 +36,7 @@ contract AssetManager is IAssetManager {
         aPair.adjustManagement(aToken0Amount, aToken1Amount);
     }
 
-    function adjustBalance(IAssetManagedPair aOwner, address aToken, uint112 aNewAmount) external {
+    function adjustBalance(IAssetManagedPair aOwner, address aToken, uint104 aNewAmount) external {
         getBalance[aOwner][aToken] = aNewAmount;
     }
 

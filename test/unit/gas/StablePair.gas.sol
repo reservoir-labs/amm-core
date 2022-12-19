@@ -73,4 +73,3 @@ contract StablePairGas is BaseTest {
         _oraclePair.burn(address(this));
     }
 }
-

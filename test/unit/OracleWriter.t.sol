@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
+import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -13,8 +13,8 @@ contract OracleWriterTest is BaseTest {
     event OracleCallerChanged(address oldCaller, address newCaller);
     event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 
-    IOracleWriter[] internal _pairs;
-    IOracleWriter internal _pair;
+    OracleWriter[] internal _pairs;
+    OracleWriter internal _pair;
 
     function setUp() public {
         _pairs.push(_constantProductPair);

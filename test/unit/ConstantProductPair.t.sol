@@ -11,7 +11,7 @@ import { AssetManager } from "test/__mocks/AssetManager.sol";
 import { Math } from "src/libraries/Math.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
-import { Observation } from "src/interfaces/IOracleWriter.sol";
+import { Observation } from "src/oracle/OracleWriter.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
@@ -134,9 +134,9 @@ contract ConstantProductPairTest is BaseTest {
     function testSwap_ExtremeAmounts() public {
         // arrange
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
-        uint256 lSwapAmount = 1e18;
-        uint256 lAmountB = type(uint112).max - lSwapAmount;
-        uint256 lAmountC = type(uint112).max;
+        uint256 lSwapAmount = 0.001e18;
+        uint256 lAmountB = type(uint104).max - lSwapAmount;
+        uint256 lAmountC = type(uint104).max;
         _tokenB.mint(address(lPair), lAmountB);
         _tokenC.mint(address(lPair), lAmountC);
         lPair.mint(address(this));
@@ -151,8 +151,8 @@ contract ConstantProductPairTest is BaseTest {
         );
 
         // assert
-        assertEq(_tokenC.balanceOf(address(this)), 0.997e18);
-        assertEq(_tokenB.balanceOf(address(lPair)), type(uint112).max);
+        assertEq(_tokenB.balanceOf(address(lPair)), type(uint104).max);
+        assertEq(_tokenC.balanceOf(address(this)), 0.000997e18);
     }
 
     function testSwap_ExactOutExceedReserves() public {
@@ -172,8 +172,8 @@ contract ConstantProductPairTest is BaseTest {
 
     function testSwap_ExactOut(uint256 aAmountOut) public {
         // assume
-        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
-        // this amount makes the new reserve of the input token stay within uint112 and not overflow
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint104).max + 1;
+        // this amount makes the new reserve of the input token stay within uint104 and not overflow
         uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         uint256 lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
 
@@ -193,11 +193,11 @@ contract ConstantProductPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), lAmountOut);
     }
 
-    function testSwap_ExactOut_NewReservesExceedUint112() public {
+    function testSwap_ExactOut_NewReservesExceedUint104() public {
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setCustomSwapFee(0);
-        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint112).max + 1;
+        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint104).max + 1;
         uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         // 1 more than the max
         uint256 lAmountOut = lMaxOutputAmt + 1;
@@ -516,7 +516,7 @@ contract ConstantProductPairTest is BaseTest {
 
     function testOracle_LiquidityAtMaximum() public {
         // arrange
-        uint256 lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
+        uint256 lLiquidityToAdd = type(uint104).max - INITIAL_MINT_AMOUNT;
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 5);
         _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
@@ -524,9 +524,9 @@ contract ConstantProductPairTest is BaseTest {
         _constantProductPair.mint(address(this));
 
         // sanity
-        (uint112 lReserve0, uint112 lReserve1,) = _constantProductPair.getReserves();
-        assertEq(lReserve0, type(uint112).max);
-        assertEq(lReserve1, type(uint112).max);
+        (uint104 lReserve0, uint104 lReserve1,) = _constantProductPair.getReserves();
+        assertEq(lReserve0, type(uint104).max);
+        assertEq(lReserve1, type(uint104).max);
 
         // act
         vm.roll(block.number + 1);
@@ -535,12 +535,12 @@ contract ConstantProductPairTest is BaseTest {
 
         // assert
         uint256 lTotalSupply = _constantProductPair.totalSupply();
-        assertEq(lTotalSupply, type(uint112).max);
+        assertEq(lTotalSupply, type(uint104).max);
 
         Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
         Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
         assertApproxEqRel(
-            type(uint112).max,
+            type(uint104).max,
             LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5),
             0.0001e18
         );

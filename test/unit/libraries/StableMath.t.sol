@@ -17,8 +17,8 @@ contract StableMathTest is BaseTest {
         uint256 aN_A
     ) public {
         // assume - covers ratios up to 1:10000000000, which is good enough even in the case of a depeg
-        uint256 lReserve0 = bound(aReserve0, 1e18, type(uint112).max / 100);
-        uint256 lReserve1 = bound(aReserve1, lReserve0 / 1e10, Math.min(type(uint112).max / 100, lReserve0 * 1e10));
+        uint256 lReserve0 = bound(aReserve0, 1e18, type(uint104).max / 100);
+        uint256 lReserve1 = bound(aReserve1, lReserve0 / 1e10, Math.min(type(uint104).max / 100, lReserve0 * 1e10));
         uint256 lN_A =
             2 * bound(aN_A, StableMath.MIN_A * StableMath.A_PRECISION, StableMath.MAX_A * StableMath.A_PRECISION);
 

@@ -1,5 +1,5 @@
-OPTIMIZED_KEY=0xffc5ad74baa9d5ad8a9547da8063aab8b925963d87a72ab4eac0ef7acc613055
-UNOPTIMIZED_KEY=0xc5e1a30a68be844e410a5e805ec9cfa3aa3ab5e53c1ca0eaadf29099ef88e5c9
+OPTIMIZED_KEY=0x99e9ae9828cdef7c93783e78875678b18c99dc02a370bf61abf26c21caa0e0c1
+UNOPTIMIZED_KEY=$(cat scripts/unoptimized-stable-mint-burn-key)
 
 if [ "$FOUNDRY_PROFILE" == "coverage" ]
 then

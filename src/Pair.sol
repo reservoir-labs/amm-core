@@ -37,9 +37,10 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     uint128 internal immutable token0PrecisionMultiplier;
     uint128 internal immutable token1PrecisionMultiplier;
 
-    uint112 internal _reserve0;
-    uint112 internal _reserve1;
+    uint104 internal _reserve0;
+    uint104 internal _reserve1;
     uint32 internal _blockTimestampLast;
+    uint16 public index = type(uint16).max;
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint256).max;
@@ -66,7 +67,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
     }
 
-    function getReserves() public view returns (uint112 rReserve0, uint112 rReserve1, uint32 rBlockTimestampLast) {
+    function getReserves() public view returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast) {
         rReserve0 = _reserve0;
         rReserve1 = _reserve1;
         rBlockTimestampLast = _blockTimestampLast;
@@ -125,7 +126,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
-    function _update(uint256 aTotalToken0, uint256 aTotalToken1, uint112 aReserve0, uint112 aReserve1)
+    function _update(uint256 aTotalToken0, uint256 aTotalToken1, uint104 aReserve0, uint104 aReserve1)
         internal
         virtual;
 }

@@ -16,7 +16,7 @@ interface IPair is IUniswapV2ERC20 {
     function factory() external returns (GenericFactory);
     function token0() external view returns (address);
     function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function getReserves() external view returns (uint104 reserve0, uint104 reserve1, uint32 blockTimestampLast);
 
     function mint(address to) external returns (uint256 liquidity);
     function burn(address to) external returns (uint256 amount0, uint256 amount1);
@@ -45,7 +45,7 @@ interface IPair is IUniswapV2ERC20 {
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
     event Swap(address indexed sender, bool zeroForOne, uint256 amountIn, uint256 amountOut, address indexed to);
-    event Sync(uint112 reserve0, uint112 reserve1);
+    event Sync(uint104 reserve0, uint104 reserve1);
 
     event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
     event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);

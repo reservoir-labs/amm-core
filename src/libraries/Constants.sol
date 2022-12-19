@@ -4,5 +4,5 @@ pragma solidity ^0.8.0;
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 library ConstantsLib {
-    bytes32 public constant MINT_BURN_KEY = bytes32(0xffc5ad74baa9d5ad8a9547da8063aab8b925963d87a72ab4eac0ef7acc613055);
+    bytes32 public constant MINT_BURN_KEY = bytes32(0x99e9ae9828cdef7c93783e78875678b18c99dc02a370bf61abf26c21caa0e0c1);
 }

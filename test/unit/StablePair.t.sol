@@ -8,7 +8,7 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
-import { Observation } from "src/interfaces/IOracleWriter.sol";
+import { Observation } from "src/oracle/OracleWriter.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
@@ -331,7 +331,7 @@ contract StablePairTest is BaseTest {
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
-        (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
             lAmountOut, lReserve0, lReserve1, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
         );
@@ -357,7 +357,7 @@ contract StablePairTest is BaseTest {
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
-        (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
             lAmountOut, lReserve0, lReserve1, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
         );
@@ -413,7 +413,7 @@ contract StablePairTest is BaseTest {
         uint256 lMinLiq = _stablePair.MINIMUM_LIQUIDITY();
         uint256 lAmtBToMint = bound(aAmtBToMint, lMinLiq / 2 + 1, lMinLiq);
         uint256 lAmtCToMint = bound(aAmtCToMint, lMinLiq / 2 + 1, lMinLiq);
-        uint256 lSwapAmt = bound(aSwapAmt, 1, type(uint112).max - lAmtBToMint);
+        uint256 lSwapAmt = bound(aSwapAmt, 1, type(uint104).max - lAmtBToMint);
 
         // arrange
         StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
@@ -447,8 +447,8 @@ contract StablePairTest is BaseTest {
     function testSwap_VeryLargeLiquidity(uint256 aSwapAmt) public {
         // assume
         uint256 lSwapAmt = bound(aSwapAmt, 1, 10e18);
-        uint256 lAmtBToMint = type(uint112).max;
-        uint256 lAmtCToMint = type(uint112).max - lSwapAmt;
+        uint256 lAmtBToMint = type(uint104).max;
+        uint256 lAmtCToMint = type(uint104).max - lSwapAmt;
 
         // arrange
         StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
@@ -572,7 +572,7 @@ contract StablePairTest is BaseTest {
     function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintAmt) public {
         // assume
         uint256 lAmpCoeff = bound(aAmpCoeff, StableMath.MIN_A, StableMath.MAX_A);
-        uint256 lSwapAmt = bound(aSwapAmt, 1e3, type(uint112).max / 2);
+        uint256 lSwapAmt = bound(aSwapAmt, 1e3, type(uint104).max / 2);
         uint256 lCMintAmt = bound(aMintAmt, 1e18, 10_000_000_000e18);
         uint256 lDMintAmt = bound(lCMintAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
 
@@ -1007,7 +1007,7 @@ contract StablePairTest is BaseTest {
         // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
         // tokenA balance in the pool  : 170e18
         // tokenB balance in the pool : 30.10e18
-        (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
         assertEq(lReserve0, 170e18);
         assertEq(lReserve1, 30_102_419_348_114_679_723);
 
@@ -1048,7 +1048,7 @@ contract StablePairTest is BaseTest {
         // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
         // tokenA balance in the pool  : 170e18
         // tokenB balance in the pool : 30.10e18
-        (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
         assertEq(lReserve0, 170e18);
         assertEq(lReserve1, 30_102_419_348_114_679_723);
 
@@ -1332,16 +1332,16 @@ contract StablePairTest is BaseTest {
 
     function testOracle_LiquidityAtMaximum() external {
         // arrange
-        uint256 lLiquidityToAdd = type(uint112).max - INITIAL_MINT_AMOUNT;
+        uint256 lLiquidityToAdd = type(uint104).max - INITIAL_MINT_AMOUNT;
         _stepTime(5);
         _tokenA.mint(address(_stablePair), lLiquidityToAdd);
         _tokenB.mint(address(_stablePair), lLiquidityToAdd);
         _stablePair.mint(address(this));
 
         // sanity
-        (uint112 lReserve0, uint112 lReserve1,) = _stablePair.getReserves();
-        assertEq(lReserve0, type(uint112).max);
-        assertEq(lReserve1, type(uint112).max);
+        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        assertEq(lReserve0, type(uint104).max);
+        assertEq(lReserve1, type(uint104).max);
 
         // act
         _stepTime(5);
@@ -1349,12 +1349,12 @@ contract StablePairTest is BaseTest {
 
         // assert
         uint256 lTotalSupply = _stablePair.totalSupply();
-        assertEq(lTotalSupply, uint256(type(uint112).max) * 2);
+        assertEq(lTotalSupply, uint256(type(uint104).max) * 2);
 
         Observation memory lObs0 = _oracleCaller.observation(_stablePair, 0);
         Observation memory lObs1 = _oracleCaller.observation(_stablePair, _stablePair.index());
         assertApproxEqRel(
-            type(uint112).max,
+            type(uint104).max,
             LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5),
             0.0001e18
         );
