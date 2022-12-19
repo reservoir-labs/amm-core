@@ -2,16 +2,37 @@ pragma solidity ^0.8.0;
 
 import { stdMath } from "forge-std/Test.sol";
 
-import { IOracleWriter, Observation } from "src/interfaces/IOracleWriter.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { Pair } from "src/Pair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-abstract contract OracleWriter is Pair, IOracleWriter {
+struct Observation {
+    // natural log (ln) of the raw accumulated price (token1/token0)
+    int112 logAccRawPrice;
+    // natural log (ln) of the clamped accumulated price (token1/token0)
+    // in the case of maximum price supported by the oracle (~2.87e56 == e ** 130.0000)
+    // (1300000) 21 bits multiplied by 32 bits of the timestamp gives 53 bits
+    // which fits into int56
+    int56 logAccClampedPrice;
+    // natural log (ln) of the accumulated liquidity (sqrt(x * y))
+    // in the case of maximum liq (sqrt(uint104 * uint104) == 5.192e33 == e ** 77.5325)
+    // (775325) 20 bits multiplied by 32 bits of the timestamp gives 52 bits
+    // which fits into int56
+    int56 logAccLiquidity;
+    // overflows every 136 years, in the year 2106
+    uint32 timestamp;
+}
+
+abstract contract OracleWriter is Pair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
+
+    // TODO: OracleCallerChanged -> OracleCallerUpdated
+    event OracleCallerChanged(address oldCaller, address newCaller);
+    // TODO: AllowedChangePerSecondChanged -> MaxChangeRateUpdated
+    event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 
     // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
@@ -19,11 +40,12 @@ abstract contract OracleWriter is Pair, IOracleWriter {
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
     Observation[65_536] internal _observations;
-    uint16 public index = type(uint16).max;
 
     // maximum allowed rate of change of price per second
     // to mitigate oracle manipulation attacks in the face of post-merge ETH
+    // TODO: allowedChangePerSecond -> maxChangeRate
     uint256 public allowedChangePerSecond;
+    // TODO: setAllowedChangePerSecond -> setMaxChangeRate
     uint256 public prevClampedPrice;
 
     address public oracleCaller;

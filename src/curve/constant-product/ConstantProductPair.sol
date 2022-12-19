@@ -83,9 +83,9 @@ contract ConstantProductPair is ReservoirPair {
         pure
         returns (uint256 rSharesToIssue)
     {
-        // ASSERT: newK & oldK        < uint112
+        // ASSERT: newK & oldK        < uint104
         // ASSERT: aPlatformFee       < FEE_ACCURACY
-        // ASSERT: aCirculatingShares < uint112
+        // ASSERT: aCirculatingShares < uint104
 
         // perf: can be unchecked
         uint256 lScaledGrowth = aSqrtNewK * ACCURACY / aSqrtOldK; // ASSERT: < UINT256
@@ -95,7 +95,7 @@ contract ConstantProductPair is ReservoirPair {
         rSharesToIssue = lScaledTargetOwnership * aCirculatingShares / (ACCURACY - lScaledTargetOwnership); // ASSERT: lScaledTargetOwnership < ACCURACY
     }
 
-    function _mintFee(uint112 aReserve0, uint112 aReserve1) private returns (bool rFeeOn) {
+    function _mintFee(uint104 aReserve0, uint104 aReserve1) private returns (bool rFeeOn) {
         rFeeOn = platformFee > 0;
 
         if (rFeeOn) {
@@ -121,7 +121,7 @@ contract ConstantProductPair is ReservoirPair {
     function mint(address aTo) external nonReentrant returns (uint256 rLiquidity) {
         _syncManaged(); // check asset-manager pnl
 
-        (uint112 lReserve0, uint112 lReserve1,) = getReserves(); // gas savings
+        (uint104 lReserve0, uint104 lReserve1,) = getReserves(); // gas savings
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
         uint256 lAmount0 = lBalance0 - lReserve0;
@@ -149,7 +149,7 @@ contract ConstantProductPair is ReservoirPair {
     function burn(address aTo) external nonReentrant returns (uint256 rAmount0, uint256 rAmount1) {
         _syncManaged(); // check asset-manager pnl
 
-        (uint112 lReserve0, uint112 lReserve1,) = getReserves(); // gas savings
+        (uint104 lReserve0, uint104 lReserve1,) = getReserves(); // gas savings
         uint256 liquidity = balanceOf[address(this)];
 
         bool lFeeOn = _mintFee(lReserve0, lReserve1);
@@ -178,7 +178,7 @@ contract ConstantProductPair is ReservoirPair {
         returns (uint256 rAmountOut)
     {
         require(aAmount != 0, "CP: AMOUNT_ZERO");
-        (uint112 lReserve0, uint112 lReserve1,) = getReserves(); // gas savings
+        (uint104 lReserve0, uint104 lReserve1,) = getReserves(); // gas savings
         uint256 lAmountIn;
         address lTokenOut;
 

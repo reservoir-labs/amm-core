@@ -327,7 +327,7 @@ contract AaveIntegrationTest is BaseTest {
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // act
-        uint112 lBalance = _manager.getBalance(_pair, USDC);
+        uint104 lBalance = _manager.getBalance(_pair, USDC);
 
         // assert
         assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManage)));

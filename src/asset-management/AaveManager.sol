@@ -51,18 +51,18 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
-    function getBalance(IAssetManagedPair aOwner, address aToken) external view returns (uint112 rTokenBalance) {
+    function getBalance(IAssetManagedPair aOwner, address aToken) external view returns (uint104 rTokenBalance) {
         return _getBalance(aOwner, aToken);
     }
 
-    function _getBalance(IAssetManagedPair aOwner, address aToken) private view returns (uint112 rTokenBalance) {
+    function _getBalance(IAssetManagedPair aOwner, address aToken) private view returns (uint104 rTokenBalance) {
         address lAaveToken = _getATokenAddress(aToken);
         uint256 lTotalShares = totalShares[lAaveToken];
         if (lTotalShares == 0) {
             return 0;
         }
         rTokenBalance =
-            uint112(shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]);
+            uint104(shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -151,10 +151,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
         address lToken0 = lPair.token0();
         address lToken1 = lPair.token1();
-        (uint112 lReserve0, uint112 lReserve1,) = lPair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = lPair.getReserves();
 
-        uint112 lToken0Managed = _getBalance(lPair, lToken0);
-        uint112 lToken1Managed = _getBalance(lPair, lToken1);
+        uint104 lToken0Managed = _getBalance(lPair, lToken0);
+        uint104 lToken1Managed = _getBalance(lPair, lToken1);
 
         int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed);
         int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed);

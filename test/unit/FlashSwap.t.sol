@@ -38,7 +38,7 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
 
     function testSwap_FlashSwap_ExactIn(uint256 aSwapAmt) external allPairs {
         // assume
-        int256 lSwapAmt = int256(bound(aSwapAmt, 1, type(uint112).max / 2));
+        int256 lSwapAmt = int256(bound(aSwapAmt, 1, type(uint104).max / 2));
 
         // act
         uint256 lAmtOut = _pair.swap(lSwapAmt, true, address(this), "some bytes");
@@ -60,7 +60,7 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
 
     function testSwap_FlashSwap_NoPay(uint256 aSwapAmt) external allPairs {
         // assume
-        int256 lSwapAmt = int256(bound(aSwapAmt, 1, type(uint112).max / 2));
+        int256 lSwapAmt = int256(bound(aSwapAmt, 1, type(uint104).max / 2));
 
         // act & assert
         vm.expectRevert();

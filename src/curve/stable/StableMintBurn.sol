@@ -69,7 +69,7 @@ contract StableMintBurn is ReservoirPair {
             uint256 amount0Optimal = (_amount1 * lReserve0) / lReserve1;
             token0Fee = (swapFee * (_amount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
         }
-        require(token0Fee <= type(uint112).max && token1Fee <= type(uint112).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
+        require(token0Fee <= type(uint104).max && token1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
@@ -77,7 +77,7 @@ contract StableMintBurn is ReservoirPair {
     function mint(address to) public nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
-        (uint112 lReserve0, uint112 lReserve1,) = getReserves();
+        (uint104 lReserve0, uint104 lReserve1,) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -85,8 +85,8 @@ contract StableMintBurn is ReservoirPair {
         uint256 amount1 = balance1 - lReserve1;
 
         (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, lReserve0, lReserve1);
-        lReserve0 += uint112(fee0);
-        lReserve1 += uint112(fee1);
+        lReserve0 += uint104(fee0);
+        lReserve1 += uint104(fee1);
 
         (uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
 
@@ -101,7 +101,7 @@ contract StableMintBurn is ReservoirPair {
         _mint(to, liquidity);
         _update(balance0, balance1, lReserve0, lReserve1);
 
-        // casting is safe as the max invariant would be 2 * uint112 * uint60 (in the case of tokens with 0 decimal
+        // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
         // places)
         // which results in 112 + 60 + 1 = 173 bits
         // which fits into uint192
@@ -131,7 +131,7 @@ contract StableMintBurn is ReservoirPair {
         _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
         _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
 
-        _update(_totalToken0(), _totalToken1(), uint112(lReserve0), uint112(lReserve1));
+        _update(_totalToken0(), _totalToken1(), uint104(lReserve0), uint104(lReserve1));
 
         lastInvariant = uint192(_computeLiquidity(_reserve0, _reserve1));
         lastInvariantAmp = _getCurrentAPrecise();

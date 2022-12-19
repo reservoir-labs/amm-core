@@ -42,8 +42,8 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
     }
 
     // update reserves and, on the first call per block, price and liq accumulators
-    function _update(uint256 aBalance0, uint256 aBalance1, uint112 aReserve0, uint112 aReserve1) internal override {
-        require(aBalance0 <= type(uint112).max && aBalance1 <= type(uint112).max, "CP: OVERFLOW");
+    function _update(uint256 aBalance0, uint256 aBalance1, uint104 aReserve0, uint104 aReserve1) internal override {
+        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "CP: OVERFLOW");
 
         uint32 lBlockTimestamp = uint32(block.timestamp % 2 ** 32);
         uint32 lTimeElapsed;
@@ -54,8 +54,8 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGua
             _updateOracle(aReserve0, aReserve1, lTimeElapsed, _blockTimestampLast);
         }
 
-        _reserve0 = uint112(aBalance0);
-        _reserve1 = uint112(aBalance1);
+        _reserve0 = uint104(aBalance0);
+        _reserve1 = uint104(aBalance1);
         _blockTimestampLast = lBlockTimestamp;
         // PERF: Does this use SLOADs?
         emit Sync(_reserve0, _reserve1);
