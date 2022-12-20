@@ -14,14 +14,20 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 import { Observation } from "src/oracle/OracleWriter.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
-import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
+import { ConstantProductPair, IReservoirCallee } from "src/curve/constant-product/ConstantProductPair.sol";
 
-contract ConstantProductPairTest is BaseTest {
+contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     using stdStorage for StdStorage;
 
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
 
     AssetManager private _manager = new AssetManager();
+
+    function(address, int256, int256, bytes calldata) internal private _validateCallback;
+
+    function reservoirCall(address aSwapper, int256 lToken0, int256 lToken1, bytes calldata aData) external {
+        _validateCallback(aSwapper, lToken0, lToken1, aData);
+    }
 
     function _calculateOutput(uint256 aReserveIn, uint256 aReserveOut, uint256 aAmountIn, uint256 aFee)
         private
@@ -129,6 +135,28 @@ contract ConstantProductPairTest is BaseTest {
         // assert
         assertEq(MintableERC20(token1).balanceOf(address(this)), expectedOutput);
         assertEq(MintableERC20(token0).balanceOf(address(this)), 0);
+    }
+
+    function _reenterSwap(address aSwapper, int256 aToken0, int256 aToken1, bytes calldata aData) internal {
+        assertEq(aSwapper, address(this));
+        assertEq(aToken0, -1e18);
+        assertApproxEqRel(aToken1, 1e18, 0.013e18);
+        assertEq(aData, bytes(hex"00"));
+
+        _constantProductPair.swap(1e18, true, address(this), "");
+    }
+
+    function testSwap_Reenter() external {
+        // arrange
+        _validateCallback = _reenterSwap;
+        address lToken0;
+        address lToken1;
+        (lToken0, lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
+
+        // act
+        MintableERC20(lToken0).mint(address(_constantProductPair), 1e18);
+        vm.expectRevert("REENTRANCY");
+        _constantProductPair.swap(1e18, true, address(this), bytes(hex"00"));
     }
 
     function testSwap_ExtremeAmounts() public {

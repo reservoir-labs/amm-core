@@ -9,7 +9,7 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { Observation } from "src/oracle/OracleWriter.sol";
-import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
+import { StablePair, AmplificationData, IReservoirCallee } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract StablePairTest is BaseTest {
@@ -17,6 +17,12 @@ contract StablePairTest is BaseTest {
 
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTime);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
+
+    function(address, int256, int256, bytes calldata) internal private _validateCallback;
+
+    function reservoirCall(address aSwapper, int256 lToken0, int256 lToken1, bytes calldata aData) external {
+        _validateCallback(aSwapper, lToken0, lToken1, aData);
+    }
 
     function _calculateConstantProductOutput(uint256 aReserveIn, uint256 aReserveOut, uint256 aTokenIn, uint256 aFee)
         private
@@ -29,6 +35,14 @@ contract StablePairTest is BaseTest {
         uint256 lDenominator = aReserveIn * MAX_FEE + lAmountInWithFee;
 
         rExpectedOut = lNumerator / lDenominator;
+    }
+
+    function _getToken0Token1(address aTokenA, address aTokenB)
+        private
+        pure
+        returns (address rToken0, address rToken1)
+    {
+        (rToken0, rToken1) = aTokenA < aTokenB ? (aTokenA, aTokenB) : (aTokenB, aTokenA);
     }
 
     function testFactoryAmpTooLow() public {
@@ -318,6 +332,28 @@ contract StablePairTest is BaseTest {
 
         // assert
         assertEq(lAmountOut, _tokenB.balanceOf(address(this)));
+    }
+
+    function _reenterSwap(address aSwapper, int256 aToken0, int256 aToken1, bytes calldata aData) internal {
+        assertEq(aSwapper, address(this));
+        assertEq(aToken0, -1e18);
+        assertApproxEqRel(aToken1, 1e18, 0.002e18);
+        assertEq(aData, bytes(hex"00"));
+
+        _stablePair.swap(1e18, true, address(this), "");
+    }
+
+    function testSwap_Reenter() external {
+        // arrange
+        _validateCallback = _reenterSwap;
+        address lToken0;
+        address lToken1;
+        (lToken0, lToken1) = _getToken0Token1(address(_tokenA), address(_tokenB));
+
+        // act
+        MintableERC20(lToken0).mint(address(_stablePair), 1e18);
+        vm.expectRevert("REENTRANCY");
+        _stablePair.swap(1e18, true, address(this), bytes(hex"00"));
     }
 
     function testSwap_ZeroInput() public {

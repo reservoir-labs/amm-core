@@ -2,17 +2,18 @@ pragma solidity ^0.8.0;
 
 import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
 import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
-import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 
-abstract contract ReservoirPair is AssetManagedPair, OracleWriter, ReentrancyGuard {
+abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
+    modifier _nonReentrant() virtual;
+
     /// @notice Force reserves to match balances.
-    function sync() external nonReentrant {
+    function sync() external _nonReentrant {
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), _reserve0, _reserve1);
     }
 
     /// @notice Force balances to match reserves.
-    function skim(address aTo) external nonReentrant {
+    function skim(address aTo) external _nonReentrant {
         uint256 lReserve0 = _reserve0; // gas savings
         uint256 lReserve1 = _reserve1;
 

@@ -44,6 +44,8 @@ contract StablePair is ReservoirPair {
 
     AmplificationData public ampData;
 
+    uint256 private _locked = 1;
+
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
     uint192 private lastInvariant;
@@ -63,6 +65,14 @@ contract StablePair is ReservoirPair {
                 && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "SP: INVALID_A"
         );
+    }
+
+    modifier _nonReentrant() override {
+        require(_locked == 1, "REENTRANCY");
+
+        _locked = 2;
+        _;
+        _locked = 1;
     }
 
     function rampA(uint64 aFutureARaw, uint64 aFutureATime) external onlyFactory {
@@ -147,7 +157,7 @@ contract StablePair is ReservoirPair {
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
         external
-        nonReentrant
+        _nonReentrant
         returns (uint256 amountOut)
     {
         require(amount != 0, "SP: AMOUNT_ZERO");

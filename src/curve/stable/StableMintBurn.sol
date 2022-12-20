@@ -36,6 +36,8 @@ contract StableMintBurn is ReservoirPair {
 
     AmplificationData public ampData;
 
+    uint256 private _locked = 1;
+
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
     uint192 private lastInvariant;
@@ -52,6 +54,14 @@ contract StableMintBurn is ReservoirPair {
                 && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
             "SP: INVALID_A"
         );
+    }
+
+    modifier _nonReentrant() override {
+        require(_locked == 1, "REENTRANCY");
+
+        _locked = 2;
+        _;
+        _locked = 1;
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
@@ -72,9 +82,10 @@ contract StableMintBurn is ReservoirPair {
         require(token0Fee <= type(uint104).max && token1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
+    // TODO: public -> external?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) public nonReentrant returns (uint256 liquidity) {
+    function mint(address to) public _nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
         (uint104 lReserve0, uint104 lReserve1,) = getReserves();
@@ -114,8 +125,9 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
+    // TODO: public -> external?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public nonReentrant returns (uint256 amount0, uint256 amount1) {
+    function burn(address to) public _nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
         (uint256 lReserve0, uint256 lReserve1,) = getReserves();
