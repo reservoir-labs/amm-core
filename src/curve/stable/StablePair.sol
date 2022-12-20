@@ -161,7 +161,7 @@ contract StablePair is ReservoirPair {
         returns (uint256 amountOut)
     {
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint104 lReserve0, uint104 lReserve1,) = getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = getReserves();
         uint256 amountIn;
         address tokenOut;
 
@@ -209,14 +209,14 @@ contract StablePair is ReservoirPair {
             );
         }
 
-        uint256 balance0 = _totalToken0();
-        uint256 balance1 = _totalToken1();
+        uint256 lBalance0 = _totalToken0();
+        uint256 lBalance1 = _totalToken1();
 
-        uint256 actualAmountIn = tokenOut == token0 ? balance1 - lReserve1 : balance0 - lReserve0;
-        require(amountIn <= actualAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+        uint256 lReceived = tokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        require(lReceived >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
-        _update(balance0, balance1, lReserve0, lReserve1);
-        emit Swap(msg.sender, tokenOut == token1, actualAmountIn, amountOut, to);
+        _update(lBalance0, lBalance1, lReserve0, lReserve1);
+        emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
     }
 
     function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)
@@ -304,7 +304,7 @@ contract StablePair is ReservoirPair {
 
     // TODO: Is this function needed?
     function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
 
         if (tokenIn == token0) {
             finalAmountOut = _getAmountOut(amountIn, lReserve0, lReserve1, true);
@@ -316,7 +316,7 @@ contract StablePair is ReservoirPair {
 
     // TODO: Do we need this function?
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
         uint256 d = _computeLiquidity(lReserve0, lReserve1);
         virtualPrice = (d * (uint256(10) ** decimals)) / totalSupply;
     }
@@ -325,29 +325,29 @@ contract StablePair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint256 lReserve0, uint256 lReserve1, uint32 timeElapsed, uint32 timestampLast)
+    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast)
         internal
         override
     {
-        Observation storage previous = _observations[index];
+        Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier
+            _getCurrentAPrecise(), aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
-            _calcClampedPrice(currRawPrice, prevClampedPrice, timeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(lReserve0, lReserve1);
+            _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
+        int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(timeElapsed)));
+            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
-            index += 1;
-            _observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
+                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
+            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
+            _slot0.index += 1;
+            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
         }
     }
 }

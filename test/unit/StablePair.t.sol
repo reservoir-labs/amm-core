@@ -29,7 +29,7 @@ contract StablePairTest is BaseTest {
         view
         returns (uint256 rExpectedOut)
     {
-        uint256 MAX_FEE = _constantProductPair.FEE_ACCURACY();
+        uint256 MAX_FEE = _stablePair.FEE_ACCURACY();
         uint256 lAmountInWithFee = aTokenIn * (MAX_FEE - aFee);
         uint256 lNumerator = lAmountInWithFee * aReserveOut;
         uint256 lDenominator = aReserveIn * MAX_FEE + lAmountInWithFee;
@@ -66,7 +66,7 @@ contract StablePairTest is BaseTest {
     function testMint() public {
         // arrange
         uint256 lLpTokenTotalSupply = _stablePair.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1,) = _stablePair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _stablePair.getReserves();
         uint256 lOldLiquidity = lReserve0 + lReserve1;
         uint256 lLiquidityToAdd = 5e18;
 
@@ -185,8 +185,8 @@ contract StablePairTest is BaseTest {
         assertTrue(_stablePair.getCurrentA() != lOtherPair.getCurrentA());
 
         // sanity
-        (uint256 lReserve0_S, uint256 lReserve1_S,) = _stablePair.getReserves();
-        (uint256 lReserve0_O, uint256 lReserve1_O,) = lOtherPair.getReserves();
+        (uint256 lReserve0_S, uint256 lReserve1_S,,) = _stablePair.getReserves();
+        (uint256 lReserve0_O, uint256 lReserve1_O,,) = lOtherPair.getReserves();
         assertEq(lReserve0_S, lReserve0_O);
         assertEq(lReserve1_S, lReserve1_O);
 
@@ -236,8 +236,8 @@ contract StablePairTest is BaseTest {
         assertTrue(_stablePair.getCurrentA() != lOtherPair.getCurrentA());
 
         // sanity
-        (uint256 lReserve0_S, uint256 lReserve1_S,) = _stablePair.getReserves();
-        (uint256 lReserve0_O, uint256 lReserve1_O,) = lOtherPair.getReserves();
+        (uint256 lReserve0_S, uint256 lReserve1_S,,) = _stablePair.getReserves();
+        (uint256 lReserve0_O, uint256 lReserve1_O,,) = lOtherPair.getReserves();
         assertEq(lReserve0_S, lReserve0_O);
         assertEq(lReserve1_S, lReserve1_O);
 
@@ -308,7 +308,7 @@ contract StablePairTest is BaseTest {
             );
         }
 
-        (uint256 lReserve0, uint256 lReserve1,) = lPair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = lPair.getReserves();
         uint256 lTotalSupply = lPair.totalSupply();
 
         // act
@@ -367,7 +367,7 @@ contract StablePairTest is BaseTest {
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
-        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
             lAmountOut, lReserve0, lReserve1, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
         );
@@ -393,7 +393,7 @@ contract StablePairTest is BaseTest {
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
 
         // arrange
-        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
             lAmountOut, lReserve0, lReserve1, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
         );
@@ -563,7 +563,7 @@ contract StablePairTest is BaseTest {
 
         // arrange
         uint256 lSwapAmt = 10e18;
-        (uint256 lReserve0, uint256 lReserve1,) = _stablePair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _stablePair.getReserves();
 
         // act
         vm.prank(address(_factory));
@@ -648,7 +648,7 @@ contract StablePairTest is BaseTest {
         vm.startPrank(_alice);
         uint256 lLpTokenBalance = _stablePair.balanceOf(_alice);
         uint256 lLpTokenTotalSupply = _stablePair.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1,) = _stablePair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _stablePair.getReserves();
         address lToken0 = _stablePair.token0();
 
         // act
@@ -1043,7 +1043,7 @@ contract StablePairTest is BaseTest {
         // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
         // tokenA balance in the pool  : 170e18
         // tokenB balance in the pool : 30.10e18
-        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         assertEq(lReserve0, 170e18);
         assertEq(lReserve1, 30_102_419_348_114_679_723);
 
@@ -1058,7 +1058,7 @@ contract StablePairTest is BaseTest {
         // the attacker did not get more than what he started with
         assertLt(_tokenA.balanceOf(address(this)), lSwapAmt);
         // the pool was not worse off
-        (lReserve0, lReserve1,) = _stablePair.getReserves();
+        (lReserve0, lReserve1,,) = _stablePair.getReserves();
         assertGt(lReserve0, INITIAL_MINT_AMOUNT);
         assertEq(lReserve1, INITIAL_MINT_AMOUNT);
     }
@@ -1084,7 +1084,7 @@ contract StablePairTest is BaseTest {
         // Pool is imbalanced! Now trades from tokenB -> tokenA may be profitable in small sizes
         // tokenA balance in the pool  : 170e18
         // tokenB balance in the pool : 30.10e18
-        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         assertEq(lReserve0, 170e18);
         assertEq(lReserve1, 30_102_419_348_114_679_723);
 
@@ -1101,7 +1101,7 @@ contract StablePairTest is BaseTest {
         // the attacker got more than what he started with
         assertGt(_tokenA.balanceOf(address(this)), lSwapAmt);
         // the pool is worse off by 0.13%
-        (lReserve0, lReserve1,) = _stablePair.getReserves();
+        (lReserve0, lReserve1,,) = _stablePair.getReserves();
         assertEq(lReserve0, 99_871_702_539_906_228_887);
         assertEq(lReserve1, INITIAL_MINT_AMOUNT);
     }
@@ -1112,7 +1112,7 @@ contract StablePairTest is BaseTest {
 
     function testOracle_NoWriteInSameTimestamp() public {
         // arrange
-        uint16 lInitialIndex = _stablePair.index();
+        (,,, uint16 lInitialIndex) = _constantProductPair.getReserves();
         uint256 lAmountToSwap = 1e17;
 
         // act
@@ -1126,7 +1126,7 @@ contract StablePairTest is BaseTest {
         _stablePair.sync();
 
         // assert
-        uint16 lFinalIndex = _stablePair.index();
+        (,,, uint16 lFinalIndex) = _constantProductPair.getReserves();
         assertEq(lFinalIndex, lInitialIndex);
     }
 
@@ -1143,25 +1143,27 @@ contract StablePairTest is BaseTest {
         }
 
         // assert
-        assertEq(_stablePair.index(), 3);
+        (,,, uint16 lIndex) = _stablePair.getReserves();
+        assertEq(lIndex, 3);
     }
 
     function testWriteObservations() external {
         // arrange
         // swap 1
         _stepTime(1);
-        (uint256 lReserve0, uint256 lReserve1,) = _stablePair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _stablePair.getReserves();
         _tokenA.mint(address(_stablePair), 5e18);
         _stablePair.swap(5e18, true, address(this), "");
 
         // swap 2
         _stepTime(1);
-        (lReserve0, lReserve1,) = _stablePair.getReserves();
+        (lReserve0, lReserve1,,) = _stablePair.getReserves();
         _tokenA.mint(address(_stablePair), 5e18);
         _stablePair.swap(5e18, true, address(this), "");
 
         // sanity
-        assertEq(_stablePair.index(), 1);
+        (,,, uint16 lIndex) = _stablePair.getReserves();
+        assertEq(lIndex, 1);
 
         Observation memory lObs = _oracleCaller.observation(_stablePair, 0);
         assertTrue(lObs.logAccRawPrice == 0);
@@ -1194,10 +1196,11 @@ contract StablePairTest is BaseTest {
 
     function testOracle_OverflowAccPrice() public {
         // arrange - make the last observation close to overflowing
+        (,,, uint16 lIndex) = _stablePair.getReserves();
         _writeObservation(
-            _stablePair, _stablePair.index(), type(int112).max, type(int56).max, 0, uint32(block.timestamp)
+            _stablePair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp)
         );
-        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, _stablePair.index());
+        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
 
         // act
         uint256 lAmountToSwap = 5e18;
@@ -1208,21 +1211,24 @@ contract StablePairTest is BaseTest {
         _stablePair.sync();
 
         // assert - when it overflows it goes from a very positive number to a very negative number
-        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, _stablePair.index());
+        (,,, lIndex) = _stablePair.getReserves();
+        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
 
     function testOracle_OverflowAccLiquidity() public {
         // arrange
-        _writeObservation(_stablePair, _stablePair.index(), 0, 0, type(int56).max, uint32(block.timestamp));
-        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, _stablePair.index());
+        (,,, uint16 lIndex) = _stablePair.getReserves();
+        _writeObservation(_stablePair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp));
+        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
 
         // act
         _stepTime(5);
         _stablePair.sync();
 
         // assert
-        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, _stablePair.index());
+        (,,, lIndex) = _stablePair.getReserves();
+        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
         assertLt(lCurrObs.logAccLiquidity, lPrevObs.logAccLiquidity);
     }
 
@@ -1235,13 +1241,13 @@ contract StablePairTest is BaseTest {
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
 
-        (uint256 lReserve0_1, uint256 lReserve1_1,) = _stablePair.getReserves();
+        (uint256 lReserve0_1, uint256 lReserve1_1,,) = _stablePair.getReserves();
         uint256 lPrice1 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(5);
 
         _tokenA.mint(address(_stablePair), lAmountToSwap);
         _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
-        (uint256 lReserve0_2, uint256 lReserve1_2,) = _stablePair.getReserves();
+        (uint256 lReserve0_2, uint256 lReserve1_2,,) = _stablePair.getReserves();
         uint256 lPrice2 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
 
         _stepTime(5);
@@ -1283,14 +1289,14 @@ contract StablePairTest is BaseTest {
         // price = 0.4944
         _tokenA.mint(address(_stablePair), 100e18);
         _stablePair.swap(100e18, true, _bob, "");
-        (uint256 lReserve0_1, uint256 lReserve1_1,) = _stablePair.getReserves();
+        (uint256 lReserve0_1, uint256 lReserve1_1,,) = _stablePair.getReserves();
         uint256 lSpotPrice1 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(10);
 
         // price = 0.0000936563
         _tokenA.mint(address(_stablePair), 200e18);
         _stablePair.swap(200e18, true, _bob, "");
-        (uint256 lReserve0_2, uint256 lReserve1_2,) = _stablePair.getReserves();
+        (uint256 lReserve0_2, uint256 lReserve1_2,,) = _stablePair.getReserves();
         uint256 lSpotPrice2 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);
         _stablePair.sync();
@@ -1350,7 +1356,8 @@ contract StablePairTest is BaseTest {
         _stablePair.burn(address(this));
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(_stablePair, _stablePair.index());
+        (,,, uint16 lIndex) = _stablePair.getReserves();
+        Observation memory lObs0 = _oracleCaller.observation(_stablePair, lIndex);
         uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
         // we check that it is within 0.01% of accuracy
         // sqrt(INITIAL_MINT_AMOUNT * INITIAL_MINT_AMOUNT) == INITIAL_MINT_AMOUNT
@@ -1361,7 +1368,8 @@ contract StablePairTest is BaseTest {
         _stablePair.sync();
 
         // assert
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, _stablePair.index());
+        (,,, lIndex) = _stablePair.getReserves();
+        Observation memory lObs1 = _oracleCaller.observation(_stablePair, lIndex);
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
     }
@@ -1375,7 +1383,7 @@ contract StablePairTest is BaseTest {
         _stablePair.mint(address(this));
 
         // sanity
-        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         assertEq(lReserve0, type(uint104).max);
         assertEq(lReserve1, type(uint104).max);
 
@@ -1387,8 +1395,9 @@ contract StablePairTest is BaseTest {
         uint256 lTotalSupply = _stablePair.totalSupply();
         assertEq(lTotalSupply, uint256(type(uint104).max) * 2);
 
+        (,,, uint16 lIndex) = _stablePair.getReserves();
         Observation memory lObs0 = _oracleCaller.observation(_stablePair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, _stablePair.index());
+        Observation memory lObs1 = _oracleCaller.observation(_stablePair, lIndex);
         assertApproxEqRel(
             type(uint104).max,
             LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5),

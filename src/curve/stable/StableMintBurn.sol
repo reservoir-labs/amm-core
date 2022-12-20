@@ -88,7 +88,7 @@ contract StableMintBurn is ReservoirPair {
     function mint(address to) public _nonReentrant returns (uint256 liquidity) {
         _syncManaged();
 
-        (uint104 lReserve0, uint104 lReserve1,) = getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -130,7 +130,7 @@ contract StableMintBurn is ReservoirPair {
     function burn(address to) public _nonReentrant returns (uint256 amount0, uint256 amount1) {
         _syncManaged();
 
-        (uint256 lReserve0, uint256 lReserve1,) = getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
         uint256 liquidity = balanceOf[address(this)];
 
         (uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
@@ -145,7 +145,7 @@ contract StableMintBurn is ReservoirPair {
 
         _update(_totalToken0(), _totalToken1(), uint104(lReserve0), uint104(lReserve1));
 
-        lastInvariant = uint192(_computeLiquidity(_reserve0, _reserve1));
+        lastInvariant = uint192(_computeLiquidity(_slot0.reserve0, _slot0.reserve1));
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
@@ -236,7 +236,7 @@ contract StableMintBurn is ReservoirPair {
         internal
         override
     {
-        Observation storage previous = _observations[index];
+        Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(), lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier
@@ -253,8 +253,8 @@ contract StableMintBurn is ReservoirPair {
             int56 logAccClampedPrice =
                 previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
             int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
-            index += 1;
-            _observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
+            _slot0.index += 1;
+            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
         }
     }
 }

@@ -11,6 +11,13 @@ import { IPair } from "src/interfaces/IPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
 
+struct Slot0 {
+    uint104 reserve0;
+    uint104 reserve1;
+    uint32 blockTimestampLast;
+    uint16 index;
+}
+
 abstract contract Pair is IPair, UniswapV2ERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
@@ -37,10 +44,12 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     uint128 internal immutable token0PrecisionMultiplier;
     uint128 internal immutable token1PrecisionMultiplier;
 
-    uint104 internal _reserve0;
-    uint104 internal _reserve1;
-    uint32 internal _blockTimestampLast;
-    uint16 public index = type(uint16).max;
+    Slot0 internal _slot0 = Slot0({
+        reserve0: 0,
+        reserve1: 0,
+        blockTimestampLast: 0,
+        index: type(uint16).max
+    });
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint256).max;
@@ -67,10 +76,13 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
     }
 
-    function getReserves() public view returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast) {
-        rReserve0 = _reserve0;
-        rReserve1 = _reserve1;
-        rBlockTimestampLast = _blockTimestampLast;
+    function getReserves() public view returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex) {
+        Slot0 memory lSlot0 = _slot0;
+
+        rReserve0 = lSlot0.reserve0;
+        rReserve1 = lSlot0.reserve1;
+        rBlockTimestampLast = lSlot0.blockTimestampLast;
+        rIndex = lSlot0.index;
     }
 
     function setCustomSwapFee(uint256 _customSwapFee) external onlyFactory {

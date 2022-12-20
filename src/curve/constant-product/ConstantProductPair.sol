@@ -131,7 +131,7 @@ contract ConstantProductPair is ReservoirPair {
     function mint(address aTo) external _nonReentrant returns (uint256 rLiquidity) {
         _syncManaged(); // check asset-manager pnl
 
-        (uint104 lReserve0, uint104 lReserve1,) = getReserves(); // gas savings
+        (uint104 lReserve0, uint104 lReserve1,,) = getReserves(); // gas savings
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
         uint256 lAmount0 = lBalance0 - lReserve0;
@@ -149,7 +149,7 @@ contract ConstantProductPair is ReservoirPair {
         _mint(aTo, rLiquidity);
 
         _update(lBalance0, lBalance1, lReserve0, lReserve1);
-        if (lFeeOn) kLast = uint224(_reserve0) * _reserve1; // reserve0 and reserve1 are up-to-date
+        if (lFeeOn) kLast = uint224(_slot0.reserve0) * _slot0.reserve1; // reserve0 and reserve1 are up-to-date
         emit Mint(msg.sender, lAmount0, lAmount1);
 
         _managerCallback();
@@ -159,7 +159,7 @@ contract ConstantProductPair is ReservoirPair {
     function burn(address aTo) external _nonReentrant returns (uint256 rAmount0, uint256 rAmount1) {
         _syncManaged(); // check asset-manager pnl
 
-        (uint104 lReserve0, uint104 lReserve1,) = getReserves(); // gas savings
+        (uint104 lReserve0, uint104 lReserve1,,) = getReserves(); // gas savings
         uint256 liquidity = balanceOf[address(this)];
 
         bool lFeeOn = _mintFee(lReserve0, lReserve1);
@@ -175,7 +175,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lBalance1 = _totalToken1();
 
         _update(lBalance0, lBalance1, lReserve0, lReserve1);
-        if (lFeeOn) kLast = uint224(_reserve0) * _reserve1; // reserve0 and reserve1 are up-to-date
+        if (lFeeOn) kLast = uint224(_slot0.reserve0) * _slot0.reserve1; // reserve0 and reserve1 are up-to-date
         emit Burn(msg.sender, rAmount0, rAmount1);
 
         _managerCallback();
@@ -188,7 +188,7 @@ contract ConstantProductPair is ReservoirPair {
         returns (uint256 rAmountOut)
     {
         require(aAmount != 0, "CP: AMOUNT_ZERO");
-        (uint104 lReserve0, uint104 lReserve1,) = getReserves(); // gas savings
+        (uint104 lReserve0, uint104 lReserve1,,) = getReserves(); // gas savings
         uint256 lAmountIn;
         address lTokenOut;
 
@@ -256,7 +256,7 @@ contract ConstantProductPair is ReservoirPair {
         internal
         override
     {
-        Observation storage previous = _observations[index];
+        Observation storage previous = _observations[_slot0.index];
 
         (uint256 lCurrRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
             aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier
@@ -274,8 +274,8 @@ contract ConstantProductPair is ReservoirPair {
             int56 logAccClampedPrice =
                 previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
             int56 logAccLiq = previous.logAccLiquidity + int56(lCurrLogLiq) * int56(int256(uint256(aTimeElapsed)));
-            index += 1;
-            _observations[index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
+            _slot0.index += 1;
+            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
         }
     }
 }

@@ -151,7 +151,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
         address lToken0 = lPair.token0();
         address lToken1 = lPair.token1();
-        (uint104 lReserve0, uint104 lReserve1,) = lPair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = lPair.getReserves();
 
         uint104 lToken0Managed = _getBalance(lPair, lToken0);
         uint104 lToken1Managed = _getBalance(lPair, lToken1);

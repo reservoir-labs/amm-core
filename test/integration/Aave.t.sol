@@ -317,7 +317,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testGetBalance(uint256 aAmountToManage) public allNetworks allPairs {
         // assume
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManage = int256(bound(aAmountToManage, 0, lReserveUSDC));
 
@@ -358,7 +358,7 @@ contract AaveIntegrationTest is BaseTest {
     {
         // assume
         ConstantProductPair lOtherPair = _createOtherPair();
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1, lReserveUSDC));
         int256 lAmountToManageOther = int256(bound(aAmountToManage2, 1, lReserveUSDC));
@@ -386,7 +386,7 @@ contract AaveIntegrationTest is BaseTest {
         // assume
         ConstantProductPair lOtherPair = _createOtherPair();
         (address lAaveToken,,) = _dataProvider.getReserveTokensAddresses(USDC);
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1, lReserveUSDC));
         int256 lAmountToManageOther = int256(bound(aAmountToManage2, 1, lReserveUSDC));
@@ -421,7 +421,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testShares(uint256 aAmountToManage) public allNetworks allPairs {
         // assume
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManage = int256(bound(aAmountToManage, 0, lReserveUSDC));
 
@@ -447,7 +447,7 @@ contract AaveIntegrationTest is BaseTest {
         allPairs
     {
         // assume
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManage1 = int256(bound(aAmountToManage1, 100, lReserveUSDC / 2));
         int256 lAmountToManage2 = int256(bound(aAmountToManage2, 100, lReserveUSDC / 2));
@@ -503,14 +503,14 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         uint256 lNewAmount = _manager.getBalance(_pair, USDC);
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(lNewAmount, lReserveUSDC * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100);
     }
 
     function testAfterLiquidityEvent_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs {
         // assume
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         uint256 lInitialAmount =
             bound(aInitialAmount, lReserveUSDC * (_manager.upperThreshold() + 2) / 100, lReserveUSDC);
@@ -525,7 +525,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         uint256 lNewAmount = _manager.getBalance(_pair, USDC);
-        (uint256 lReserve0After, uint256 lReserve1After,) = _pair.getReserves();
+        (uint256 lReserve0After, uint256 lReserve1After,,) = _pair.getReserves();
         uint256 lReserveUSDCAfter = _pair.token0() == USDC ? lReserve0After : lReserve1After;
         assertTrue(
             MathUtils.within1(
@@ -593,7 +593,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert - burn succeeds but no assets should have been moved
         (address lAaveToken,,) = _dataProvider.getReserveTokensAddresses(USDC);
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
 
         assertGt(IERC20(USDC).balanceOf(address(this)), 0);
@@ -618,7 +618,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lAaveToken,,) = _dataProvider.getReserveTokensAddresses(USDC);
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
 
         assertGt(IERC20(USDC).balanceOf(address(this)), 0);
@@ -674,7 +674,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testSwap_ReturnAsset() public allNetworks allPairs {
         // arrange
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         (uint256 lReserveUSDC, uint256 lReserveTokenA) =
             _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         // manage half
@@ -700,7 +700,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lAaveToken,,) = _dataProvider.getReserveTokensAddresses(USDC);
-        (lReserve0, lReserve1,) = _pair.getReserves();
+        (lReserve0, lReserve1,,) = _pair.getReserves();
         lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT / 2 + 10);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), 0);
@@ -713,7 +713,7 @@ contract AaveIntegrationTest is BaseTest {
     // when the pool is paused, attempts to withdraw should fail and the swap should fail too
     function testSwap_ReturnAsset_PausedFail() public allNetworks allPairs {
         // arrange
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         (uint256 lReserveUSDC, uint256 lReserveTokenA) =
             _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         // manage half
@@ -739,7 +739,7 @@ contract AaveIntegrationTest is BaseTest {
     // the amount requested is within the balance of the pair, no need to return asset
     function testSwap_NoReturnAsset() public allNetworks allPairs {
         // arrange
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         (uint256 lReserveUSDC, uint256 lReserveTokenA) =
             _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
         // manage half
@@ -758,7 +758,7 @@ contract AaveIntegrationTest is BaseTest {
         _pair.swap(lOutputAmt, false, address(this), bytes(""));
 
         // assert
-        (lReserve0, lReserve1,) = _pair.getReserves();
+        (lReserve0, lReserve1,,) = _pair.getReserves();
         lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(IERC20(USDC).balanceOf(address(this)), MINT_AMOUNT / 2);
         assertEq(IERC20(USDC).balanceOf(address(_pair)), 0);
@@ -768,7 +768,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testBurn_ReturnAsset() public allNetworks allPairs {
         // arrange
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         // manage half
         _manager.adjustManagement(
@@ -796,7 +796,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testBurn_ReturnAsset_PausedFail() public allNetworks allPairs {
         // arrange
-        (uint256 lReserve0, uint256 lReserve1,) = _pair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         // manage half
         _manager.adjustManagement(

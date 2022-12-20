@@ -90,13 +90,13 @@ contract AssetManagedPairTest is BaseTest {
         address lToken1 = _pair.token1();
 
         // sanity
-        (uint104 lReserve0, uint104 lReserve1,) = _pair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _pair.getReserves();
         uint256 lBal0Before = IERC20(lToken0).balanceOf(address(_pair));
         uint256 lBal1Before = IERC20(lToken1).balanceOf(address(_pair));
 
         _manager.adjustManagement(_pair, 20e18, 20e18);
 
-        (uint104 lReserve0_1, uint104 lReserve1_1,) = _pair.getReserves();
+        (uint104 lReserve0_1, uint104 lReserve1_1,,) = _pair.getReserves();
         uint256 lBal0After = IERC20(lToken0).balanceOf(address(_pair));
         uint256 lBal1After = IERC20(lToken1).balanceOf(address(_pair));
 
@@ -113,7 +113,7 @@ contract AssetManagedPairTest is BaseTest {
         // act
         _manager.adjustManagement(_pair, lAmount0Decrease, lAmount1Decrease);
 
-        (uint104 lReserve0_2, uint104 lReserve1_2,) = _pair.getReserves();
+        (uint104 lReserve0_2, uint104 lReserve1_2,,) = _pair.getReserves();
 
         // assert
         assertEq(uint256(lReserve0_2), lReserve0);
@@ -325,7 +325,7 @@ contract AssetManagedPairTest is BaseTest {
         // assert
         assertEq(_manager.getBalance(_stablePair, lToken0), lNewManagedBalance0);
         assertEq(_manager.getBalance(_stablePair, lToken1), lNewManagedBalance1);
-        (uint104 lReserve0, uint104 lReserve1,) = _stablePair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         assertTrue(
             MathUtils.within1(lReserve0, (INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18)
         );
@@ -354,10 +354,35 @@ contract AssetManagedPairTest is BaseTest {
         _pair.sync();
 
         // assert
-        (uint104 lReserve0, uint104 lReserve1,) = _pair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _pair.getReserves();
         assertEq(_pair.token0Managed(), lAmount0NewBalance);
         assertEq(_pair.token1Managed(), lAmount1NewBalance);
         assertEq(lReserve0, INITIAL_MINT_AMOUNT - uint256(lAmount0Managed) + lAmount0NewBalance);
         assertEq(lReserve1, INITIAL_MINT_AMOUNT - uint256(lAmount1Managed) + lAmount1NewBalance);
+    }
+
+    function testBurn_AfterAlmostTotalLoss() external allPairs {
+        // assume
+        uint256 lNewManagedBalance0 = 1;
+        uint256 lNewManagedBalance1 = 1;
+
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), uint104(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, address(_tokenB), uint104(lNewManagedBalance1)); // some amount lost
+
+        // act
+        uint256 lLpTokenBal = _pair.balanceOf(_alice);
+        uint256 lTotalSupply = _pair.totalSupply();
+        vm.prank(_alice);
+        _pair.transfer(address(_pair), lLpTokenBal);
+        _pair.burn(address(this));
+
+        // assert - the burner gets less than in the case where the loss didn't happen
+        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
     }
 }

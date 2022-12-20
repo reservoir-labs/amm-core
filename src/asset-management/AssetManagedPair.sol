@@ -46,14 +46,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
             emit ProfitReported(token, lProfit);
 
-            token == token0 ? _reserve0 += lProfit : _reserve1 += lProfit;
+            token == token0 ? _slot0.reserve0 += lProfit : _slot0.reserve1 += lProfit;
         } else if (newBalance < prevBalance) {
             // report loss
             uint104 lLoss = prevBalance - newBalance;
 
             emit LossReported(token, lLoss);
 
-            token == token0 ? _reserve0 -= lLoss : _reserve1 -= lLoss;
+            token == token0 ? _slot0.reserve0 -= lLoss : _slot0.reserve1 -= lLoss;
         }
         // else do nothing balance is equal
     }

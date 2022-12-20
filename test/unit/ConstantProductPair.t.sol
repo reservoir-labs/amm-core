@@ -65,7 +65,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // arrange
         uint256 lTotalSupplyLpToken = _constantProductPair.totalSupply();
         uint256 lLiquidityToAdd = 5e18;
-        (uint256 reserve0,,) = _constantProductPair.getReserves();
+        (uint256 reserve0,,,) = _constantProductPair.getReserves();
 
         // act
         _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
@@ -121,7 +121,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testSwap() public {
         // arrange
-        (uint256 reserve0, uint256 reserve1,) = _constantProductPair.getReserves();
+        (uint256 reserve0, uint256 reserve1,,) = _constantProductPair.getReserves();
         uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, DEFAULT_SWAP_FEE_CP);
 
         // act
@@ -208,7 +208,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setCustomSwapFee(0);
-        (uint256 lReserve0, uint256 lReserve1,) = _constantProductPair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _constantProductPair.getReserves();
         uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
 
         // act - exact token1 out
@@ -229,7 +229,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         // 1 more than the max
         uint256 lAmountOut = lMaxOutputAmt + 1;
-        (uint256 lReserve0, uint256 lReserve1,) = _constantProductPair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _constantProductPair.getReserves();
         uint256 lAmountIn = _calculateInput(lReserve0, lReserve1, lAmountOut, _constantProductPair.swapFee());
 
         // act & assert
@@ -243,7 +243,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         vm.startPrank(_alice);
         uint256 lLpTokenBalance = _constantProductPair.balanceOf(_alice);
         uint256 lLpTokenTotalSupply = _constantProductPair.totalSupply();
-        (uint256 lReserve0, uint256 lReserve1,) = _constantProductPair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = _constantProductPair.getReserves();
 
         // act
         _constantProductPair.transfer(address(_constantProductPair), _constantProductPair.balanceOf(_alice));
@@ -275,7 +275,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testOracle_NoWriteInSameTimestamp() public {
         // arrange
-        uint16 lInitialIndex = _constantProductPair.index();
+        (,,, uint16 lInitialIndex) = _constantProductPair.getReserves();
         uint256 lAmountToSwap = 1e17;
 
         // act
@@ -289,7 +289,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.sync();
 
         // assert
-        uint16 lFinalIndex = _constantProductPair.index();
+        (,,, uint16 lFinalIndex) = _constantProductPair.getReserves();
         assertEq(lFinalIndex, lInitialIndex);
     }
 
@@ -307,7 +307,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         }
 
         // assert
-        assertEq(_constantProductPair.index(), 3);
+        (,,, uint256 lIndex) = _constantProductPair.getReserves();
+        assertEq(lIndex, 3);
     }
 
     function testWriteObservations() external {
@@ -323,7 +324,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.swap(1e17, true, address(this), "");
 
         // sanity
-        assertEq(_constantProductPair.index(), 1);
+        (,,, uint256 lIndex) = _constantProductPair.getReserves();
+        assertEq(lIndex, 1);
 
         Observation memory lObs = _oracleCaller.observation(_constantProductPair, 0);
         assertTrue(lObs.logAccRawPrice == 0);
@@ -352,15 +354,16 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testOracle_OverflowAccPrice() public {
         // arrange - make the last observation close to overflowing
+        (,,, uint16 lIndex) = _constantProductPair.getReserves();
         _writeObservation(
             _constantProductPair,
-            _constantProductPair.index(),
+            lIndex,
             type(int112).max,
             type(int56).max,
             0,
             uint32(block.timestamp)
         );
-        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
 
         // act
         uint256 lAmountToSwap = 1e18;
@@ -371,23 +374,26 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.sync();
 
         // assert - when it overflows it goes from a very positive number to a very negative number
-        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        (,,, lIndex) = _constantProductPair.getReserves();
+        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, lIndex);
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
 
     function testOracle_OverflowAccLiquidity() public {
         // arrange
+        (,,, uint16 lIndex) = _constantProductPair.getReserves();
         _writeObservation(
-            _constantProductPair, _constantProductPair.index(), 0, 0, type(int56).max, uint32(block.timestamp)
+            _constantProductPair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp)
         );
-        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
 
         // act
         _stepTime(5);
         _constantProductPair.sync();
 
         // assert
-        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        (,,, lIndex) = _constantProductPair.getReserves();
+        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, lIndex);
         assertLt(lCurrObs.logAccLiquidity, lPrevObs.logAccLiquidity);
     }
 
@@ -400,13 +406,13 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
 
-        (uint256 lReserve0_1, uint256 lReserve1_1,) = _constantProductPair.getReserves();
+        (uint256 lReserve0_1, uint256 lReserve1_1,,) = _constantProductPair.getReserves();
         uint256 lPrice1 = lReserve1_1 * 1e18 / lReserve0_1;
         _stepTime(5);
 
         _tokenA.mint(address(_constantProductPair), lAmountToSwap);
         _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
-        (uint256 lReserve0_2, uint256 lReserve1_2,) = _constantProductPair.getReserves();
+        (uint256 lReserve0_2, uint256 lReserve1_2,,) = _constantProductPair.getReserves();
         uint256 lPrice2 = lReserve1_2 * 1e18 / lReserve0_2;
 
         _stepTime(5);
@@ -526,7 +532,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.burn(address(this));
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        (,,, uint16 lIndex) = _constantProductPair.getReserves();
+        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, lIndex);
         uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
         // we check that it is within 0.01% of accuracy
         assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
@@ -537,7 +544,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.sync();
 
         // assert
-        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        (,,, lIndex) = _constantProductPair.getReserves();
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, lIndex);
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
     }
@@ -552,7 +560,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.mint(address(this));
 
         // sanity
-        (uint104 lReserve0, uint104 lReserve1,) = _constantProductPair.getReserves();
+        (uint104 lReserve0, uint104 lReserve1,,) = _constantProductPair.getReserves();
         assertEq(lReserve0, type(uint104).max);
         assertEq(lReserve1, type(uint104).max);
 
@@ -565,8 +573,9 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         uint256 lTotalSupply = _constantProductPair.totalSupply();
         assertEq(lTotalSupply, type(uint104).max);
 
+        (,,, uint16 lIndex) = _constantProductPair.getReserves();
         Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, _constantProductPair.index());
+        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, lIndex);
         assertApproxEqRel(
             type(uint104).max,
             LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5),
