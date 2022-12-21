@@ -49,7 +49,12 @@ abstract contract BaseTest is Test {
                     _bytesToHex(abi.encodePacked(keccak256(type(StableMintBurn).creationCode)))
                 );
             }
-        } catch { }
+        } catch {
+            vm.writeFile(
+                "scripts/optimized-stable-mint-burn-key",
+                _bytesToHex(abi.encodePacked(keccak256(type(StableMintBurn).creationCode)))
+            );
+        }
 
         // set shared variables
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);

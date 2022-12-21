@@ -1,11 +1,14 @@
 [profile.default]
-solc           = "0.8.17"
-bytecode_hash  = "none"
+solc = "0.8.17"
+bytecode_hash = "none"
 optimizer_runs = 1_000_000
-remappings     = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
-match_path     = "test/unit/*.sol"
-verbosity      = 3
-fs_permissions = [{ access = "write", path = "./scripts/unoptimized-stable-mint-burn-key" }]
+remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
+match_path = "test/unit/*.sol"
+verbosity = 3
+fs_permissions = [
+    { access = "write", path = "./scripts/optimized-stable-mint-burn-key" },
+    { access = "write", path = "./scripts/unoptimized-stable-mint-burn-key" },
+]
 
 [profile.integration]
 match_path = "test/integration/*.sol"
