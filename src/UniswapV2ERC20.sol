@@ -1,7 +1,6 @@
 /* solhint-disable const-name-snakecase */
 pragma solidity ^0.8.0;
 
-import "forge-std/console2.sol";
 import { IUniswapV2ERC20 } from "src/interfaces/IUniswapV2ERC20.sol";
 
 // TODO: Is UniswapV2ERC20 still the best ERC-20 to inherit from or should we

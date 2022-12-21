@@ -56,14 +56,6 @@ contract StableMintBurn is ReservoirPair {
         );
     }
 
-    modifier _nonReentrant() override {
-        require(_locked == 1, "REENTRANCY");
-
-        _locked = 2;
-        _;
-        _locked = 1;
-    }
-
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
     function _nonOptimalMintFee(uint256 _amount0, uint256 _amount1, uint256 lReserve0, uint256 lReserve1)
         internal
@@ -85,10 +77,11 @@ contract StableMintBurn is ReservoirPair {
     // TODO: public -> external?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) public _nonReentrant returns (uint256 liquidity) {
+    function mint(address to) public returns (uint256 liquidity) {
+        // NB: Must sync management PNL before we load reserves.
         _syncManaged();
+        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
 
-        (uint104 lReserve0, uint104 lReserve1,,) = getReserves();
         (uint256 balance0, uint256 balance1) = _balance();
 
         uint256 newLiq = _computeLiquidity(balance0, balance1);
@@ -123,14 +116,18 @@ contract StableMintBurn is ReservoirPair {
         emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
+        _unlock();
     }
 
     // TODO: public -> external?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public _nonReentrant returns (uint256 amount0, uint256 amount1) {
+    function burn(address to) public returns (uint256 amount0, uint256 amount1) {
+        // NB: Must sync management PNL before we load reserves.
+        // PERF: _syncManaged could take lReserve0, lReserve1 in as an argument
+        //       and return the modified reserves?
         _syncManaged();
+        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
 
-        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
         uint256 liquidity = balanceOf[address(this)];
 
         (uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
@@ -151,6 +148,7 @@ contract StableMintBurn is ReservoirPair {
         emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
+        _unlock();
     }
 
     /// @inheritdoc IPair

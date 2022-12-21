@@ -67,14 +67,6 @@ contract StablePair is ReservoirPair {
         );
     }
 
-    modifier _nonReentrant() override {
-        require(_locked == 1, "REENTRANCY");
-
-        _locked = 2;
-        _;
-        _locked = 1;
-    }
-
     function rampA(uint64 aFutureARaw, uint64 aFutureATime) external onlyFactory {
         require(aFutureARaw >= StableMath.MIN_A && aFutureARaw <= StableMath.MAX_A, "SP: INVALID_A");
 
@@ -157,11 +149,10 @@ contract StablePair is ReservoirPair {
     /// @inheritdoc IPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
         external
-        _nonReentrant
         returns (uint256 amountOut)
     {
+        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
-        (uint104 lReserve0, uint104 lReserve1,,) = getReserves();
         uint256 amountIn;
         address tokenOut;
 
@@ -217,6 +208,7 @@ contract StablePair is ReservoirPair {
 
         _update(lBalance0, lBalance1, lReserve0, lReserve1);
         emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
+        _unlock();
     }
 
     function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)

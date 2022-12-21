@@ -356,12 +356,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _constantProductPair.getReserves();
         _writeObservation(
-            _constantProductPair,
-            lIndex,
-            type(int112).max,
-            type(int56).max,
-            0,
-            uint32(block.timestamp)
+            _constantProductPair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp % 2 ** 31)
         );
         Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
 
@@ -382,9 +377,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testOracle_OverflowAccLiquidity() public {
         // arrange
         (,,, uint16 lIndex) = _constantProductPair.getReserves();
-        _writeObservation(
-            _constantProductPair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp)
-        );
+        _writeObservation(_constantProductPair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp));
         Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
 
         // act

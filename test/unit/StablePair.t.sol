@@ -1197,9 +1197,7 @@ contract StablePairTest is BaseTest {
     function testOracle_OverflowAccPrice() public {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _stablePair.getReserves();
-        _writeObservation(
-            _stablePair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp)
-        );
+        _writeObservation(_stablePair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp));
         Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
 
         // act

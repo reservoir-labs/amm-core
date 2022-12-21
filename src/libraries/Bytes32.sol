@@ -18,10 +18,6 @@ library Bytes32Lib {
         return bytes32(uint256(uint160(aValue)));
     }
 
-    function toBytes4(bytes32 aValue) internal pure returns (bytes4) {
-        return bytes4(uint32(uint256(aValue)));
-    }
-
     function toBool(bytes32 aValue) internal pure returns (bool) {
         return uint256(aValue) % 2 == 1;
     }

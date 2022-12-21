@@ -122,6 +122,7 @@ abstract contract BaseTest is Test {
         int56 aLiq,
         uint32 aTime
     ) internal {
+        require(aTime < 2 ** 31, "TIMESTAMP TOO BIG");
         bytes32 lEncoded = bytes32(
             bytes.concat(
                 bytes4(aTime), bytes7(uint56(aLiq)), bytes7(uint56(aClampedPrice)), bytes14(uint112(aRawPrice))

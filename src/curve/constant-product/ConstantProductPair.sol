@@ -26,18 +26,8 @@ contract ConstantProductPair is ReservoirPair {
 
     uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
-    uint256 private _locked = 1;
-
     // solhint-disable-next-line no-empty-blocks
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
-
-    modifier _nonReentrant() override {
-        require(_locked == 1, "REENTRANCY");
-
-        _locked = 2;
-        _;
-        _locked = 1;
-    }
 
     // TODO: Use library function to DRY?
     function _getAmountOut(uint256 aAmountIn, uint256 aReserveIn, uint256 aReserveOut, uint256 aSwapFee)
@@ -128,10 +118,11 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function mint(address aTo) external _nonReentrant returns (uint256 rLiquidity) {
+    function mint(address aTo) external returns (uint256 rLiquidity) {
+        // NB: Must sync management PNL before we load reserves.
         _syncManaged(); // check asset-manager pnl
+        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
 
-        (uint104 lReserve0, uint104 lReserve1,,) = getReserves(); // gas savings
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
         uint256 lAmount0 = lBalance0 - lReserve0;
@@ -153,13 +144,15 @@ contract ConstantProductPair is ReservoirPair {
         emit Mint(msg.sender, lAmount0, lAmount1);
 
         _managerCallback();
+        _unlock();
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function burn(address aTo) external _nonReentrant returns (uint256 rAmount0, uint256 rAmount1) {
+    function burn(address aTo) external returns (uint256 rAmount0, uint256 rAmount1) {
+        // NB: Must sync management PNL before we load reserves.
         _syncManaged(); // check asset-manager pnl
+        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
 
-        (uint104 lReserve0, uint104 lReserve1,,) = getReserves(); // gas savings
         uint256 liquidity = balanceOf[address(this)];
 
         bool lFeeOn = _mintFee(lReserve0, lReserve1);
@@ -179,16 +172,16 @@ contract ConstantProductPair is ReservoirPair {
         emit Burn(msg.sender, rAmount0, rAmount1);
 
         _managerCallback();
+        _unlock();
     }
 
     /// @inheritdoc IPair
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
-        _nonReentrant
         returns (uint256 rAmountOut)
     {
+        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
-        (uint104 lReserve0, uint104 lReserve1,,) = getReserves(); // gas savings
         uint256 lAmountIn;
         address lTokenOut;
 
@@ -246,6 +239,7 @@ contract ConstantProductPair is ReservoirPair {
 
         _update(lBalance0, lBalance1, lReserve0, lReserve1);
         emit Swap(msg.sender, lTokenOut == token1, actualAmountIn, rAmountOut, aTo);
+        _unlock();
     }
 
     /*//////////////////////////////////////////////////////////////////////////

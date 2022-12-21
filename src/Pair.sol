@@ -14,7 +14,7 @@ import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
 struct Slot0 {
     uint104 reserve0;
     uint104 reserve1;
-    uint32 blockTimestampLast;
+    uint32 packedTimestamp;
     uint16 index;
 }
 
@@ -44,12 +44,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     uint128 internal immutable token0PrecisionMultiplier;
     uint128 internal immutable token1PrecisionMultiplier;
 
-    Slot0 internal _slot0 = Slot0({
-        reserve0: 0,
-        reserve1: 0,
-        blockTimestampLast: 0,
-        index: type(uint16).max
-    });
+    Slot0 internal _slot0 = Slot0({reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max});
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint256).max;
@@ -76,12 +71,51 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
     }
 
-    function getReserves() public view returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex) {
+    function _splitSlot0Timestamp(uint32 rRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
+        rLocked = rRawTimestamp >> 31 == 1;
+        rTimestamp = rRawTimestamp & 0x7FFFFFFF;
+    }
+
+    function _writeSlot0Timestamp(uint32 aTimestamp, bool aLocked) internal {
+        // PERF: Shift in declaration might be cheaper/optimized.
+        uint32 lLocked = aLocked ? uint32(1) : uint32(0);
+        _slot0.packedTimestamp = aTimestamp | (lLocked << 31);
+    }
+
+    function _lockAndLoad()
+        internal
+        returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex)
+    {
+        Slot0 memory lSlot0 = _slot0;
+
+        // Load slot0 values.
+        bool lLock;
+        rReserve0 = lSlot0.reserve0;
+        rReserve1 = lSlot0.reserve1;
+        (rBlockTimestampLast, lLock) = _splitSlot0Timestamp(lSlot0.packedTimestamp);
+        rIndex = lSlot0.index;
+
+        // Acquire reentrancy lock.
+        require(!lLock, "REENTRANCY");
+        _writeSlot0Timestamp(rBlockTimestampLast, true);
+    }
+
+    function _unlock() internal {
+        // PERF: We should pass the timestamp in instead of reading it again.
+        (uint32 lBlockTimestampLast,) = _splitSlot0Timestamp(_slot0.packedTimestamp);
+        _writeSlot0Timestamp(lBlockTimestampLast, false);
+    }
+
+    function getReserves()
+        public
+        view
+        returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex)
+    {
         Slot0 memory lSlot0 = _slot0;
 
         rReserve0 = lSlot0.reserve0;
         rReserve1 = lSlot0.reserve1;
-        rBlockTimestampLast = lSlot0.blockTimestampLast;
+        (rBlockTimestampLast,) = _splitSlot0Timestamp(lSlot0.packedTimestamp);
         rIndex = lSlot0.index;
     }
 

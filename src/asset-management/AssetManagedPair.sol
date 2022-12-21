@@ -46,6 +46,7 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
             emit ProfitReported(token, lProfit);
 
+            // PERF: Are these two SSTOREs?
             token == token0 ? _slot0.reserve0 += lProfit : _slot0.reserve1 += lProfit;
         } else if (newBalance < prevBalance) {
             // report loss
@@ -53,6 +54,7 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
 
             emit LossReported(token, lLoss);
 
+            // PERF: Are these two SSTOREs?
             token == token0 ? _slot0.reserve0 -= lLoss : _slot0.reserve1 -= lLoss;
         }
         // else do nothing balance is equal
@@ -77,7 +79,7 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         if (address(assetManager) == address(0)) {
             return;
         }
-        // TODO: Unsure how I fell about this, probably okay but assetManager
+        // TODO: Unsure how I feel about this, probably okay but assetManager
         // is under our control so not sure if we can't just assume this call
         // won't fail?
         //
