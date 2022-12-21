@@ -39,37 +39,44 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(address token, uint104 prevBalance, uint104 newBalance) internal {
-        if (newBalance > prevBalance) {
+    function _handleReport(address aToken, uint104 aReserve, uint104 lPrevBalance, uint104 lNewBalance)
+        private
+        returns (uint104 rUpdatedReserve)
+    {
+        if (lNewBalance > lPrevBalance) {
             // report profit
-            uint104 lProfit = newBalance - prevBalance;
+            uint104 lProfit = lNewBalance - lPrevBalance;
 
-            emit ProfitReported(token, lProfit);
+            emit ProfitReported(aToken, lProfit);
 
-            // PERF: Are these two SSTOREs?
-            token == token0 ? _slot0.reserve0 += lProfit : _slot0.reserve1 += lProfit;
-        } else if (newBalance < prevBalance) {
+            rUpdatedReserve = aReserve + lProfit;
+        } else if (lNewBalance < lPrevBalance) {
             // report loss
-            uint104 lLoss = prevBalance - newBalance;
+            uint104 lLoss = lPrevBalance - lNewBalance;
 
-            emit LossReported(token, lLoss);
+            emit LossReported(aToken, lLoss);
 
-            // PERF: Are these two SSTOREs?
-            token == token0 ? _slot0.reserve0 -= lLoss : _slot0.reserve1 -= lLoss;
+            rUpdatedReserve = aReserve - lLoss;
+        } else {
+            // Balances are equal, return the original reserve.
+            rUpdatedReserve = aReserve;
         }
-        // else do nothing balance is equal
     }
 
-    function _syncManaged() internal {
+    function _syncManaged(uint104 aReserve0, uint104 aReserve1)
+        internal
+        returns (uint104 rReserve0, uint104 rReserve1)
+    {
         if (address(assetManager) == address(0)) {
-            return;
+            // PERF: Is assigning to rReserve0 cheaper?
+            return (aReserve0, aReserve1);
         }
 
         uint104 lToken0Managed = assetManager.getBalance(this, token0);
         uint104 lToken1Managed = assetManager.getBalance(this, token1);
 
-        _handleReport(token0, token0Managed, lToken0Managed);
-        _handleReport(token1, token1Managed, lToken1Managed);
+        rReserve0 = _handleReport(token0, aReserve0, token0Managed, lToken0Managed);
+        rReserve1 = _handleReport(token1, aReserve1, token1Managed, lToken1Managed);
 
         token0Managed = lToken0Managed;
         token1Managed = lToken1Managed;

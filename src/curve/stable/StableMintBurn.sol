@@ -79,14 +79,14 @@ contract StableMintBurn is ReservoirPair {
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) public returns (uint256 liquidity) {
         // NB: Must sync management PNL before we load reserves.
-        _syncManaged();
         (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
-        (uint256 balance0, uint256 balance1) = _balance();
+        (uint256 lBalance0, uint256 lBalance1) = _balance();
 
-        uint256 newLiq = _computeLiquidity(balance0, balance1);
-        uint256 amount0 = balance0 - lReserve0;
-        uint256 amount1 = balance1 - lReserve1;
+        uint256 newLiq = _computeLiquidity(lBalance0, lBalance1);
+        uint256 amount0 = lBalance0 - lReserve0;
+        uint256 amount1 = lBalance1 - lReserve1;
 
         (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, lReserve0, lReserve1);
         lReserve0 += uint104(fee0);
@@ -103,7 +103,7 @@ contract StableMintBurn is ReservoirPair {
         }
         require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(to, liquidity);
-        _update(balance0, balance1, lReserve0, lReserve1);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1);
 
         // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
         // places)
@@ -116,7 +116,6 @@ contract StableMintBurn is ReservoirPair {
         emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
-        _unlock(_currentTime());
     }
 
     // TODO: public -> external?
@@ -125,8 +124,8 @@ contract StableMintBurn is ReservoirPair {
         // NB: Must sync management PNL before we load reserves.
         // PERF: _syncManaged could take lReserve0, lReserve1 in as an argument
         //       and return the modified reserves?
-        _syncManaged();
         (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         uint256 liquidity = balanceOf[address(this)];
 
@@ -140,15 +139,15 @@ contract StableMintBurn is ReservoirPair {
         _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
         _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
 
-        _update(_totalToken0(), _totalToken1(), uint104(lReserve0), uint104(lReserve1));
+        _updateAndUnlock(_totalToken0(), _totalToken1(), uint104(lReserve0), uint104(lReserve1));
 
+        // TODO: Just use balance0, balance1 to computeLiquidity
         lastInvariant = uint192(_computeLiquidity(_slot0.reserve0, _slot0.reserve1));
         lastInvariantAmp = _getCurrentAPrecise();
 
         emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
-        _unlock(_currentTime());
     }
 
     /// @inheritdoc IPair

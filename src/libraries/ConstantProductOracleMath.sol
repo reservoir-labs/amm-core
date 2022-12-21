@@ -25,8 +25,8 @@ library ConstantProductOracleMath {
     /**
      * @notice Calculates the spot price of token1/token0 for the constant product pair
      * @dev Minimum price is 1e-18, as we do not round to zero
-     * @param reserve0 should never be 0, as checked by _update()
-     * @param reserve1 should never be 0, as checked by _update()
+     * @param reserve0 should never be 0, as checked by _updateAndUnlock()
+     * @param reserve1 should never be 0, as checked by _updateAndUnlock()
      */
     function calcLogPrice(uint256 reserve0, uint256 reserve1)
         internal

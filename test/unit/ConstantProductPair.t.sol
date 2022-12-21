@@ -642,6 +642,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testPlatformFee_Disable() external {
         // sanity
+        assertGt(_constantProductPair.platformFee(), 100);
         _constantProductPair.sync();
         IERC20 lToken0 = IERC20(_constantProductPair.token0());
         IERC20 lToken1 = IERC20(_constantProductPair.token1());
@@ -656,7 +657,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         _constantProductPair.sync();
         assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
-        assertGe(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertEq(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
         assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
 
@@ -681,6 +682,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testPlatformFee_DisableReenable() external {
         // sanity
+        assertGt(_constantProductPair.platformFee(), 100);
         _constantProductPair.sync();
         IERC20 lToken0 = IERC20(_constantProductPair.token0());
         IERC20 lToken1 = IERC20(_constantProductPair.token1());

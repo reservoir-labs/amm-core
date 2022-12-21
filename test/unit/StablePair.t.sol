@@ -245,6 +245,8 @@ contract StablePairTest is BaseTest {
         (uint256 lTotalSupply2,) = lOtherPair.burn(address(this));
 
         // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
+        assertGt(_stablePair.balanceOf(address(_platformFeeTo)), 0);
+        assertGt(lOtherPair.balanceOf(address(_platformFeeTo)), 0);
         assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
         assertEq(lTotalSupply1, lTotalSupply2);
     }
@@ -319,6 +321,9 @@ contract StablePairTest is BaseTest {
         (uint256 lExpectedPlatformFee, uint256 lGrowthInLiq) =
             _calcExpectedPlatformFee(lPlatformFee, lPair, lReserve0, lReserve1, lTotalSupply, lOldLiq);
         assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
+        if (aPlatformFee > 0) {
+            assertGt(lPair.balanceOf(_platformFeeTo), 0);
+        }
         assertApproxEqRel(
             lExpectedPlatformFee * 1e18 / lGrowthInLiq, lPlatformFee * 1e18 / lPair.FEE_ACCURACY(), 0.006e18
         );
