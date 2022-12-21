@@ -144,7 +144,7 @@ contract ConstantProductPair is ReservoirPair {
         emit Mint(msg.sender, lAmount0, lAmount1);
 
         _managerCallback();
-        _unlock();
+        _unlock(_currentTime());
     }
 
     // this low-level function should be called from a contract which performs important safety checks
@@ -172,7 +172,7 @@ contract ConstantProductPair is ReservoirPair {
         emit Burn(msg.sender, rAmount0, rAmount1);
 
         _managerCallback();
-        _unlock();
+        _unlock(_currentTime());
     }
 
     /// @inheritdoc IPair
@@ -239,7 +239,7 @@ contract ConstantProductPair is ReservoirPair {
 
         _update(lBalance0, lBalance1, lReserve0, lReserve1);
         emit Swap(msg.sender, lTokenOut == token1, actualAmountIn, rAmountOut, aTo);
-        _unlock();
+        _unlock(_currentTime());
     }
 
     /*//////////////////////////////////////////////////////////////////////////

@@ -6,20 +6,20 @@ import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
 abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
     /// @notice Force reserves to match balances.
     function sync() external {
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
 
         _syncManaged();
         _update(_totalToken0(), _totalToken1(), lReserve0, lReserve1);
-        _unlock();
+        _unlock(lBlockTimestampLast);
     }
 
     /// @notice Force balances to match reserves.
     function skim(address aTo) external {
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
 
         _checkedTransfer(token0, aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
         _checkedTransfer(token1, aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
-        _unlock();
+        _unlock(lBlockTimestampLast);
     }
 
     // performs a transfer, if it fails, it attempts to retrieve assets from the
@@ -49,7 +49,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
         (uint32 lBlockTimestampLast, bool lLocked) = _splitSlot0Timestamp(_slot0.packedTimestamp);
         require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "CP: OVERFLOW");
 
-        uint32 lBlockTimestamp = uint32(block.timestamp % 2 ** 31);
+        uint32 lBlockTimestamp = uint32(_currentTime());
         uint32 lTimeElapsed;
         unchecked {
             lTimeElapsed = lBlockTimestamp - lBlockTimestampLast; // overflow is desired

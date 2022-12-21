@@ -116,7 +116,7 @@ contract StableMintBurn is ReservoirPair {
         emit Mint(msg.sender, amount0, amount1);
 
         _managerCallback();
-        _unlock();
+        _unlock(_currentTime());
     }
 
     // TODO: public -> external?
@@ -148,7 +148,7 @@ contract StableMintBurn is ReservoirPair {
         emit Burn(msg.sender, amount0, amount1);
 
         _managerCallback();
-        _unlock();
+        _unlock(_currentTime());
     }
 
     /// @inheritdoc IPair

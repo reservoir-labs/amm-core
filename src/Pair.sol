@@ -40,7 +40,6 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    // perf: can we use a smaller type?
     uint128 internal immutable token0PrecisionMultiplier;
     uint128 internal immutable token1PrecisionMultiplier;
 
@@ -71,15 +70,18 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
     }
 
+    function _currentTime() internal view returns (uint32) {
+        return uint32(block.timestamp % 2** 31);
+    }
+
     function _splitSlot0Timestamp(uint32 rRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
         rLocked = rRawTimestamp >> 31 == 1;
         rTimestamp = rRawTimestamp & 0x7FFFFFFF;
     }
 
     function _writeSlot0Timestamp(uint32 aTimestamp, bool aLocked) internal {
-        // PERF: Shift in declaration might be cheaper/optimized.
-        uint32 lLocked = aLocked ? uint32(1) : uint32(0);
-        _slot0.packedTimestamp = aTimestamp | (lLocked << 31);
+        uint32 lLocked = aLocked ? uint32(1 << 31) : uint32(0);
+        _slot0.packedTimestamp = aTimestamp | lLocked;
     }
 
     function _lockAndLoad()
@@ -100,10 +102,8 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         _writeSlot0Timestamp(rBlockTimestampLast, true);
     }
 
-    function _unlock() internal {
-        // PERF: We should pass the timestamp in instead of reading it again.
-        (uint32 lBlockTimestampLast,) = _splitSlot0Timestamp(_slot0.packedTimestamp);
-        _writeSlot0Timestamp(lBlockTimestampLast, false);
+    function _unlock(uint32 aBlockTimestampLast) internal {
+        _writeSlot0Timestamp(aBlockTimestampLast, false);
     }
 
     function getReserves()

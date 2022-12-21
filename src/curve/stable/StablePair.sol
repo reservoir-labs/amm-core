@@ -208,7 +208,7 @@ contract StablePair is ReservoirPair {
 
         _update(lBalance0, lBalance1, lReserve0, lReserve1);
         emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
-        _unlock();
+        _unlock(_currentTime());
     }
 
     function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)
