@@ -235,7 +235,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         // act & assert
         _tokenA.mint(address(_constantProductPair), lAmountIn);
-        vm.expectRevert("CP: OVERFLOW");
+        vm.expectRevert("RP: OVERFLOW");
         _constantProductPair.swap(-int256(lAmountOut), false, address(this), bytes(""));
     }
 

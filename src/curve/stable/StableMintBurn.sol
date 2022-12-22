@@ -77,20 +77,21 @@ contract StableMintBurn is ReservoirPair {
     // TODO: public -> external?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) public returns (uint256 rLiquidity) {
+    function mint(address aTo) public returns (uint256 rLiquidity) {
         // NB: Must sync management PNL before we load reserves.
+        // TODO: Is passing/using reserves as uint256 cheaper and still safe?
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
-        (uint256 lBalance0, uint256 lBalance1) = _balance();
+        (uint256 lBalance0, uint256 lBalance1) = _balances();
 
         uint256 lNewLiq = _computeLiquidity(lBalance0, lBalance1);
         uint256 lAmount0 = lBalance0 - lReserve0;
         uint256 lAmount1 = lBalance1 - lReserve1;
 
-        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(lAmount0, lAmount1, lReserve0, lReserve1);
-        lReserve0 += uint104(fee0);
-        lReserve1 += uint104(fee1);
+        (uint256 lFee0, uint256 lFee1) = _nonOptimalMintFee(lAmount0, lAmount1, lReserve0, lReserve1);
+        lReserve0 += uint104(lFee0);
+        lReserve1 += uint104(lFee1);
 
         (uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
 
@@ -102,7 +103,7 @@ contract StableMintBurn is ReservoirPair {
             rLiquidity = ((lNewLiq - oldLiq) * _totalSupply) / oldLiq;
         }
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
-        _mint(to, rLiquidity);
+        _mint(aTo, rLiquidity);
 
         // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
         // places)
@@ -120,7 +121,7 @@ contract StableMintBurn is ReservoirPair {
 
     // TODO: public -> external?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public returns (uint256 amount0, uint256 amount1) {
+    function burn(address aTo) public returns (uint256 amount0, uint256 amount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
@@ -134,8 +135,8 @@ contract StableMintBurn is ReservoirPair {
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
+        _checkedTransfer(token0, aTo, amount0, lReserve0, lReserve1);
+        _checkedTransfer(token1, aTo, amount1, lReserve0, lReserve1);
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
@@ -152,9 +153,9 @@ contract StableMintBurn is ReservoirPair {
         revert("SMB: IMPOSSIBLE");
     }
 
-    function _balance() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = _totalToken0();
-        balance1 = _totalToken1();
+    function _balances() internal view returns (uint256 rBalance0, uint256 rBalance1) {
+        rBalance0 = _totalToken0();
+        rBalance1 = _totalToken1();
     }
 
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.

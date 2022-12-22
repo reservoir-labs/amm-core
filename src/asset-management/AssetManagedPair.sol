@@ -39,20 +39,20 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(address aToken, uint104 aReserve, uint104 lPrevBalance, uint104 lNewBalance)
+    function _handleReport(address aToken, uint104 aReserve, uint104 aPrevBalance, uint104 aNewBalance)
         private
         returns (uint104 rUpdatedReserve)
     {
-        if (lNewBalance > lPrevBalance) {
+        if (aNewBalance > aPrevBalance) {
             // report profit
-            uint104 lProfit = lNewBalance - lPrevBalance;
+            uint104 lProfit = aNewBalance - aPrevBalance;
 
             emit ProfitReported(aToken, lProfit);
 
             rUpdatedReserve = aReserve + lProfit;
-        } else if (lNewBalance < lPrevBalance) {
+        } else if (aNewBalance < aPrevBalance) {
             // report loss
-            uint104 lLoss = lPrevBalance - lNewBalance;
+            uint104 lLoss = aPrevBalance - aNewBalance;
 
             emit LossReported(aToken, lLoss);
 

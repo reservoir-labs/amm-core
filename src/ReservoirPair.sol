@@ -50,7 +50,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
         uint104 aReserve1,
         uint32 aBlockTimestampLast
     ) internal {
-        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "CP: OVERFLOW");
+        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
 
         uint32 lBlockTimestamp = uint32(_currentTime());
         uint32 lTimeElapsed;

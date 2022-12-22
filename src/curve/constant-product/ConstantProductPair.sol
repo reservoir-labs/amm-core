@@ -24,7 +24,7 @@ contract ConstantProductPair is ReservoirPair {
 
     string private constant PAIR_SWAP_FEE_NAME = "CP::swapFee";
 
-    uint208 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
@@ -138,9 +138,8 @@ contract ConstantProductPair is ReservoirPair {
         require(rLiquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
 
-        // TODO: Make all the kLasts uint208 instead?
         // NB: The size of lBalance0 & lBalance1 will be verified in _update.
-        if (lFeeOn) kLast = uint208(lBalance0) * uint104(lBalance1);
+        if (lFeeOn) kLast = lBalance0 * lBalance1;
         emit Mint(msg.sender, lAmount0, lAmount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
@@ -168,7 +167,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lBalance1 = _totalToken1();
 
         // NB: The size of lBalance0 & lBalance1 will be verified in _update.
-        if (lFeeOn) kLast = uint208(lBalance0) * uint104(lBalance1);
+        if (lFeeOn) kLast = lBalance0 * lBalance1;
         emit Burn(msg.sender, rAmount0, rAmount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
