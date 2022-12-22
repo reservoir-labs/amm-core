@@ -20,6 +20,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     using stdStorage for StdStorage;
 
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
+    event Sync(uint104 reserve0, uint104 reserve1);
 
     AssetManager private _manager = new AssetManager();
 
@@ -642,7 +643,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testPlatformFee_Disable() external {
         // sanity
-        assertGt(_constantProductPair.platformFee(), 100);
+        assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
         IERC20 lToken0 = IERC20(_constantProductPair.token0());
         IERC20 lToken1 = IERC20(_constantProductPair.token1());
@@ -682,7 +683,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testPlatformFee_DisableReenable() external {
         // sanity
-        assertGt(_constantProductPair.platformFee(), 100);
+        assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
         IERC20 lToken0 = IERC20(_constantProductPair.token0());
         IERC20 lToken1 = IERC20(_constantProductPair.token1());
@@ -736,5 +737,26 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.burn(address(this));
         uint256 lNewShares = _constantProductPair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
         assertLt(lNewShares, lPlatformShares);
+    }
+
+    function testSync() external {
+        // arrange
+        _tokenA.mint(address(_constantProductPair), 10e18);
+        _tokenB.mint(address(_constantProductPair), 10e18);
+
+        // sanity
+        (uint256 lReserve0, uint256 lReserve1,,) = _constantProductPair.getReserves();
+        assertEq(lReserve0, 100e18);
+        assertEq(lReserve1, 100e18);
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit Sync(110e18, 110e18);
+        _constantProductPair.sync();
+
+        // assert
+        (lReserve0, lReserve1,,) = _constantProductPair.getReserves();
+        assertEq(lReserve0, 110e18);
+        assertEq(lReserve1, 110e18);
     }
 }

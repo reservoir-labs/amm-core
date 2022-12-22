@@ -119,7 +119,7 @@ contract ConstantProductPair is ReservoirPair {
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address aTo) external returns (uint256 rLiquidity) {
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
         uint256 lBalance0 = _totalToken0();
@@ -143,14 +143,14 @@ contract ConstantProductPair is ReservoirPair {
         if (lFeeOn) kLast = uint208(lBalance0) * uint104(lBalance1);
         emit Mint(msg.sender, lAmount0, lAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
     // this low-level function should be called from a contract which performs important safety checks
     function burn(address aTo) external returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
         uint256 liquidity = balanceOf[address(this)];
@@ -171,7 +171,7 @@ contract ConstantProductPair is ReservoirPair {
         if (lFeeOn) kLast = uint208(lBalance0) * uint104(lBalance1);
         emit Burn(msg.sender, rAmount0, rAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
@@ -180,7 +180,7 @@ contract ConstantProductPair is ReservoirPair {
         external
         returns (uint256 rAmountOut)
     {
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
         uint256 lAmountIn;
         address lTokenOut;
@@ -237,7 +237,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 actualAmountIn = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lAmountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         emit Swap(msg.sender, lTokenOut == token1, actualAmountIn, rAmountOut, aTo);
     }
 
