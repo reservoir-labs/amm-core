@@ -102,6 +102,10 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         _writeSlot0Timestamp(rBlockTimestampLast, true);
     }
 
+    function _unlock(uint32 aBlockTimestampLast) internal {
+        _writeSlot0Timestamp(aBlockTimestampLast, false);
+    }
+
     function getReserves()
         public
         view

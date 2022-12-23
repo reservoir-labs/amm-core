@@ -67,8 +67,4 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
 
         emit Sync(uint104(aBalance0), uint104(aBalance1));
     }
-
-    function _unlock(uint32 aBlockTimestampLast) internal {
-        _writeSlot0Timestamp(aBlockTimestampLast, false);
-    }
 }
