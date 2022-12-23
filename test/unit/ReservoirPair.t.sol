@@ -8,6 +8,8 @@ contract ReservoirPairTest is BaseTest {
     ReservoirPair[] internal _pairs;
     ReservoirPair internal _pair;
 
+    event Sync(uint104 reserve0, uint104 reserve1);
+
     function setUp() public {
         _pairs.push(_constantProductPair);
         _pairs.push(_stablePair);
@@ -40,5 +42,26 @@ contract ReservoirPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), lAmountB);
         assertEq(_tokenA.balanceOf(address(_pair)), INITIAL_MINT_AMOUNT);
         assertEq(_tokenB.balanceOf(address(_pair)), INITIAL_MINT_AMOUNT);
+    }
+
+    function testSync() external allPairs {
+        // arrange
+        _tokenA.mint(address(_pair), 10e18);
+        _tokenB.mint(address(_pair), 10e18);
+
+        // sanity
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
+        assertEq(lReserve0, 100e18);
+        assertEq(lReserve1, 100e18);
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit Sync(110e18, 110e18);
+        _pair.sync();
+
+        // assert
+        (lReserve0, lReserve1,,) = _pair.getReserves();
+        assertEq(lReserve0, 110e18);
+        assertEq(lReserve1, 110e18);
     }
 }
