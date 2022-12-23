@@ -434,6 +434,16 @@ contract StablePairTest is BaseTest {
         _stablePair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
     }
 
+    function testSwap_ExactInExceedUint104() external {
+        // arrange
+        uint256 lSwapAmt = type(uint104).max - INITIAL_MINT_AMOUNT + 1;
+
+        // act & assert
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        vm.expectRevert("RP: OVERFLOW");
+        _stablePair.swap(int256(lSwapAmt), true, address(this), "");
+    }
+
     function testSwap_BetterPerformanceThanConstantProduct() public {
         // act
         uint256 lSwapAmount = 5e18;

@@ -18,7 +18,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
 
         _checkedTransfer(token0, aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
         _checkedTransfer(token1, aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
-        _updateAndUnlock(lReserve0, lReserve1, lReserve0, lReserve1, lBlockTimestampLast);
+        _unlock(lBlockTimestampLast);
     }
 
     // performs a transfer, if it fails, it attempts to retrieve assets from the
@@ -66,5 +66,9 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
         _writeSlot0Timestamp(lBlockTimestamp, false);
 
         emit Sync(uint104(aBalance0), uint104(aBalance1));
+    }
+
+    function _unlock(uint32 aBlockTimestampLast) internal {
+        _writeSlot0Timestamp(aBlockTimestampLast, false);
     }
 }
