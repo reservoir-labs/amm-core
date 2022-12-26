@@ -725,6 +725,25 @@ contract StablePairTest is BaseTest {
         assertGt(lAmtC, 0);
     }
 
+    function testBurn_LastInvariantUseReserveInsteadOfBalance() external {
+        // arrange - trigger a write to the lastInvariant via burn
+        uint256 lBalance = _stablePair.balanceOf(_alice);
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), lBalance / 2);
+        _stablePair.burn(address(this));
+
+        // grow the liq in the pool so that there is platformFee to be minted
+        uint256 lSwapAmt = 10e18;
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        _stablePair.swap(int256(lSwapAmt), true, address(this), "");
+
+        // act - do a zero burn to trigger minting of platformFee
+        _stablePair.burn(address(this));
+
+        // assert
+        assertEq(_stablePair.balanceOf(_platformFeeTo), 249949579285927);
+    }
+
     function testRampA() public {
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
