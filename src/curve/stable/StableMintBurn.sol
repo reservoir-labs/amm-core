@@ -81,7 +81,7 @@ contract StableMintBurn is ReservoirPair {
         // NB: Must sync management PNL before we load reserves.
         // TODO: Is passing/using reserves as uint256 cheaper and still safe?
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
+//        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         (uint256 lBalance0, uint256 lBalance1) = _balances();
 
@@ -124,7 +124,7 @@ contract StableMintBurn is ReservoirPair {
     function burn(address aTo) public returns (uint256 amount0, uint256 amount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
+//        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         uint256 liquidity = balanceOf[address(this)];
 

@@ -68,7 +68,45 @@ contract ReservoirPairTest is BaseTest {
         assertEq(lReserve1, 110e18);
     }
 
-    function testOracleWriteAfterAssetManagerProfitLoss() external allPairs {
+    function testOracleWriteAfterAssetManagerProfit_Mint() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 20e18);
+        _manager.adjustBalance(_pair, address(_tokenB), 20e18);
+        _stepTime(10);
+
+        // act
+        _tokenA.mint(address(_pair), 1e18);
+        _tokenB.mint(address(_pair), 1e18);
+        _pair.mint(address(this));
+
+        // assert
+        (, , , uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lObs.logAccLiquidity, 470050);
+    }
+
+    function testOracleWriteAfterAssetManagerProfit_Burn() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 20e18);
+        _manager.adjustBalance(_pair, address(_tokenB), 20e18);
+        _stepTime(10);
+
+        // act
+        _pair.burn(address(this));
+
+        // assert
+        (, , , uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lObs.logAccLiquidity, 470050);
+    }
+
+    function testOracleWriteAfterAssetManagerProfit_Sync() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
@@ -83,6 +121,6 @@ contract ReservoirPairTest is BaseTest {
         // assert
         (, , , uint16 lIndex) = _pair.getReserves();
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 5);
+        assertEq(lObs.logAccLiquidity, 470050);
     }
 }
