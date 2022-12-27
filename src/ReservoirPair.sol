@@ -7,7 +7,7 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
     /// @notice Force reserves to match balances.
     function sync() external {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-//        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         _updateAndUnlock(_totalToken0(), _totalToken1(), lReserve0, lReserve1, lBlockTimestampLast);
     }

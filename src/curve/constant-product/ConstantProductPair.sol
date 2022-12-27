@@ -120,7 +120,7 @@ contract ConstantProductPair is ReservoirPair {
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address aTo) external returns (uint256 rLiquidity) {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-//        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
@@ -150,7 +150,7 @@ contract ConstantProductPair is ReservoirPair {
     function burn(address aTo) external returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-//        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
         uint256 liquidity = balanceOf[address(this)];
 
