@@ -140,7 +140,7 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
-        lastInvariant = uint192(_computeLiquidity(lReserve0, lReserve1));
+        lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
         lastInvariantAmp = _getCurrentAPrecise();
         emit Burn(msg.sender, amount0, amount1);
 
