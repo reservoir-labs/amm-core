@@ -147,11 +147,8 @@ contract StablePair is ReservoirPair {
     }
 
     /// @inheritdoc IPair
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
-        external
-        returns (uint256 amountOut)
-    {
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external returns (uint256 amountOut) {
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
         uint256 amountIn;
         address tokenOut;
@@ -206,9 +203,8 @@ contract StablePair is ReservoirPair {
         uint256 lReceived = tokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lReceived >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
-        _update(lBalance0, lBalance1, lReserve0, lReserve1);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
-        _unlock(_currentTime());
     }
 
     function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)

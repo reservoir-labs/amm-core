@@ -245,6 +245,8 @@ contract StablePairTest is BaseTest {
         (uint256 lTotalSupply2,) = lOtherPair.burn(address(this));
 
         // assert - even after the difference in A, we expect the platformFee received (LP tokens) to be the same
+        assertGt(_stablePair.balanceOf(address(_platformFeeTo)), 0);
+        assertGt(lOtherPair.balanceOf(address(_platformFeeTo)), 0);
         assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lOtherPair.balanceOf(address(_platformFeeTo)));
         assertEq(lTotalSupply1, lTotalSupply2);
     }
@@ -319,6 +321,9 @@ contract StablePairTest is BaseTest {
         (uint256 lExpectedPlatformFee, uint256 lGrowthInLiq) =
             _calcExpectedPlatformFee(lPlatformFee, lPair, lReserve0, lReserve1, lTotalSupply, lOldLiq);
         assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
+        if (aPlatformFee > 0) {
+            assertGt(lPair.balanceOf(_platformFeeTo), 0);
+        }
         assertApproxEqRel(
             lExpectedPlatformFee * 1e18 / lGrowthInLiq, lPlatformFee * 1e18 / lPair.FEE_ACCURACY(), 0.006e18
         );
@@ -427,6 +432,16 @@ contract StablePairTest is BaseTest {
 
         vm.expectRevert("SP: NOT_ENOUGH_LIQ");
         _stablePair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+    }
+
+    function testSwap_ExactInExceedUint104() external {
+        // arrange
+        uint256 lSwapAmt = type(uint104).max - INITIAL_MINT_AMOUNT + 1;
+
+        // act & assert
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        vm.expectRevert("RP: OVERFLOW");
+        _stablePair.swap(int256(lSwapAmt), true, address(this), "");
     }
 
     function testSwap_BetterPerformanceThanConstantProduct() public {
@@ -708,6 +723,25 @@ contract StablePairTest is BaseTest {
         (uint256 lAmtC, uint256 lAmtD) = lPair.token0() == address(_tokenC) ? (lAmt0, lAmt1) : (lAmt1, lAmt0);
         assertEq(lAmtD, 0);
         assertGt(lAmtC, 0);
+    }
+
+    function testBurn_LastInvariantUseReserveInsteadOfBalance() external {
+        // arrange - trigger a write to the lastInvariant via burn
+        uint256 lBalance = _stablePair.balanceOf(_alice);
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), lBalance / 2);
+        _stablePair.burn(address(this));
+
+        // grow the liq in the pool so that there is platformFee to be minted
+        uint256 lSwapAmt = 10e18;
+        _tokenA.mint(address(_stablePair), lSwapAmt);
+        _stablePair.swap(int256(lSwapAmt), true, address(this), "");
+
+        // act - do a zero burn to trigger minting of platformFee
+        _stablePair.burn(address(this));
+
+        // assert
+        assertEq(_stablePair.balanceOf(_platformFeeTo), 249949579285927);
     }
 
     function testRampA() public {

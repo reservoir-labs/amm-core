@@ -2,11 +2,16 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { ReservoirPair } from "src/ReservoirPair.sol";
+import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
+import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 contract ReservoirPairTest is BaseTest {
+    AssetManager private _manager = new AssetManager();
+
     ReservoirPair[] internal _pairs;
     ReservoirPair internal _pair;
+
+    event Sync(uint104 reserve0, uint104 reserve1);
 
     function setUp() public {
         _pairs.push(_constantProductPair);
@@ -40,5 +45,82 @@ contract ReservoirPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), lAmountB);
         assertEq(_tokenA.balanceOf(address(_pair)), INITIAL_MINT_AMOUNT);
         assertEq(_tokenB.balanceOf(address(_pair)), INITIAL_MINT_AMOUNT);
+    }
+
+    function testSync() external allPairs {
+        // arrange
+        _tokenA.mint(address(_pair), 10e18);
+        _tokenB.mint(address(_pair), 10e18);
+
+        // sanity
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
+        assertEq(lReserve0, 100e18);
+        assertEq(lReserve1, 100e18);
+
+        // act
+        vm.expectEmit(true, true, true, true);
+        emit Sync(110e18, 110e18);
+        _pair.sync();
+
+        // assert
+        (lReserve0, lReserve1,,) = _pair.getReserves();
+        assertEq(lReserve0, 110e18);
+        assertEq(lReserve1, 110e18);
+    }
+
+    function testOracleWriteAfterAssetManagerProfit_Mint() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 20e18);
+        _manager.adjustBalance(_pair, address(_tokenB), 20e18);
+        _stepTime(10);
+
+        // act
+        _tokenA.mint(address(_pair), 1e18);
+        _tokenB.mint(address(_pair), 1e18);
+        _pair.mint(address(this));
+
+        // assert
+        (, , , uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lObs.logAccLiquidity, 470050);
+    }
+
+    function testOracleWriteAfterAssetManagerProfit_Burn() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 20e18);
+        _manager.adjustBalance(_pair, address(_tokenB), 20e18);
+        _stepTime(10);
+
+        // act
+        _pair.burn(address(this));
+
+        // assert
+        (, , , uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lObs.logAccLiquidity, 470050);
+    }
+
+    function testOracleWriteAfterAssetManagerProfit_Sync() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+        _manager.adjustManagement(_pair, 10e18, 10e18);
+        _manager.adjustBalance(_pair, address(_tokenA), 20e18);
+        _manager.adjustBalance(_pair, address(_tokenB), 20e18);
+        _stepTime(10);
+
+        // act
+        _pair.sync();
+
+        // assert
+        (, , , uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lObs.logAccLiquidity, 470050);
     }
 }

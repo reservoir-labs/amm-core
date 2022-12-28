@@ -71,7 +71,7 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     }
 
     function _currentTime() internal view returns (uint32) {
-        return uint32(block.timestamp % 2** 31);
+        return uint32(block.timestamp % 2 ** 31);
     }
 
     function _splitSlot0Timestamp(uint32 rRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
@@ -171,8 +171,4 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
-
-    function _update(uint256 aTotalToken0, uint256 aTotalToken1, uint104 aReserve0, uint104 aReserve1)
-        internal
-        virtual;
 }

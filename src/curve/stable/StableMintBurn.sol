@@ -77,56 +77,54 @@ contract StableMintBurn is ReservoirPair {
     // TODO: public -> external?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) public returns (uint256 liquidity) {
+    function mint(address aTo) public returns (uint256 rLiquidity) {
         // NB: Must sync management PNL before we load reserves.
-        _syncManaged();
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        // TODO: Is passing/using reserves as uint256 cheaper and still safe?
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
-        (uint256 balance0, uint256 balance1) = _balance();
+        (uint256 lBalance0, uint256 lBalance1) = _balances();
 
-        uint256 newLiq = _computeLiquidity(balance0, balance1);
-        uint256 amount0 = balance0 - lReserve0;
-        uint256 amount1 = balance1 - lReserve1;
+        uint256 lNewLiq = _computeLiquidity(lBalance0, lBalance1);
+        uint256 lAmount0 = lBalance0 - lReserve0;
+        uint256 lAmount1 = lBalance1 - lReserve1;
 
-        (uint256 fee0, uint256 fee1) = _nonOptimalMintFee(amount0, amount1, lReserve0, lReserve1);
-        lReserve0 += uint104(fee0);
-        lReserve1 += uint104(fee1);
+        (uint256 lFee0, uint256 lFee1) = _nonOptimalMintFee(lAmount0, lAmount1, lReserve0, lReserve1);
+        lReserve0 += uint104(lFee0);
+        lReserve1 += uint104(lFee1);
 
         (uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
 
         if (_totalSupply == 0) {
-            require(amount0 > 0 && amount1 > 0, "SP: INVALID_AMOUNTS");
-            liquidity = newLiq - MINIMUM_LIQUIDITY;
+            require(lAmount0 > 0 && lAmount1 > 0, "SP: INVALID_AMOUNTS");
+            rLiquidity = lNewLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
-            liquidity = ((newLiq - oldLiq) * _totalSupply) / oldLiq;
+            rLiquidity = ((lNewLiq - oldLiq) * _totalSupply) / oldLiq;
         }
-        require(liquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
-        _mint(to, liquidity);
-        _update(balance0, balance1, lReserve0, lReserve1);
+        require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
+        _mint(aTo, rLiquidity);
 
         // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
         // places)
         // which results in 112 + 60 + 1 = 173 bits
         // which fits into uint192
-        // TODO: Why does lastInvariant get set to newLiq? Not symmetric with burn?
-        lastInvariant = uint192(newLiq);
+        // TODO: Why does lastInvariant get set to lNewLiq? Not symmetric with burn?
+        lastInvariant = uint192(lNewLiq);
         lastInvariantAmp = _getCurrentAPrecise();
 
-        emit Mint(msg.sender, amount0, amount1);
+        emit Mint(msg.sender, lAmount0, lAmount1);
 
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
-        _unlock(_currentTime());
     }
 
     // TODO: public -> external?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) public returns (uint256 amount0, uint256 amount1) {
+    function burn(address aTo) public returns (uint256 amount0, uint256 amount1) {
         // NB: Must sync management PNL before we load reserves.
-        // PERF: _syncManaged could take lReserve0, lReserve1 in as an argument
-        //       and return the modified reserves?
-        _syncManaged();
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         uint256 liquidity = balanceOf[address(this)];
 
@@ -137,18 +135,17 @@ contract StableMintBurn is ReservoirPair {
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, to, amount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, to, amount1, lReserve0, lReserve1);
+        _checkedTransfer(token0, aTo, amount0, lReserve0, lReserve1);
+        _checkedTransfer(token1, aTo, amount1, lReserve0, lReserve1);
 
-        _update(_totalToken0(), _totalToken1(), uint104(lReserve0), uint104(lReserve1));
-
-        lastInvariant = uint192(_computeLiquidity(_slot0.reserve0, _slot0.reserve1));
+        uint256 lBalance0 = _totalToken0();
+        uint256 lBalance1 = _totalToken1();
+        lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
         lastInvariantAmp = _getCurrentAPrecise();
-
         emit Burn(msg.sender, amount0, amount1);
 
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
-        _unlock(_currentTime());
     }
 
     /// @inheritdoc IPair
@@ -156,21 +153,21 @@ contract StableMintBurn is ReservoirPair {
         revert("SMB: IMPOSSIBLE");
     }
 
-    function _balance() internal view returns (uint256 balance0, uint256 balance1) {
-        balance0 = _totalToken0();
-        balance1 = _totalToken1();
+    function _balances() internal view returns (uint256 rBalance0, uint256 rBalance1) {
+        rBalance0 = _totalToken0();
+        rBalance1 = _totalToken1();
     }
 
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
     /// See the StableSwap paper for details.
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
-    /// @return liquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 lReserve0, uint256 lReserve1) internal view returns (uint256 liquidity) {
+    /// @return rLiquidity The invariant, at the precision of the pool.
+    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
         unchecked {
-            uint256 adjustedReserve0 = lReserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = lReserve1 * token1PrecisionMultiplier;
-            liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
+            uint256 lAdjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
+            uint256 lAdjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
+            rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(lAdjustedReserve0, lAdjustedReserve1, _getNA());
         }
     }
 

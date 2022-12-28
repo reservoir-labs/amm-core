@@ -24,7 +24,7 @@ contract ConstantProductPair is ReservoirPair {
 
     string private constant PAIR_SWAP_FEE_NAME = "CP::swapFee";
 
-    uint224 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
@@ -119,9 +119,8 @@ contract ConstantProductPair is ReservoirPair {
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address aTo) external returns (uint256 rLiquidity) {
-        // NB: Must sync management PNL before we load reserves.
-        _syncManaged(); // check asset-manager pnl
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
@@ -139,19 +138,19 @@ contract ConstantProductPair is ReservoirPair {
         require(rLiquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
 
-        _update(lBalance0, lBalance1, lReserve0, lReserve1);
-        if (lFeeOn) kLast = uint224(_slot0.reserve0) * _slot0.reserve1; // reserve0 and reserve1 are up-to-date
+        // NB: The size of lBalance0 & lBalance1 will be verified in _update.
+        if (lFeeOn) kLast = lBalance0 * lBalance1;
         emit Mint(msg.sender, lAmount0, lAmount1);
 
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
-        _unlock(_currentTime());
     }
 
     // this low-level function should be called from a contract which performs important safety checks
     function burn(address aTo) external returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
-        _syncManaged(); // check asset-manager pnl
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
         uint256 liquidity = balanceOf[address(this)];
 
@@ -167,12 +166,12 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        _update(lBalance0, lBalance1, lReserve0, lReserve1);
-        if (lFeeOn) kLast = uint224(_slot0.reserve0) * _slot0.reserve1; // reserve0 and reserve1 are up-to-date
+        // NB: The size of lBalance0 & lBalance1 will be verified in _update.
+        if (lFeeOn) kLast = lBalance0 * lBalance1;
         emit Burn(msg.sender, rAmount0, rAmount1);
 
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
-        _unlock(_currentTime());
     }
 
     /// @inheritdoc IPair
@@ -180,7 +179,7 @@ contract ConstantProductPair is ReservoirPair {
         external
         returns (uint256 rAmountOut)
     {
-        (uint104 lReserve0, uint104 lReserve1,,) = _lockAndLoad();
+        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
         uint256 lAmountIn;
         address lTokenOut;
@@ -237,9 +236,8 @@ contract ConstantProductPair is ReservoirPair {
         uint256 actualAmountIn = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lAmountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
 
-        _update(lBalance0, lBalance1, lReserve0, lReserve1);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         emit Swap(msg.sender, lTokenOut == token1, actualAmountIn, rAmountOut, aTo);
-        _unlock(_currentTime());
     }
 
     /*//////////////////////////////////////////////////////////////////////////

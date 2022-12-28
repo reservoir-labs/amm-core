@@ -7,10 +7,9 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
     /// @notice Force reserves to match balances.
     function sync() external {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
-        _syncManaged();
-        _update(_totalToken0(), _totalToken1(), lReserve0, lReserve1);
-        _unlock(lBlockTimestampLast);
+        _updateAndUnlock(_totalToken0(), _totalToken1(), lReserve0, lReserve1, lBlockTimestampLast);
     }
 
     /// @notice Force balances to match reserves.
@@ -44,26 +43,28 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
     }
 
     // update reserves and, on the first call per block, price and liq accumulators
-    function _update(uint256 aBalance0, uint256 aBalance1, uint104 aReserve0, uint104 aReserve1) internal override {
-        // TODO: Cache this load?
-        (uint32 lBlockTimestampLast, bool lLocked) = _splitSlot0Timestamp(_slot0.packedTimestamp);
-        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "CP: OVERFLOW");
+    function _updateAndUnlock(
+        uint256 aBalance0,
+        uint256 aBalance1,
+        uint104 aReserve0,
+        uint104 aReserve1,
+        uint32 aBlockTimestampLast
+    ) internal {
+        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
 
         uint32 lBlockTimestamp = uint32(_currentTime());
         uint32 lTimeElapsed;
         unchecked {
-            lTimeElapsed = lBlockTimestamp - lBlockTimestampLast; // overflow is desired
+            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            _updateOracle(aReserve0, aReserve1, lTimeElapsed, lBlockTimestampLast);
+            _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
         }
 
         _slot0.reserve0 = uint104(aBalance0);
         _slot0.reserve1 = uint104(aBalance1);
-        _writeSlot0Timestamp(lBlockTimestamp, lLocked);
+        _writeSlot0Timestamp(lBlockTimestamp, false);
 
-        // TODO: _slot0.{reserve0,reserve1} -> aBalance0,aBalance1 after we have
-        //       tests.
-        emit Sync(_slot0.reserve0, _slot0.reserve1);
+        emit Sync(uint104(aBalance0), uint104(aBalance1));
     }
 }
