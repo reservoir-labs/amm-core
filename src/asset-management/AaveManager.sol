@@ -4,6 +4,7 @@ import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
@@ -15,6 +16,7 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 // there will be many adapters but only one asset maanged pair.
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
+    using SafeCast for uint256;
 
     event FundsInvested(IAssetManagedPair pair, IERC20 token, uint256 shares);
     event FundsDivested(IAssetManagedPair pair, IERC20 token, uint256 shares);
@@ -62,7 +64,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             return 0;
         }
         rTokenBalance =
-            uint104(shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]);
+            (shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]).toUint104();
     }
 
     /*//////////////////////////////////////////////////////////////////////////
