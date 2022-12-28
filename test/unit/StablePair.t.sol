@@ -367,6 +367,15 @@ contract StablePairTest is BaseTest {
         _stablePair.swap(0, true, address(this), "");
     }
 
+    function testSwap_MinInt256() external {
+        // arrange
+        int256 lSwapAmt = type(int256).min;
+
+        // act & assert
+        vm.expectRevert();
+        _stablePair.swap(lSwapAmt, true, address(this), "");
+    }
+
     function testSwap_Token0ExactOut(uint256 aAmountOut) public {
         // assume
         uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
