@@ -144,7 +144,7 @@ contract StableMintBurn is ReservoirPair {
         lastInvariantAmp = _getCurrentAPrecise();
         emit Burn(msg.sender, amount0, amount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
