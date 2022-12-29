@@ -821,6 +821,104 @@ contract StablePairTest is BaseTest {
         assertEq(_stablePair.balanceOf(_platformFeeTo), 249_949_579_285_927);
     }
 
+    function testPlatformFee_Disable() external {
+        // sanity
+        assertGt(_stablePair.platformFee(), 0);
+        _stablePair.sync();
+        IERC20 lToken0 = IERC20(_stablePair.token0());
+        IERC20 lToken1 = IERC20(_stablePair.token1());
+        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // swap lSwapAmount back and forth
+        lToken0.transfer(address(_stablePair), lSwapAmount);
+        uint256 lAmountOut = _stablePair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _stablePair.sync();
+        assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+
+        _stablePair.burn(address(this));
+        uint256 lPlatformShares = _stablePair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(0);
+
+        // act
+        lToken0.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _stablePair.burn(address(this));
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+    }
+
+    function testPlatformFee_DisableReenable() external {
+        // sanity
+        assertGt(_stablePair.platformFee(), 0);
+        _stablePair.sync();
+        IERC20 lToken0 = IERC20(_stablePair.token0());
+        IERC20 lToken1 = IERC20(_stablePair.token1());
+        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // act - swap once with platform fee.
+        lToken0.transfer(address(_stablePair), lSwapAmount);
+        uint256 lAmountOut = _stablePair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _stablePair.sync();
+        assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+
+        _stablePair.burn(address(this));
+        uint256 lPlatformShares = _stablePair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(0);
+
+        // act - swap twice with no platform fee.
+        lToken0.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+        lToken0.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _stablePair.burn(address(this));
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+
+        // act - swap once at half volume, again with platform fee.
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(type(uint256).max);
+        lToken0.transfer(address(_stablePair), lAmountOut / 2);
+        lAmountOut = _stablePair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert - we shouldn't have received more than the first time because
+        //          we disabled fees for the high volume.
+        _stablePair.burn(address(this));
+        uint256 lNewShares = _stablePair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
+        console.log("new", lNewShares);
+        console.log("old", lPlatformShares);
+        assertLt(lNewShares, lPlatformShares);
+    }
+
     function testRampA() public {
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);

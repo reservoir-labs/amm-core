@@ -668,6 +668,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
+        // why are we getting the balance of _factory?
         assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
 
         _constantProductPair.burn(address(this));
@@ -744,6 +745,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         //          we disabled fees for the high volume.
         _constantProductPair.burn(address(this));
         uint256 lNewShares = _constantProductPair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
+        console.log("new", lNewShares);
+        console.log("old", lPlatformShares);
         assertLt(lNewShares, lPlatformShares);
     }
 }
