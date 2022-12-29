@@ -93,7 +93,7 @@ contract StableMintBurn is ReservoirPair {
         lReserve0 += uint104(lFee0);
         lReserve1 += uint104(lFee1);
 
-        (uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
+        (bool feeOn, uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
 
         if (_totalSupply == 0) {
             require(lAmount0 > 0 && lAmount1 > 0, "SP: INVALID_AMOUNTS");
@@ -105,13 +105,15 @@ contract StableMintBurn is ReservoirPair {
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
 
-        // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
-        // places)
-        // which results in 112 + 60 + 1 = 173 bits
-        // which fits into uint192
-        // TODO: Why does lastInvariant get set to lNewLiq? Not symmetric with burn?
-        lastInvariant = uint192(lNewLiq);
-        lastInvariantAmp = _getCurrentAPrecise();
+        if (feeOn) {
+            // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
+            // places)
+            // which results in 112 + 60 + 1 = 173 bits
+            // which fits into uint192
+            // TODO: Why does lastInvariant get set to lNewLiq? Not symmetric with burn?
+            lastInvariant = uint192(lNewLiq);
+            lastInvariantAmp = _getCurrentAPrecise();
+        }
 
         emit Mint(msg.sender, lAmount0, lAmount1);
 
@@ -128,7 +130,7 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 liquidity = balanceOf[address(this)];
 
-        (uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
+        (bool feeOn, uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
 
         amount0 = (liquidity * lReserve0) / _totalSupply;
         amount1 = (liquidity * lReserve1) / _totalSupply;
@@ -140,8 +142,10 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
-        lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
-        lastInvariantAmp = _getCurrentAPrecise();
+        if (feeOn) {
+            lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
+            lastInvariantAmp = _getCurrentAPrecise();
+        }
         emit Burn(msg.sender, amount0, amount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
@@ -172,27 +176,35 @@ contract StableMintBurn is ReservoirPair {
         }
     }
 
-    function _mintFee(uint256 lReserve0, uint256 lReserve1) internal returns (uint256 _totalSupply, uint256 d) {
+    function _mintFee(uint256 lReserve0, uint256 lReserve1)
+        internal
+        returns (bool feeOn, uint256 _totalSupply, uint256 d)
+    {
+        feeOn = platformFee > 0;
         _totalSupply = totalSupply;
-        uint256 _dLast = lastInvariant;
-        if (_dLast != 0) {
-            d = StableMath._computeLiquidityFromAdjustedBalances(
-                lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
-            );
-            if (d > _dLast) {
-                // @dev `platformFee` % of increase in liquidity.
-                uint256 _platformFee = platformFee;
-                uint256 numerator = _totalSupply * (d - _dLast) * _platformFee;
-                uint256 denominator = (FEE_ACCURACY - _platformFee) * d + _platformFee * _dLast;
-                uint256 liquidity = numerator / denominator;
+        if (feeOn) {
+            uint256 _dLast = lastInvariant;
+            if (_dLast != 0) {
+                d = StableMath._computeLiquidityFromAdjustedBalances(
+                    lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
+                );
+                if (d > _dLast) {
+                    // @dev `platformFee` % of increase in liquidity.
+                    uint256 _platformFee = platformFee;
+                    uint256 numerator = _totalSupply * (d - _dLast) * _platformFee;
+                    uint256 denominator = (FEE_ACCURACY - _platformFee) * d + _platformFee * _dLast;
+                    uint256 liquidity = numerator / denominator;
 
-                if (liquidity != 0) {
-                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
+                    if (liquidity != 0) {
+                        address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
 
-                    _mint(platformFeeTo, liquidity);
-                    _totalSupply += liquidity;
+                        _mint(platformFeeTo, liquidity);
+                        _totalSupply += liquidity;
+                    }
                 }
             }
+        } else if (lastInvariant != 0) {
+            lastInvariant = 0;
         }
     }
 
