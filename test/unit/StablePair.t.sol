@@ -143,7 +143,6 @@ contract StablePairTest is BaseTest {
 
     function testMint_WhenRampingA(uint256 aFutureA) external {
         // assume - for ramping up or down from DEFAULT_AMP_COEFF
-
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
         vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
@@ -742,6 +741,40 @@ contract StablePairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), 0);
         assertEq(_tokenA.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
         assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+    }
+
+    function testBurn_WhenRampingA(uint256 aFutureA) external {
+        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
+        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
+        uint256 lBalance = _stablePair.balanceOf(_alice);
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.rampA(lFutureAToSet, lFutureATimestamp);
+        uint256 lBefore = vm.snapshot();
+
+        // act
+        vm.warp(lFutureATimestamp / 2);
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), lBalance / 2);
+        _stablePair.burn(address(this));
+        uint256 lTokenABal0 = _tokenA.balanceOf(address(this));
+        uint256 lTokenBBal0 = _tokenB.balanceOf(address(this));
+
+        vm.revertTo(lBefore);
+
+        vm.warp(lFutureATimestamp);
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), lBalance / 2);
+        _stablePair.burn(address(this));
+        uint256 lTokenABal1 = _tokenA.balanceOf(address(this));
+        uint256 lTokenBBal1 = _tokenB.balanceOf(address(this));
+
+        // assert - amount received should be the same regardless of A
+        assertEq(lTokenABal0, lTokenABal1);
+        assertEq(lTokenBBal0, lTokenBBal1);
     }
 
     function testBurn_DiffDecimalPlaces(uint256 aAmtToBurn) public {

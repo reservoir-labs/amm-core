@@ -746,36 +746,4 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         uint256 lNewShares = _constantProductPair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
         assertLt(lNewShares, lPlatformShares);
     }
-
-    function testPlatformFee_100Percent() external {
-        // arrange
-        uint256 lInitialTotalSupply = _constantProductPair.totalSupply();
-        int256 lSwapAmt = 50e18;
-        vm.prank(address(_factory));
-        _constantProductPair.setCustomPlatformFee(1_000_000);
-
-        // swap several times to make the liq grow
-        _tokenA.mint(address(_constantProductPair), uint256(lSwapAmt));
-        _constantProductPair.swap(lSwapAmt, true, address(this), "");
-
-        // sanity
-        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
-
-        // act - do a zero burn to mint the platformFee
-        _constantProductPair.burn(address(this));
-
-        // assert
-        assertEq(
-            _constantProductPair.balanceOf(_platformFeeTo), _constantProductPair.totalSupply() - lInitialTotalSupply
-        );
-
-        console.log("kLast", _constantProductPair.kLast());
-
-        uint256 lBalance = _constantProductPair.balanceOf(_platformFeeTo);
-        vm.prank(_platformFeeTo);
-        _constantProductPair.transfer(address(_constantProductPair), lBalance);
-        _constantProductPair.burn(address(this));
-        console.log(_tokenA.balanceOf(address(this)));
-        console.log(_tokenB.balanceOf(address(this)));
-    }
 }
