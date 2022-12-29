@@ -167,7 +167,8 @@ contract StableMintBurn is ReservoirPair {
         unchecked {
             uint256 lAdjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
             uint256 lAdjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
-            rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(lAdjustedReserve0, lAdjustedReserve1, _getNA());
+            rLiquidity =
+                StableMath._computeLiquidityFromAdjustedBalances(lAdjustedReserve0, lAdjustedReserve1, _getNA());
         }
     }
 

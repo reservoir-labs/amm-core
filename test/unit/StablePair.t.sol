@@ -141,6 +141,41 @@ contract StablePairTest is BaseTest {
         assertLt(lBurnOutputA, lSwapOutputA + lAmountAToMint);
     }
 
+    function testMint_WhenRampingA(uint256 aFutureA) external {
+        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
+        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.rampA(lFutureAToSet, lFutureATimestamp);
+        uint256 lBefore = vm.snapshot();
+
+        // act
+        vm.warp(lFutureATimestamp / 2);
+        _tokenA.mint(address(_stablePair), 5e18);
+        _tokenB.mint(address(_stablePair), 10e18);
+        _stablePair.mint(address(this));
+        uint256 lLpTokens1 = _stablePair.balanceOf(address(this));
+
+        vm.revertTo(lBefore);
+
+        vm.warp(lFutureATimestamp);
+        _tokenA.mint(address(_stablePair), 5e18);
+        _tokenB.mint(address(_stablePair), 10e18);
+        _stablePair.mint(address(this));
+        uint256 lLpTokens2 = _stablePair.balanceOf(address(this));
+
+        // assert
+        if (lFutureAToSet > DEFAULT_AMP_COEFF) {
+            assertGt(lLpTokens2, lLpTokens1);
+        } else if (lFutureAToSet < DEFAULT_AMP_COEFF) {
+            assertLt(lLpTokens2, lLpTokens1);
+        }
+    }
+
     function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public {
         // assume - for ramping up or down from DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
@@ -750,7 +785,7 @@ contract StablePairTest is BaseTest {
         _stablePair.burn(address(this));
 
         // assert
-        assertEq(_stablePair.balanceOf(_platformFeeTo), 249949579285927);
+        assertEq(_stablePair.balanceOf(_platformFeeTo), 249_949_579_285_927);
     }
 
     function testRampA() public {

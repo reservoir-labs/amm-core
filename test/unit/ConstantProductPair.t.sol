@@ -765,7 +765,9 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.burn(address(this));
 
         // assert
-        assertEq(_constantProductPair.balanceOf(_platformFeeTo), _constantProductPair.totalSupply() - lInitialTotalSupply);
+        assertEq(
+            _constantProductPair.balanceOf(_platformFeeTo), _constantProductPair.totalSupply() - lInitialTotalSupply
+        );
 
         console.log("kLast", _constantProductPair.kLast());
 
