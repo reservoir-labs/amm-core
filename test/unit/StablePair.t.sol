@@ -907,6 +907,7 @@ contract StablePairTest is BaseTest {
         // act - swap once at half volume, again with platform fee.
         vm.prank(address(_factory));
         _stablePair.setCustomPlatformFee(type(uint256).max);
+        _stablePair.burn(address(this));
         lToken0.transfer(address(_stablePair), lAmountOut / 2);
         lAmountOut = _stablePair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
         lToken1.transfer(address(_stablePair), lAmountOut);
@@ -916,8 +917,6 @@ contract StablePairTest is BaseTest {
         //          we disabled fees for the high volume.
         _stablePair.burn(address(this));
         uint256 lNewShares = _stablePair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
-        console.log("new", lNewShares);
-        console.log("old", lPlatformShares);
         assertLt(lNewShares, lPlatformShares);
     }
 

@@ -735,6 +735,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act - swap once at half volume, again with platform fee.
         vm.prank(address(_factory));
         _constantProductPair.setCustomPlatformFee(type(uint256).max);
+        _constantProductPair.burn(address(this));
         lToken0.transfer(address(_constantProductPair), lAmountOut / 2);
         lAmountOut = _constantProductPair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
         lToken1.transfer(address(_constantProductPair), lAmountOut);
@@ -744,8 +745,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         //          we disabled fees for the high volume.
         _constantProductPair.burn(address(this));
         uint256 lNewShares = _constantProductPair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
-        console.log("new", lNewShares);
-        console.log("old", lPlatformShares);
         assertLt(lNewShares, lPlatformShares);
     }
 }
