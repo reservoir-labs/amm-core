@@ -668,8 +668,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
-        // why are we getting the balance of _factory?
-        assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _constantProductPair.burn(address(this));
         uint256 lPlatformShares = _constantProductPair.balanceOf(address(_platformFeeTo));
@@ -709,7 +708,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertGe(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
-        assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _constantProductPair.burn(address(this));
         uint256 lPlatformShares = _constantProductPair.balanceOf(address(_platformFeeTo));

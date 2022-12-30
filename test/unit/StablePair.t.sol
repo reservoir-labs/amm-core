@@ -840,6 +840,7 @@ contract StablePairTest is BaseTest {
         assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
         assertEq(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
         assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _stablePair.burn(address(this));
         uint256 lPlatformShares = _stablePair.balanceOf(address(_platformFeeTo));
@@ -879,6 +880,7 @@ contract StablePairTest is BaseTest {
         assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
         assertGe(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
         assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _stablePair.burn(address(this));
         uint256 lPlatformShares = _stablePair.balanceOf(address(_platformFeeTo));
