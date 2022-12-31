@@ -39,6 +39,29 @@ contract OracleWriterTest is BaseTest {
         _pair.observation(lIndex);
     }
 
+    function testUpdateOracle_WriteOldReservesNotNew() external allPairs {
+        // arrange
+        uint256 lJumpAhead = 10;
+        (uint104 lReserve0,,,) = _pair.getReserves();
+        assertEq(lReserve0, INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_pair), 10e18);
+
+        // act - call sync to trigger a write to the oracle
+        _stepTime(lJumpAhead);
+        _pair.sync();
+
+        // assert - make sure that the written observation is of the previous reserves, not the new reserves
+        (uint256 lNewReserve0,,, uint16 lIndex) = _pair.getReserves();
+
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lNewReserve0, 110e18);
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logAccLiquidity / int56(int256(lJumpAhead))),
+            INITIAL_MINT_AMOUNT,
+            0.0001e18
+        );
+    }
+
     function testUpdateOracleCaller() external allPairs {
         // arrange
         address lNewOracleCaller = address(0x555);
