@@ -290,18 +290,6 @@ contract StablePair is ReservoirPair {
         return _getCurrentAPrecise();
     }
 
-    // TODO: Is this function needed?
-    function getAmountOut(address tokenIn, uint256 amountIn) public view returns (uint256 finalAmountOut) {
-        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
-
-        if (tokenIn == token0) {
-            finalAmountOut = _getAmountOut(amountIn, lReserve0, lReserve1, true);
-        } else {
-            require(tokenIn == token1, "SP: INVALID_INPUT_TOKEN");
-            finalAmountOut = _getAmountOut(amountIn, lReserve0, lReserve1, false);
-        }
-    }
-
     // TODO: Do we need this function?
     function getVirtualPrice() public view returns (uint256 virtualPrice) {
         (uint256 lReserve0, uint256 lReserve1,,) = getReserves();

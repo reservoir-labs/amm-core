@@ -1144,92 +1144,106 @@ contract StablePairTest is BaseTest {
         assertEq(_stablePair.getCurrentA(), lFutureAToSet);
     }
 
-    function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount)
+    function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint256 aFutureA, uint256 aDuration, uint256 aSwapAmount)
         public
     {
-        // arrange
+        // assume
         uint64 lFutureAToSet = uint64(bound(aFutureA, _stablePair.getCurrentA(), StableMath.MAX_A));
         uint256 lMinRampDuration = lFutureAToSet / _stablePair.getCurrentA() * 1 days;
         uint256 lMaxRampDuration = 30 days; // 1 month
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = aSwapAmount / 2;
+        int256 lAmountToSwap = int256(bound(aSwapAmount, 1, type(uint104).max / 2));
+
+        // arrange
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
         // act
         _factory.rawCall(
             address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
         );
 
-        uint256 lAmountOutBeforeRamp = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
-        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
+        uint256 lBefore = vm.snapshot();
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutBeforeRamp = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
-        skip(lCheck1);
-        uint256 lAmountOutT1 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck1;
-        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
-        skip(lCheck2);
-        uint256 lAmountOutT2 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lTimeToSkip = bound(aSeed, 0, lRemainingTime / 4);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT1 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        lRemainingTime -= lCheck2;
-        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 0, lRemainingTime));
-        skip(lCheck3);
-        uint256 lAmountOutT3 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck3;
-        skip(lRemainingTime);
-        uint256 lAmountOutT4 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        lTimeToSkip = bound(aSeed, lRemainingTime / 4, lRemainingTime / 2);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT2 = _stablePair.swap(lAmountToSwap, true, address(this), "");
+
+        vm.revertTo(lBefore);
+
+        _stepTime(lRemainingTime);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT3 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
         // assert - output amount over time should be increasing or be within 1 due to rounding error
         assertTrue(lAmountOutT1 >= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
         assertTrue(lAmountOutT2 >= lAmountOutT1 || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 >= lAmountOutT2 || MathUtils.within1(lAmountOutT3, lAmountOutT2));
-        assertTrue(lAmountOutT4 >= lAmountOutT3 || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 
-    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount)
+    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint256 aFutureA, uint256 aDuration, uint256 aSwapAmount)
         public
     {
-        // arrange
+        // assume
         uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _stablePair.getCurrentA()));
         uint256 lMinRampDuration = _stablePair.getCurrentA() / lFutureAToSet * 1 days;
         uint256 lMaxRampDuration = 1000 days;
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = aSwapAmount / 2;
+        int256 lAmountToSwap = int256(bound(aSwapAmount, 1, type(uint104).max / 2));
+
+        // arrange
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
         // act
         _factory.rawCall(
             address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
         );
 
-        uint256 lAmountOutBeforeRamp = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
-        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
+        uint256 lBefore = vm.snapshot();
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutBeforeRamp = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
-        skip(lCheck1);
-        uint256 lAmountOutT1 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck1;
-        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
-        skip(lCheck2);
-        uint256 lAmountOutT2 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lTimeToSkip = bound(aSeed, 0, lRemainingTime / 4);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT1 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        lRemainingTime -= lCheck2;
-        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
-        skip(lCheck3);
-        uint256 lAmountOutT3 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck3;
-        skip(lRemainingTime);
-        uint256 lAmountOutT4 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        lTimeToSkip = bound(aSeed, lRemainingTime / 4, lRemainingTime / 2);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT2 = _stablePair.swap(lAmountToSwap, true, address(this), "");
+
+        vm.revertTo(lBefore);
+
+        _stepTime(lRemainingTime);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT3 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
         // assert - output amount over time should be decreasing or within 1 due to rounding error
         assertTrue(lAmountOutT1 <= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
         assertTrue(lAmountOutT2 <= lAmountOutT1 || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 <= lAmountOutT2 || MathUtils.within1(lAmountOutT3, lAmountOutT2));
-        assertTrue(lAmountOutT4 <= lAmountOutT3 || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 
     // inspired from saddle's test case, which is testing for this vulnerability
