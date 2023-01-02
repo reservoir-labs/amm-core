@@ -93,19 +93,19 @@ contract StableMintBurn is ReservoirPair {
         lReserve0 += uint104(lFee0);
         lReserve1 += uint104(lFee1);
 
-        (bool feeOn, uint256 _totalSupply, uint256 oldLiq) = _mintFee(lReserve0, lReserve1);
+        (bool lFeeOn, uint256 lTotalSupply, uint256 lOldLiq) = _mintFee(lReserve0, lReserve1);
 
-        if (_totalSupply == 0) {
+        if (lTotalSupply == 0) {
             require(lAmount0 > 0 && lAmount1 > 0, "SP: INVALID_AMOUNTS");
             rLiquidity = lNewLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
-            rLiquidity = ((lNewLiq - oldLiq) * _totalSupply) / oldLiq;
+            rLiquidity = ((lNewLiq - lOldLiq) * lTotalSupply) / lOldLiq;
         }
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
 
-        if (feeOn) {
+        if (lFeeOn) {
             // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
             // places)
             // which results in 112 + 60 + 1 = 173 bits
@@ -130,10 +130,10 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 liquidity = balanceOf[address(this)];
 
-        (bool feeOn, uint256 _totalSupply,) = _mintFee(lReserve0, lReserve1);
+        (bool lFeeOn, uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
 
-        amount0 = (liquidity * lReserve0) / _totalSupply;
-        amount1 = (liquidity * lReserve1) / _totalSupply;
+        amount0 = (liquidity * lReserve0) / lTotalSupply;
+        amount1 = (liquidity * lReserve1) / lTotalSupply;
 
         _burn(address(this), liquidity);
 
@@ -142,7 +142,7 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
-        if (feeOn) {
+        if (lFeeOn) {
             lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
             lastInvariantAmp = _getCurrentAPrecise();
         }
@@ -178,28 +178,28 @@ contract StableMintBurn is ReservoirPair {
 
     function _mintFee(uint256 lReserve0, uint256 lReserve1)
         internal
-        returns (bool feeOn, uint256 _totalSupply, uint256 d)
+        returns (bool rFeeOn, uint256 rTotalSupply, uint256 rD)
     {
-        feeOn = platformFee > 0;
-        _totalSupply = totalSupply;
-        if (feeOn) {
-            uint256 _dLast = lastInvariant;
-            if (_dLast != 0) {
-                d = StableMath._computeLiquidityFromAdjustedBalances(
+        rFeeOn = platformFee > 0;
+        rTotalSupply = totalSupply;
+        if (rFeeOn) {
+            uint256 lDLast = lastInvariant;
+            if (lDLast != 0) {
+                rD = StableMath._computeLiquidityFromAdjustedBalances(
                     lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
                 );
-                if (d > _dLast) {
+                if (rD > lDLast) {
                     // @dev `platformFee` % of increase in liquidity.
-                    uint256 _platformFee = platformFee;
-                    uint256 numerator = _totalSupply * (d - _dLast) * _platformFee;
-                    uint256 denominator = (FEE_ACCURACY - _platformFee) * d + _platformFee * _dLast;
-                    uint256 liquidity = numerator / denominator;
+                    uint256 lPlatformFee = platformFee;
+                    uint256 lNumerator = rTotalSupply * (rD - lDLast) * lPlatformFee;
+                    uint256 lDenominator = (FEE_ACCURACY - lPlatformFee) * rD + lPlatformFee * lDLast;
+                    uint256 lLiq = lNumerator / lDenominator;
 
-                    if (liquidity != 0) {
+                    if (lLiq != 0) {
                         address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
 
-                        _mint(platformFeeTo, liquidity);
-                        _totalSupply += liquidity;
+                        _mint(platformFeeTo, lLiq);
+                        rTotalSupply += lLiq;
                     }
                 }
             }
