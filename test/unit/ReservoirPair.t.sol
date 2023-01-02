@@ -137,4 +137,16 @@ contract ReservoirPairTest is BaseTest {
         vm.expectRevert("RP: TRANSFER_FAILED");
         _pair.swap(lSwapAmt, true, address(this), "");
     }
+
+    function testCheckedTransfer_RevertWhenTransferReverts() external allPairs {
+        // arrange
+        int256 lSwapAmt = 5e18;
+        // make the tokenB balance in pair 0, so that transfer will fail
+        deal(address(_tokenB), address(_pair), 0);
+
+        // act & assert
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        vm.expectRevert("RP: TRANSFER_FAILED");
+        _pair.swap(lSwapAmt, true, address(this), "");
+    }
 }
