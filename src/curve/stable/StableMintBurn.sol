@@ -172,14 +172,14 @@ contract StableMintBurn is ReservoirPair {
         }
     }
 
-    function _mintFee(uint256 lReserve0, uint256 lReserve1)
+    function _mintFee(uint256 aReserve0, uint256 aReserve1)
         internal
         returns (uint256 rTotalSupply, uint256 rD)
     {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(
-            lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
+            aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
         );
         if (lFeeOn) {
             uint256 lDLast = lastInvariant;
@@ -189,13 +189,13 @@ contract StableMintBurn is ReservoirPair {
                     uint256 lPlatformFee = platformFee;
                     uint256 lNumerator = rTotalSupply * (rD - lDLast) * lPlatformFee;
                     uint256 lDenominator = (FEE_ACCURACY - lPlatformFee) * rD + lPlatformFee * lDLast;
-                    uint256 lLiq = lNumerator / lDenominator;
+                    uint256 lPlatformShares = lNumerator / lDenominator;
 
-                    if (lLiq != 0) {
-                        address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
+                    if (lPlatformShares != 0) {
+                        address lPlatformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
 
-                        _mint(platformFeeTo, lLiq);
-                        rTotalSupply += lLiq;
+                        _mint(lPlatformFeeTo, lPlatformShares);
+                        rTotalSupply += lPlatformShares;
                     }
                 }
             }
