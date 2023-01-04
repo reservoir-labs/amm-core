@@ -93,7 +93,7 @@ contract StableMintBurn is ReservoirPair {
         lReserve0 += uint104(lFee0);
         lReserve1 += uint104(lFee1);
 
-        (bool lFeeOn, uint256 lTotalSupply, uint256 lOldLiq) = _mintFee(lReserve0, lReserve1);
+        (uint256 lTotalSupply, uint256 lOldLiq) = _mintFee(lReserve0, lReserve1);
 
         if (lTotalSupply == 0) {
             require(lAmount0 > 0 && lAmount1 > 0, "SP: INVALID_AMOUNTS");
@@ -105,15 +105,13 @@ contract StableMintBurn is ReservoirPair {
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
 
-        if (lFeeOn) {
-            // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
-            // places)
-            // which results in 112 + 60 + 1 = 173 bits
-            // which fits into uint192
-            // TODO: Why does lastInvariant get set to lNewLiq? Not symmetric with burn?
-            lastInvariant = uint192(lNewLiq);
-            lastInvariantAmp = _getCurrentAPrecise();
-        }
+        // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
+        // places)
+        // which results in 112 + 60 + 1 = 173 bits
+        // which fits into uint192
+        // TODO: Why does lastInvariant get set to lNewLiq? Not symmetric with burn?
+        lastInvariant = uint192(lNewLiq);
+        lastInvariantAmp = _getCurrentAPrecise();
 
         emit Mint(msg.sender, lAmount0, lAmount1);
 
@@ -130,7 +128,7 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 liquidity = balanceOf[address(this)];
 
-        (bool lFeeOn, uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
+        (uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
 
         amount0 = (liquidity * lReserve0) / lTotalSupply;
         amount1 = (liquidity * lReserve1) / lTotalSupply;
@@ -142,10 +140,8 @@ contract StableMintBurn is ReservoirPair {
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
-        if (lFeeOn) {
-            lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
-            lastInvariantAmp = _getCurrentAPrecise();
-        }
+        lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
+        lastInvariantAmp = _getCurrentAPrecise();
         emit Burn(msg.sender, amount0, amount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
@@ -178,16 +174,16 @@ contract StableMintBurn is ReservoirPair {
 
     function _mintFee(uint256 lReserve0, uint256 lReserve1)
         internal
-        returns (bool rFeeOn, uint256 rTotalSupply, uint256 rD)
+        returns (uint256 rTotalSupply, uint256 rD)
     {
-        rFeeOn = platformFee > 0;
+        bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
-        if (rFeeOn) {
+        rD = StableMath._computeLiquidityFromAdjustedBalances(
+            lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
+        );
+        if (lFeeOn) {
             uint256 lDLast = lastInvariant;
             if (lDLast != 0) {
-                rD = StableMath._computeLiquidityFromAdjustedBalances(
-                    lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
-                );
                 if (rD > lDLast) {
                     // @dev `platformFee` % of increase in liquidity.
                     uint256 lPlatformFee = platformFee;

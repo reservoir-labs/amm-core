@@ -141,6 +141,23 @@ contract StablePairTest is BaseTest {
         assertLt(lBurnOutputA, lSwapOutputA + lAmountAToMint);
     }
 
+    function testMint_PlatformFeeOff() external {
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(0);
+
+        // sanity
+        assertEq(_stablePair.platformFee(), 0);
+
+        // act
+        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _stablePair.mint(address(this));
+
+        // assert
+        assertEq(_stablePair.balanceOf(address(this)), 2 * INITIAL_MINT_AMOUNT);
+    }
+
     function testMint_WhenRampingA(uint256 aFutureA) external {
         // assume - for ramping up or down from DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));

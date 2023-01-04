@@ -127,7 +127,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lAmount0 = lBalance0 - lReserve0;
         uint256 lAmount1 = lBalance1 - lReserve1;
 
-        bool lFeeOn = _mintFee(lReserve0, lReserve1);
+        _mintFee(lReserve0, lReserve1);
         uint256 lTotalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (lTotalSupply == 0) {
             rLiquidity = Math.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
@@ -139,7 +139,7 @@ contract ConstantProductPair is ReservoirPair {
         _mint(aTo, rLiquidity);
 
         // NB: The size of lBalance0 & lBalance1 will be verified in _update.
-        if (lFeeOn) kLast = lBalance0 * lBalance1;
+        kLast = lBalance0 * lBalance1;
         emit Mint(msg.sender, lAmount0, lAmount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
@@ -154,7 +154,7 @@ contract ConstantProductPair is ReservoirPair {
 
         uint256 liquidity = balanceOf[address(this)];
 
-        bool lFeeOn = _mintFee(lReserve0, lReserve1);
+        _mintFee(lReserve0, lReserve1);
         uint256 lTotalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         rAmount0 = liquidity * _totalToken0() / lTotalSupply; // using balances ensures pro-rata distribution
         rAmount1 = liquidity * _totalToken1() / lTotalSupply; // using balances ensures pro-rata distribution
@@ -167,7 +167,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lBalance1 = _totalToken1();
 
         // NB: The size of lBalance0 & lBalance1 will be verified in _update.
-        if (lFeeOn) kLast = lBalance0 * lBalance1;
+        kLast = lBalance0 * lBalance1;
         emit Burn(msg.sender, rAmount0, rAmount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
