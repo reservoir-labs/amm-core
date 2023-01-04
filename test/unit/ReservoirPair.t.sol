@@ -83,9 +83,9 @@ contract ReservoirPairTest is BaseTest {
         _pair.mint(address(this));
 
         // assert
-        (, , , uint16 lIndex) = _pair.getReserves();
+        (,,, uint16 lIndex) = _pair.getReserves();
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 470050);
+        assertEq(lObs.logAccLiquidity, 470_050);
     }
 
     function testOracleWriteAfterAssetManagerProfit_Burn() external allPairs {
@@ -101,9 +101,9 @@ contract ReservoirPairTest is BaseTest {
         _pair.burn(address(this));
 
         // assert
-        (, , , uint16 lIndex) = _pair.getReserves();
+        (,,, uint16 lIndex) = _pair.getReserves();
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 470050);
+        assertEq(lObs.logAccLiquidity, 470_050);
     }
 
     function testOracleWriteAfterAssetManagerProfit_Sync() external allPairs {
@@ -119,8 +119,34 @@ contract ReservoirPairTest is BaseTest {
         _pair.sync();
 
         // assert
-        (, , , uint16 lIndex) = _pair.getReserves();
+        (,,, uint16 lIndex) = _pair.getReserves();
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 470050);
+        assertEq(lObs.logAccLiquidity, 470_050);
+    }
+
+    function testCheckedTransfer_RevertWhenTransferFail() external allPairs {
+        // arrange
+        int256 lSwapAmt = 5e18;
+        // make any call to tokenB::transfer fail
+        vm.mockCall(
+            address(_tokenB), abi.encodeWithSelector(bytes4(keccak256("transfer(address,uint256)"))), abi.encode(false)
+        );
+
+        // act & assert
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        vm.expectRevert("RP: TRANSFER_FAILED");
+        _pair.swap(lSwapAmt, true, address(this), "");
+    }
+
+    function testCheckedTransfer_RevertWhenTransferReverts() external allPairs {
+        // arrange
+        int256 lSwapAmt = 5e18;
+        // make the tokenB balance in pair 0, so that transfer will fail
+        deal(address(_tokenB), address(_pair), 0);
+
+        // act & assert
+        _tokenA.mint(address(_pair), uint256(lSwapAmt));
+        vm.expectRevert("RP: TRANSFER_FAILED");
+        _pair.swap(lSwapAmt, true, address(this), "");
     }
 }

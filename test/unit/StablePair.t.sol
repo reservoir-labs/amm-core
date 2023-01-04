@@ -141,6 +141,57 @@ contract StablePairTest is BaseTest {
         assertLt(lBurnOutputA, lSwapOutputA + lAmountAToMint);
     }
 
+    function testMint_PlatformFeeOff() external {
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(0);
+
+        // sanity
+        assertEq(_stablePair.platformFee(), 0);
+
+        // act
+        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _stablePair.mint(address(this));
+
+        // assert
+        assertEq(_stablePair.balanceOf(address(this)), 2 * INITIAL_MINT_AMOUNT);
+    }
+
+    function testMint_WhenRampingA(uint256 aFutureA) external {
+        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
+        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.rampA(lFutureAToSet, lFutureATimestamp);
+        uint256 lBefore = vm.snapshot();
+
+        // act
+        vm.warp(lFutureATimestamp / 2);
+        _tokenA.mint(address(_stablePair), 5e18);
+        _tokenB.mint(address(_stablePair), 10e18);
+        _stablePair.mint(address(this));
+        uint256 lLpTokens1 = _stablePair.balanceOf(address(this));
+
+        vm.revertTo(lBefore);
+
+        vm.warp(lFutureATimestamp);
+        _tokenA.mint(address(_stablePair), 5e18);
+        _tokenB.mint(address(_stablePair), 10e18);
+        _stablePair.mint(address(this));
+        uint256 lLpTokens2 = _stablePair.balanceOf(address(this));
+
+        // assert
+        if (lFutureAToSet > DEFAULT_AMP_COEFF) {
+            assertGt(lLpTokens2, lLpTokens1);
+        } else if (lFutureAToSet < DEFAULT_AMP_COEFF) {
+            assertLt(lLpTokens2, lLpTokens1);
+        }
+    }
+
     function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public {
         // assume - for ramping up or down from DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
@@ -365,6 +416,15 @@ contract StablePairTest is BaseTest {
         // act & assert
         vm.expectRevert("SP: AMOUNT_ZERO");
         _stablePair.swap(0, true, address(this), "");
+    }
+
+    function testSwap_MinInt256() external {
+        // arrange
+        int256 lSwapAmt = type(int256).min;
+
+        // act & assert
+        vm.expectRevert(stdError.arithmeticError);
+        _stablePair.swap(lSwapAmt, true, address(this), "");
     }
 
     function testSwap_Token0ExactOut(uint256 aAmountOut) public {
@@ -700,6 +760,40 @@ contract StablePairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
     }
 
+    function testBurn_WhenRampingA(uint256 aFutureA) external {
+        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
+        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
+        uint256 lBalance = _stablePair.balanceOf(_alice);
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.rampA(lFutureAToSet, lFutureATimestamp);
+        uint256 lBefore = vm.snapshot();
+
+        // act
+        vm.warp(lFutureATimestamp / 2);
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), lBalance / 2);
+        _stablePair.burn(address(this));
+        uint256 lTokenABal0 = _tokenA.balanceOf(address(this));
+        uint256 lTokenBBal0 = _tokenB.balanceOf(address(this));
+
+        vm.revertTo(lBefore);
+
+        vm.warp(lFutureATimestamp);
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), lBalance / 2);
+        _stablePair.burn(address(this));
+        uint256 lTokenABal1 = _tokenA.balanceOf(address(this));
+        uint256 lTokenBBal1 = _tokenB.balanceOf(address(this));
+
+        // assert - amount received should be the same regardless of A
+        assertEq(lTokenABal0, lTokenABal1);
+        assertEq(lTokenBBal0, lTokenBBal1);
+    }
+
     function testBurn_DiffDecimalPlaces(uint256 aAmtToBurn) public {
         // assume
         uint256 lAmtToBurn = bound(aAmtToBurn, 2, 2e12 - 1);
@@ -741,7 +835,106 @@ contract StablePairTest is BaseTest {
         _stablePair.burn(address(this));
 
         // assert
-        assertEq(_stablePair.balanceOf(_platformFeeTo), 249949579285927);
+        assertEq(_stablePair.balanceOf(_platformFeeTo), 249_949_579_285_927);
+    }
+
+    function testPlatformFee_Disable() external {
+        // sanity
+        assertGt(_stablePair.platformFee(), 0);
+        _stablePair.sync();
+        IERC20 lToken0 = IERC20(_stablePair.token0());
+        IERC20 lToken1 = IERC20(_stablePair.token1());
+        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // swap lSwapAmount back and forth
+        lToken0.transfer(address(_stablePair), lSwapAmount);
+        uint256 lAmountOut = _stablePair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _stablePair.sync();
+        assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
+
+        _stablePair.burn(address(this));
+        uint256 lPlatformShares = _stablePair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(0);
+
+        // act
+        lToken0.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _stablePair.burn(address(this));
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+    }
+
+    function testPlatformFee_DisableReenable() external {
+        // sanity
+        assertGt(_stablePair.platformFee(), 0);
+        _stablePair.sync();
+        IERC20 lToken0 = IERC20(_stablePair.token0());
+        IERC20 lToken1 = IERC20(_stablePair.token1());
+        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // act - swap once with platform fee.
+        lToken0.transfer(address(_stablePair), lSwapAmount);
+        uint256 lAmountOut = _stablePair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _stablePair.sync();
+        assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
+
+        _stablePair.burn(address(this));
+        uint256 lPlatformShares = _stablePair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(0);
+
+        // act - swap twice with no platform fee.
+        lToken0.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+        lToken0.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _stablePair.burn(address(this));
+        assertEq(_stablePair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+
+        // act - swap once at half volume, again with platform fee.
+        vm.prank(address(_factory));
+        _stablePair.setCustomPlatformFee(type(uint256).max);
+        _stablePair.burn(address(this));
+        lToken0.transfer(address(_stablePair), lAmountOut / 2);
+        lAmountOut = _stablePair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
+        lToken1.transfer(address(_stablePair), lAmountOut);
+        lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert - we shouldn't have received more than the first time because
+        //          we disabled fees for the high volume.
+        _stablePair.burn(address(this));
+        uint256 lNewShares = _stablePair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
+        assertLt(lNewShares, lPlatformShares);
     }
 
     function testRampA() public {
@@ -968,92 +1161,106 @@ contract StablePairTest is BaseTest {
         assertEq(_stablePair.getCurrentA(), lFutureAToSet);
     }
 
-    function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount)
+    function testRampA_SwappingDuringRampingUp(uint256 aSeed, uint256 aFutureA, uint256 aDuration, uint256 aSwapAmount)
         public
     {
-        // arrange
+        // assume
         uint64 lFutureAToSet = uint64(bound(aFutureA, _stablePair.getCurrentA(), StableMath.MAX_A));
         uint256 lMinRampDuration = lFutureAToSet / _stablePair.getCurrentA() * 1 days;
         uint256 lMaxRampDuration = 30 days; // 1 month
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = aSwapAmount / 2;
+        int256 lAmountToSwap = int256(bound(aSwapAmount, 1, type(uint104).max / 2));
+
+        // arrange
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
         // act
         _factory.rawCall(
             address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
         );
 
-        uint256 lAmountOutBeforeRamp = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
-        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
+        uint256 lBefore = vm.snapshot();
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutBeforeRamp = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
-        skip(lCheck1);
-        uint256 lAmountOutT1 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck1;
-        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
-        skip(lCheck2);
-        uint256 lAmountOutT2 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lTimeToSkip = bound(aSeed, 0, lRemainingTime / 4);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT1 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        lRemainingTime -= lCheck2;
-        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck2))), 0, lRemainingTime));
-        skip(lCheck3);
-        uint256 lAmountOutT3 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck3;
-        skip(lRemainingTime);
-        uint256 lAmountOutT4 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        lTimeToSkip = bound(aSeed, lRemainingTime / 4, lRemainingTime / 2);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT2 = _stablePair.swap(lAmountToSwap, true, address(this), "");
+
+        vm.revertTo(lBefore);
+
+        _stepTime(lRemainingTime);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT3 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
         // assert - output amount over time should be increasing or be within 1 due to rounding error
         assertTrue(lAmountOutT1 >= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
         assertTrue(lAmountOutT2 >= lAmountOutT1 || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 >= lAmountOutT2 || MathUtils.within1(lAmountOutT3, lAmountOutT2));
-        assertTrue(lAmountOutT4 >= lAmountOutT3 || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 
-    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint64 aFutureA, uint64 aDuration, uint128 aSwapAmount)
+    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint256 aFutureA, uint256 aDuration, uint256 aSwapAmount)
         public
     {
-        // arrange
+        // assume
         uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _stablePair.getCurrentA()));
         uint256 lMinRampDuration = _stablePair.getCurrentA() / lFutureAToSet * 1 days;
         uint256 lMaxRampDuration = 1000 days;
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + uint64(bound(aDuration, lMinRampDuration, lMaxRampDuration));
-        uint256 lAmountToSwap = aSwapAmount / 2;
+        int256 lAmountToSwap = int256(bound(aSwapAmount, 1, type(uint104).max / 2));
+
+        // arrange
+        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
 
         // act
         _factory.rawCall(
             address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
         );
 
-        uint256 lAmountOutBeforeRamp = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
-        uint64 lRemainingTime = lFutureATimestamp - lCurrentTimestamp;
+        uint256 lBefore = vm.snapshot();
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutBeforeRamp = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        uint64 lCheck1 = uint64(bound(aSeed, 0, lRemainingTime));
-        skip(lCheck1);
-        uint256 lAmountOutT1 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck1;
-        uint64 lCheck2 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
-        skip(lCheck2);
-        uint256 lAmountOutT2 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        uint256 lTimeToSkip = bound(aSeed, 0, lRemainingTime / 4);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT1 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
-        lRemainingTime -= lCheck2;
-        uint64 lCheck3 = uint64(bound(uint256(keccak256(abi.encode(lCheck1))), 0, lRemainingTime));
-        skip(lCheck3);
-        uint256 lAmountOutT3 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        vm.revertTo(lBefore);
+        lBefore = vm.snapshot();
 
-        lRemainingTime -= lCheck3;
-        skip(lRemainingTime);
-        uint256 lAmountOutT4 = _stablePair.getAmountOut(address(_tokenA), lAmountToSwap);
+        lTimeToSkip = bound(aSeed, lRemainingTime / 4, lRemainingTime / 2);
+        _stepTime(lTimeToSkip);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT2 = _stablePair.swap(lAmountToSwap, true, address(this), "");
+
+        vm.revertTo(lBefore);
+
+        _stepTime(lRemainingTime);
+        _tokenA.mint(address(_stablePair), uint256(lAmountToSwap));
+        uint256 lAmountOutT3 = _stablePair.swap(lAmountToSwap, true, address(this), "");
 
         // assert - output amount over time should be decreasing or within 1 due to rounding error
         assertTrue(lAmountOutT1 <= lAmountOutBeforeRamp || MathUtils.within1(lAmountOutT1, lAmountOutBeforeRamp));
         assertTrue(lAmountOutT2 <= lAmountOutT1 || MathUtils.within1(lAmountOutT2, lAmountOutT1));
         assertTrue(lAmountOutT3 <= lAmountOutT2 || MathUtils.within1(lAmountOutT3, lAmountOutT2));
-        assertTrue(lAmountOutT4 <= lAmountOutT3 || MathUtils.within1(lAmountOutT4, lAmountOutT3));
     }
 
     // inspired from saddle's test case, which is testing for this vulnerability

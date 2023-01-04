@@ -183,6 +183,15 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertEq(_tokenC.balanceOf(address(this)), 0.000997e18);
     }
 
+    function testSwap_MinInt256() external {
+        // arrange
+        int256 lSwapAmt = type(int256).min;
+
+        // act & assert
+        vm.expectRevert(stdError.arithmeticError);
+        _constantProductPair.swap(lSwapAmt, true, address(this), "");
+    }
+
     function testSwap_ExactOutExceedReserves() public {
         // act & assert
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
@@ -659,7 +668,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
-        assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _constantProductPair.burn(address(this));
         uint256 lPlatformShares = _constantProductPair.balanceOf(address(_platformFeeTo));
@@ -699,7 +708,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertGe(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
         assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
-        assertEq(_constantProductPair.balanceOf(address(_factory)), 0);
+        assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _constantProductPair.burn(address(this));
         uint256 lPlatformShares = _constantProductPair.balanceOf(address(_platformFeeTo));
@@ -726,6 +735,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act - swap once at half volume, again with platform fee.
         vm.prank(address(_factory));
         _constantProductPair.setCustomPlatformFee(type(uint256).max);
+        _constantProductPair.burn(address(this));
         lToken0.transfer(address(_constantProductPair), lAmountOut / 2);
         lAmountOut = _constantProductPair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
         lToken1.transfer(address(_constantProductPair), lAmountOut);
