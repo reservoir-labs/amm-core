@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
-import { MintableUniswapV2ERC20 } from "test/__fixtures/MintableUniswapV2ERC20.sol";
+import { MintableReservoirERC20 } from "test/__fixtures/MintableReservoirERC20.sol";
 
 contract UniswapV2ERC20Test is BaseTest {
-    MintableUniswapV2ERC20 private _token = new MintableUniswapV2ERC20(18);
+    MintableReservoirERC20 private _token = new MintableReservoirERC20(18);
 
     function setUp() external {
         _token.mint(address(this), 100e18);

@@ -169,10 +169,7 @@ contract StableMintBurn is ReservoirPair {
         }
     }
 
-    function _mintFee(uint256 aReserve0, uint256 aReserve1)
-        internal
-        returns (uint256 rTotalSupply, uint256 rD)
-    {
+    function _mintFee(uint256 aReserve0, uint256 aReserve1) internal returns (uint256 rTotalSupply, uint256 rD) {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(

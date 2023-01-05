@@ -9,7 +9,7 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { IPair } from "src/interfaces/IPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
+import { ReservoirERC20 } from "src/ReservoirERC20.sol";
 
 struct Slot0 {
     uint104 reserve0;
@@ -18,7 +18,7 @@ struct Slot0 {
     uint16 index;
 }
 
-abstract contract Pair is IPair, UniswapV2ERC20 {
+abstract contract Pair is IPair, ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 

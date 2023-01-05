@@ -1212,9 +1212,12 @@ contract StablePairTest is BaseTest {
         assertTrue(lAmountOutT3 >= lAmountOutT2 || MathUtils.within1(lAmountOutT3, lAmountOutT2));
     }
 
-    function testRampA_SwappingDuringRampingDown(uint256 aSeed, uint256 aFutureA, uint256 aDuration, uint256 aSwapAmount)
-        public
-    {
+    function testRampA_SwappingDuringRampingDown(
+        uint256 aSeed,
+        uint256 aFutureA,
+        uint256 aDuration,
+        uint256 aSwapAmount
+    ) public {
         // assume
         uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, _stablePair.getCurrentA()));
         uint256 lMinRampDuration = _stablePair.getCurrentA() / lFutureAToSet * 1 days;
