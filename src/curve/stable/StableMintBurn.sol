@@ -108,7 +108,6 @@ contract StableMintBurn is ReservoirPair {
         // places)
         // which results in 112 + 60 + 1 = 173 bits
         // which fits into uint192
-        // TODO: Why does lastInvariant get set to lNewLiq? Not symmetric with burn?
         lastInvariant = uint192(lNewLiq);
         lastInvariantAmp = _getCurrentAPrecise();
 
