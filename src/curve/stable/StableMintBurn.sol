@@ -74,10 +74,9 @@ contract StableMintBurn is ReservoirPair {
         require(token0Fee <= type(uint104).max && token1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
-    // TODO: public -> external?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address aTo) public returns (uint256 rLiquidity) {
+    function mint(address aTo) external returns (uint256 rLiquidity) {
         // NB: Must sync management PNL before we load reserves.
         // TODO: Is passing/using reserves as uint256 cheaper and still safe?
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
@@ -119,9 +118,8 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    // TODO: public -> external?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address aTo) public returns (uint256 amount0, uint256 amount1) {
+    function burn(address aTo) external returns (uint256 amount0, uint256 amount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
