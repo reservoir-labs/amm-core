@@ -86,6 +86,7 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         if (address(assetManager) == address(0)) {
             return;
         }
+        assetManager.afterLiquidityEvent();
     }
 
     function adjustManagement(int256 token0Change, int256 token1Change) external {

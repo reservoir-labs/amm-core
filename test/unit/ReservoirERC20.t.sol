@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "test/__fixtures/BaseTest.sol";
 import { MintableReservoirERC20 } from "test/__fixtures/MintableReservoirERC20.sol";
 
-contract UniswapV2ERC20Test is BaseTest {
+contract ReservoirERC20Test is BaseTest {
     MintableReservoirERC20 private _token = new MintableReservoirERC20(18);
 
     function setUp() external {

@@ -16,7 +16,16 @@ contract ReservoirERC20Gas is BaseTest {
         abi.encodePacked(
             "\x19\x01",
             _token.DOMAIN_SEPARATOR(),
-            keccak256(abi.encode(_token.PERMIT_TYPEHASH(), _owner, _spender, _amount, _token.nonces(_owner), _deadline))
+            keccak256(
+                abi.encode(
+                    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                    _owner,
+                    _spender,
+                    _amount,
+                    _token.nonces(_owner),
+                    _deadline
+                )
+            )
         )
     );
     uint8 private _v;

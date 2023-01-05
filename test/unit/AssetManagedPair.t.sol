@@ -5,14 +5,14 @@ import "test/__fixtures/BaseTest.sol";
 import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
+import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 contract AssetManagedPairTest is BaseTest {
     AssetManager private _manager = new AssetManager();
 
-    IAssetManagedPair[] internal _pairs;
-    IAssetManagedPair internal _pair;
+    AssetManagedPair[] internal _pairs;
+    AssetManagedPair internal _pair;
 
     modifier allPairs() {
         for (uint256 i = 0; i < _pairs.length; ++i) {

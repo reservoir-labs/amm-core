@@ -8,7 +8,7 @@ import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPoolConfigurator } from "src/interfaces/aave/IPoolConfigurator.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
+import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
@@ -37,8 +37,8 @@ contract AaveIntegrationTest is BaseTest {
 
     AaveManager private _manager;
 
-    IAssetManagedPair[] internal _pairs;
-    IAssetManagedPair internal _pair;
+    AssetManagedPair[] internal _pairs;
+    AssetManagedPair internal _pair;
 
     Network[] private _networks;
     mapping(string => Fork) private _forks;
