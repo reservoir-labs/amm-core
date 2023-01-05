@@ -290,13 +290,6 @@ contract StablePair is ReservoirPair {
         return _getCurrentAPrecise();
     }
 
-    // TODO: Do we need this function?
-    function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
-        uint256 d = _computeLiquidity(lReserve0, lReserve1);
-        virtualPrice = (d * (uint256(10) ** decimals)) / totalSupply;
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/

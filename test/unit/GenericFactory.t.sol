@@ -11,7 +11,6 @@ import { GenericFactory } from "src/GenericFactory.sol";
 contract GenericFactoryTest is BaseTest {
     function testCreatePair_AllCurves(uint256 aCurveId) public {
         // assume
-        // TODO: Is this the way to test all curves?
         uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act

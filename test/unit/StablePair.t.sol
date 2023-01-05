@@ -105,7 +105,6 @@ contract StablePairTest is BaseTest {
 
         // assert
         assertLt(_stablePair.balanceOf(address(this)), lAmountAToMint + lAmountBToMint);
-        assertGt(_stablePair.getVirtualPrice(), 1e18);
     }
 
     // This test case demonstrates that if a LP provider provides liquidity in non-optimal proportions

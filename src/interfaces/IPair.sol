@@ -1,5 +1,7 @@
 pragma solidity ^0.8.0;
 
+import { ERC20 } from "solmate/tokens/ERC20.sol";
+
 import { GenericFactory } from "src/GenericFactory.sol";
 import { IReservoirERC20 } from "src/interfaces/IReservoirERC20.sol";
 
@@ -14,8 +16,8 @@ interface IPair { /*is IReservoirERC20*/
     function MAX_SWAP_FEE() external pure returns (uint256);
 
     function factory() external returns (GenericFactory);
-    function token0() external view returns (address);
-    function token1() external view returns (address);
+    function token0() external view returns (ERC20);
+    function token1() external view returns (ERC20);
     function getReserves()
         external
         view
