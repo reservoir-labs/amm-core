@@ -650,8 +650,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // sanity
         assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
-        ERC20 lToken0 = ERC20(_constantProductPair.token0());
-        ERC20 lToken1 = ERC20(_constantProductPair.token1());
+        ERC20 lToken0 = _constantProductPair.token0();
+        ERC20 lToken1 = _constantProductPair.token1();
         uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
@@ -690,8 +690,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // sanity
         assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
-        ERC20 lToken0 = ERC20(_constantProductPair.token0());
-        ERC20 lToken1 = ERC20(_constantProductPair.token1());
+        ERC20 lToken0 = _constantProductPair.token0();
+        ERC20 lToken1 = _constantProductPair.token1();
         uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
