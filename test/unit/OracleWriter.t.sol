@@ -162,7 +162,7 @@ contract OracleWriterTest is BaseTest {
         uint256 lUncompressedLiqCP = LogCompression.fromLowResLog(lObsCP.logAccLiquidity / 12);
         uint256 lUncompressedLiqSP = LogCompression.fromLowResLog(lObsSP.logAccLiquidity / 12);
         assertEq(lUncompressedLiqCP, lUncompressedLiqSP);
-        if (lCP.token0() == address(_tokenB)) {
+        if (lCP.token0() == _tokenB) {
             assertGt(lObsSP.logAccRawPrice, lObsCP.logAccRawPrice);
         } else {
             assertGt(lObsCP.logAccRawPrice, lObsSP.logAccRawPrice);

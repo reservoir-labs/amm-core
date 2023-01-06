@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "test/__fixtures/BaseTest.sol";
 import { stdStorage } from "forge-std/Test.sol";
 
-import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
@@ -172,7 +172,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act
         _tokenB.mint(address(lPair), lSwapAmount);
         lPair.swap(
-            lPair.token0() == address(_tokenB) ? int256(lSwapAmount) : -int256(lSwapAmount),
+            lPair.token0() == _tokenB ? int256(lSwapAmount) : -int256(lSwapAmount),
             true,
             address(this),
             bytes("")
@@ -653,8 +653,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // sanity
         assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
-        IERC20 lToken0 = IERC20(_constantProductPair.token0());
-        IERC20 lToken1 = IERC20(_constantProductPair.token1());
+        ERC20 lToken0 = ERC20(_constantProductPair.token0());
+        ERC20 lToken1 = ERC20(_constantProductPair.token1());
         uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
@@ -693,8 +693,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // sanity
         assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
-        IERC20 lToken0 = IERC20(_constantProductPair.token0());
-        IERC20 lToken1 = IERC20(_constantProductPair.token1());
+        ERC20 lToken0 = ERC20(_constantProductPair.token0());
+        ERC20 lToken1 = ERC20(_constantProductPair.token1());
         uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
