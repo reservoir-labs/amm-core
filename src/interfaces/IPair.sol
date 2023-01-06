@@ -3,9 +3,8 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { IReservoirERC20 } from "src/interfaces/IReservoirERC20.sol";
 
-interface IPair { /*is IReservoirERC20*/
+interface IPair {
     // solhint-disable-next-line func-name-mixedcase
     function MINIMUM_LIQUIDITY() external pure returns (uint256);
     // solhint-disable-next-line func-name-mixedcase
