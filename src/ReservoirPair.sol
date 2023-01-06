@@ -25,13 +25,9 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
 
     // performs a transfer, if it fails, it attempts to retrieve assets from the
     // AssetManager before retrying the transfer
-    function _checkedTransfer(
-        ERC20 aToken,
-        address aDestination,
-        uint256 aAmount,
-        uint256 aReserve0,
-        uint256 aReserve1
-    ) internal {
+    function _checkedTransfer(ERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
+        internal
+    {
         if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
             uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
             uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;

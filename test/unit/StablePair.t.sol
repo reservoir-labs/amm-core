@@ -345,18 +345,12 @@ contract StablePairTest is BaseTest {
         for (uint256 i; i < 20; ++i) {
             _tokenD.mint(address(lPair), lDSwapAmt);
             lPair.swap(
-                lPair.token0() == _tokenD ? int256(lDSwapAmt) : -int256(lDSwapAmt),
-                true,
-                address(this),
-                bytes("")
+                lPair.token0() == _tokenD ? int256(lDSwapAmt) : -int256(lDSwapAmt), true, address(this), bytes("")
             );
 
             _tokenC.mint(address(lPair), lCSwapAmt);
             lPair.swap(
-                lPair.token0() == _tokenC ? int256(lCSwapAmt) : -int256(lCSwapAmt),
-                true,
-                address(this),
-                bytes("")
+                lPair.token0() == _tokenC ? int256(lCSwapAmt) : -int256(lCSwapAmt), true, address(this), bytes("")
             );
         }
 
@@ -536,9 +530,8 @@ contract StablePairTest is BaseTest {
 
         // act
         _tokenB.mint(address(lPair), lSwapAmt);
-        uint256 lAmtOut = lPair.swap(
-            lPair.token0() == _tokenB ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes("")
-        );
+        uint256 lAmtOut =
+            lPair.swap(lPair.token0() == _tokenB ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         // assert
         uint256 lExpectedAmountOut = StableMath._getAmountOut(
@@ -568,9 +561,8 @@ contract StablePairTest is BaseTest {
 
         // act
         _tokenC.mint(address(lPair), lSwapAmt);
-        uint256 lAmtOut = lPair.swap(
-            lPair.token0() == _tokenC ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes("")
-        );
+        uint256 lAmtOut =
+            lPair.swap(lPair.token0() == _tokenC ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         // assert
         uint256 lExpectedAmountOut = StableMath._getAmountOut(
@@ -604,9 +596,8 @@ contract StablePairTest is BaseTest {
         _tokenD.mint(address(lPair), lSwapAmt);
 
         // act
-        uint256 lAmtOut = lPair.swap(
-            lPair.token0() == _tokenD ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes("")
-        );
+        uint256 lAmtOut =
+            lPair.swap(lPair.token0() == _tokenD ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         uint256 lExpectedAmtOut = StableMath._getAmountOut(
             lSwapAmt,
@@ -699,9 +690,7 @@ contract StablePairTest is BaseTest {
 
         // act
         _tokenD.mint(address(lPair), lSwapAmt);
-        lPair.swap(
-            lPair.token0() == _tokenD ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes("")
-        );
+        lPair.swap(lPair.token0() == _tokenD ? int256(lSwapAmt) : -int256(lSwapAmt), true, address(this), bytes(""));
 
         // assert
         uint256 lExpectedOutput = StableMath._getAmountOut(
