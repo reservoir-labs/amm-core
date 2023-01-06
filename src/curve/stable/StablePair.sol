@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
@@ -151,7 +152,7 @@ contract StablePair is ReservoirPair {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
         uint256 amountIn;
-        address tokenOut;
+        ERC20 tokenOut;
 
         // exact in
         if (inOrOut) {

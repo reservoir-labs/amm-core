@@ -2,6 +2,8 @@
 // TODO: License
 pragma solidity ^0.8.0;
 
+import { ERC20 } from "solmate/tokens/ERC20.sol";
+
 import { Math } from "src/libraries/Math.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -181,7 +183,7 @@ contract ConstantProductPair is ReservoirPair {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
         uint256 lAmountIn;
-        address lTokenOut;
+        ERC20 lTokenOut;
 
         // exact in
         if (aInOrOut) {

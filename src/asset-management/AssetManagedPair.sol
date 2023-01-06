@@ -1,5 +1,7 @@
 pragma solidity ^0.8.0;
 
+import { ERC20 } from "solmate/tokens/ERC20.sol";
+
 import { IAssetManagedPair, IAssetManager } from "src/interfaces/IAssetManagedPair.sol";
 import { Pair } from "src/Pair.sol";
 
@@ -37,7 +39,7 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         return token1.balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(address aToken, uint104 aReserve, uint104 aPrevBalance, uint104 aNewBalance)
+    function _handleReport(ERC20 aToken, uint104 aReserve, uint104 aPrevBalance, uint104 aNewBalance)
         private
         returns (uint104 rUpdatedReserve)
     {
