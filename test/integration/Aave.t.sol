@@ -542,139 +542,61 @@ contract AaveIntegrationTest is BaseTest {
         );
     }
 
-    // Not enough assets being managed, the AM would want to put some assets into AAVE
-    // but that fails because AAVE is frozen. But the mint should still succeed
-    function testAfterLiquidityEvent_Mint_SucceedEvenIfFrozen() public allNetworks allPairs {
+    function testAfterLiquidityEvent_Mint_RevertIfFrozen() public allNetworks allPairs {
         // arrange
         uint256 lMintAmt = 100e6;
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReserveFreeze(address(USDC), true);
 
-        // act
+        // act & assert
         deal(address(USDC), address(this), lMintAmt, true);
         USDC.transfer(address(_pair), lMintAmt);
         _tokenA.mint(address(_pair), lMintAmt);
+        vm.expectRevert(bytes(Errors.RESERVE_FROZEN));
         _pair.mint(address(this));
-
-        // assert - mint succeeds but no assets should have been moved
-        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
-        assertGt(_pair.balanceOf(address(this)), 0);
-        assertEq(_pair.token0Managed(), 0);
-        assertEq(_pair.token1Managed(), 0);
-        assertEq(lAaveToken.balanceOf(address(_manager)), 0);
-        assertEq(_manager.shares(_pair, USDC), 0);
-        assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT + lMintAmt);
     }
 
-    function testAfterLiquidityEvent_Mint_SucceedEvenIfPaused() public allNetworks allPairs {
+    function testAfterLiquidityEvent_Mint_RevertIfPaused() public allNetworks allPairs {
         // arrange
         uint256 lMintAmt = 100e6;
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReservePause(address(USDC), true);
 
-        // act
+        // act & assert
         deal(address(USDC), address(this), lMintAmt, true);
         USDC.transfer(address(_pair), lMintAmt);
         _tokenA.mint(address(_pair), lMintAmt);
+        vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
         _pair.mint(address(this));
-
-        // assert
-        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
-        assertGt(_pair.balanceOf(address(this)), 0);
-        assertEq(_pair.token0Managed(), 0);
-        assertEq(_pair.token1Managed(), 0);
-        assertEq(lAaveToken.balanceOf(address(_manager)), 0);
-        assertEq(_manager.shares(_pair, USDC), 0);
-        assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT + lMintAmt);
     }
 
-    function testAfterLiquidityEvent_Burn_SucceedEvenIfFrozen() public allNetworks allPairs {
+    function testAfterLiquidityEvent_Burn_RevertIfFrozen() public allNetworks allPairs {
         // arrange
         uint256 lAmtToBurn = _pair.balanceOf(_alice) / 2;
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReserveFreeze(address(USDC), true);
 
-        // act
+        // act & assert
         vm.prank(_alice);
         _pair.transfer(address(_pair), lAmtToBurn);
+        vm.expectRevert(bytes(Errors.RESERVE_FROZEN));
         _pair.burn(address(this));
-
-        // assert - burn succeeds but no assets should have been moved
-        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
-        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
-        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-
-        assertGt(USDC.balanceOf(address(this)), 0);
-        assertGt(_tokenA.balanceOf(address(this)), 0);
-        assertEq(lReserveUSDC, USDC.balanceOf(address(_pair)));
-        assertEq(_pair.token0Managed(), 0);
-        assertEq(_pair.token1Managed(), 0);
-        assertEq(_manager.shares(_pair, USDC), 0);
-        assertEq(lAaveToken.balanceOf(address(_manager)), 0);
     }
 
-    function testAfterLiquidityEvent_Burn_SucceedEvenIfPaused() public allNetworks allPairs {
+    function testAfterLiquidityEvent_Burn_RevertIfPaused() public allNetworks allPairs {
         // arrange
         uint256 lAmtToBurn = _pair.balanceOf(_alice) / 2;
         vm.prank(_aaveAdmin);
         _poolConfigurator.setReservePause(address(USDC), true);
 
-        // act
+        // act & assert
         vm.prank(_alice);
         _pair.transfer(address(_pair), lAmtToBurn);
+        vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
         _pair.burn(address(this));
-
-        // assert
-        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
-        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
-        uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-
-        assertGt(USDC.balanceOf(address(this)), 0);
-        assertGt(_tokenA.balanceOf(address(this)), 0);
-        assertEq(lReserveUSDC, USDC.balanceOf(address(_pair)));
-        assertEq(_pair.token0Managed(), 0);
-        assertEq(_pair.token1Managed(), 0);
-        assertEq(_manager.shares(_pair, USDC), 0);
-        assertEq(lAaveToken.balanceOf(address(_manager)), 0);
     }
 
-    // Having too much assets managed, the asset manager would want to
-    // divest some and put it back into the pair. But if AAVE is paused,
-    // the withdrawal from AAVE will fail but the burn should still succeed
-    function testAfterLiquidityEvent_SucceedEvenIfWithdrawFailed() public allNetworks allPairs {
-        // arrange
-        uint256 lAmtToBurn = _pair.balanceOf(_alice) / 10;
-        int256 lAmtToManage = int256(MINT_AMOUNT * 8 / 10); // put 80% of USDC under management, above the upper threshold
-        _increaseManagementOneToken(lAmtToManage);
-        uint256 lUsdcManagedBefore = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
-        uint256 lSharesBefore = _manager.shares(_pair, USDC);
-        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
-        uint256 lAaveTokenBefore = lAaveToken.balanceOf(address(_manager));
-
-        vm.prank(_aaveAdmin);
-        _poolConfigurator.setReservePause(address(USDC), true);
-
-        // act
-        vm.prank(_alice);
-        _pair.transfer(address(_pair), lAmtToBurn);
-        vm.expectCall(_poolAddressesProvider.getPool(), bytes(""));
-        _pair.burn(address(this));
-
-        // assert - burn succeeded but managed assets have not been moved
-        uint256 lUsdcManagedAfter = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
-        assertEq(lUsdcManagedBefore, lUsdcManagedAfter);
-        assertGt(USDC.balanceOf(address(this)), 0);
-        assertGt(_tokenA.balanceOf(address(this)), 0);
-        assertEq(_manager.shares(_pair, USDC), lSharesBefore);
-        assertEq(lAaveToken.balanceOf(address(_manager)), lAaveTokenBefore);
-    }
-
-    function testAfterLiquidityEvent_ShouldFailIfNotPair() public allNetworks {
+    function testAfterLiquidityEvent_RevertIfNotPair() public allNetworks {
         // act & assert
         vm.expectRevert();
         _manager.afterLiquidityEvent();
