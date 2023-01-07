@@ -110,7 +110,7 @@ contract StablePair is ReservoirPair {
     // TODO: Should we use fallback?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address) public returns (uint256) {
+    function mint(address) external returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -130,7 +130,7 @@ contract StablePair is ReservoirPair {
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address) public returns (uint256, uint256) {
+    function burn(address) external returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
