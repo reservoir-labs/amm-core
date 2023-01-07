@@ -11,7 +11,6 @@ import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { IPair, Pair } from "src/Pair.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StableMath } from "src/libraries/StableMath.sol";

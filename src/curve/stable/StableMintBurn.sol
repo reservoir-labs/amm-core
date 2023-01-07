@@ -14,7 +14,6 @@ import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
-import { IPair, Pair } from "src/Pair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)

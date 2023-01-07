@@ -12,7 +12,6 @@ import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
-import { IPair, Pair } from "src/Pair.sol";
 
 contract ConstantProductPair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;

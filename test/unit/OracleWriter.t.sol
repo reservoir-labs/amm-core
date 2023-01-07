@@ -10,8 +10,8 @@ import { GenericFactory } from "src/GenericFactory.sol";
 contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
-    event OracleCallerChanged(address oldCaller, address newCaller);
-    event AllowedChangePerSecondChanged(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
+    event OracleCallerUpdated(address oldCaller, address newCaller);
+    event MaxChangeRateUpdated(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
 
     OracleWriter[] internal _pairs;
     OracleWriter internal _pair;
@@ -69,7 +69,7 @@ contract OracleWriterTest is BaseTest {
 
         // act
         vm.expectEmit(true, true, false, false);
-        emit OracleCallerChanged(address(_oracleCaller), lNewOracleCaller);
+        emit OracleCallerUpdated(address(_oracleCaller), lNewOracleCaller);
         _pair.updateOracleCaller();
 
         // assert
@@ -99,7 +99,7 @@ contract OracleWriterTest is BaseTest {
 
         vm.prank(address(_factory));
         vm.expectEmit(true, true, false, false);
-        emit AllowedChangePerSecondChanged(0.01e18, 1);
+        emit MaxChangeRateUpdated(0.01e18, 1);
         _pair.setAllowedChangePerSecond(1);
         assertEq(_pair.allowedChangePerSecond(), 1);
     }
