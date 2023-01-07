@@ -11,8 +11,7 @@ import { AssetManager } from "test/__mocks/AssetManager.sol";
 import { Math } from "src/libraries/Math.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
-import { Observation } from "src/oracle/OracleWriter.sol";
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { Observation } from "src/ReservoirPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair, IReservoirCallee } from "src/curve/constant-product/ConstantProductPair.sol";
 

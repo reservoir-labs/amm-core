@@ -10,6 +10,8 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
+import { IPair } from "src/interfaces/IPair.sol";
+
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 
@@ -28,7 +30,7 @@ contract ConstantProductPair is ReservoirPair {
     uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
 
     // TODO: Use library function to DRY?
     function _getAmountOut(uint256 aAmountIn, uint256 aReserveIn, uint256 aReserveOut, uint256 aSwapFee)

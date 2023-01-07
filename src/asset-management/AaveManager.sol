@@ -6,8 +6,8 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
+import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
@@ -18,11 +18,11 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
     using SafeCast for uint256;
 
-    event FundsInvested(IAssetManagedPair pair, ERC20 token, uint256 shares);
-    event FundsDivested(IAssetManagedPair pair, ERC20 token, uint256 shares);
+    event FundsInvested(ReservoirPair pair, ERC20 token, uint256 shares);
+    event FundsDivested(ReservoirPair pair, ERC20 token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
-    mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public shares;
+    mapping(ReservoirPair => mapping(ERC20 => uint256)) public shares;
 
     /// @dev for each aToken, tracks the total number of shares issued
     mapping(ERC20 => uint256) public totalShares;
@@ -53,11 +53,11 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
-    function getBalance(IAssetManagedPair aOwner, ERC20 aToken) external view returns (uint104 rTokenBalance) {
+    function getBalance(ReservoirPair aOwner, ERC20 aToken) external view returns (uint104 rTokenBalance) {
         return _getBalance(aOwner, aToken);
     }
 
-    function _getBalance(IAssetManagedPair aOwner, ERC20 aToken) private view returns (uint104 rTokenBalance) {
+    function _getBalance(ReservoirPair aOwner, ERC20 aToken) private view returns (uint104 rTokenBalance) {
         ERC20 lAaveToken = _getATokenAddress(aToken);
         uint256 lTotalShares = totalShares[lAaveToken];
         if (lTotalShares == 0) {
@@ -72,14 +72,14 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @notice if token0 or token1 does not have a market in AAVE, the tokens will not be transferred
-    function adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change)
+    function adjustManagement(ReservoirPair aPair, int256 aAmount0Change, int256 aAmount1Change)
         external
         onlyOwner
     {
         _adjustManagement(aPair, aAmount0Change, aAmount1Change);
     }
 
-    function _adjustManagement(IAssetManagedPair aPair, int256 aAmount0Change, int256 aAmount1Change)
+    function _adjustManagement(ReservoirPair aPair, int256 aAmount0Change, int256 aAmount1Change)
         private
         nonReentrant
     {
@@ -119,14 +119,14 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         }
     }
 
-    function _doDivest(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
+    function _doDivest(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         uint256 lShares = _decreaseShares(aPair, aToken, aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
         emit FundsDivested(aPair, aToken, lShares);
         aToken.approve(address(aPair), aAmount);
     }
 
-    function _doInvest(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
+    function _doInvest(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
         uint256 lShares = _increaseShares(aPair, aToken, aAaveToken, aAmount);
         aToken.approve(address(pool), aAmount);
@@ -150,7 +150,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     function afterLiquidityEvent() external {
-        IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
+        ReservoirPair lPair = ReservoirPair(msg.sender);
         ERC20 lToken0 = lPair.token0();
         ERC20 lToken1 = lPair.token1();
         (uint104 lReserve0, uint104 lReserve1,,) = lPair.getReserves();
@@ -166,7 +166,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     function returnAsset(bool aToken0, uint256 aAmount) external {
         require(aAmount > 0, "AM: ZERO_AMOUNT_REQUESTED");
-        IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
+        ReservoirPair lPair = ReservoirPair(msg.sender);
         int256 lAmount0Change = -int256(aToken0 ? aAmount : 0);
         int256 lAmount1Change = -int256(aToken0 ? 0 : aAmount);
         assert(lAmount0Change < 0 || lAmount1Change < 0);
@@ -197,7 +197,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         rExchangeRate = aAaveToken.balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
     }
 
-    function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
+    function _increaseShares(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
@@ -206,7 +206,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         totalShares[aAaveToken] += rShares;
     }
 
-    function _decreaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
+    function _decreaseShares(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {

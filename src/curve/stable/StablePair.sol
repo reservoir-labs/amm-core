@@ -6,6 +6,8 @@ import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { IPair } from "src/interfaces/IPair.sol";
+
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -51,7 +53,7 @@ contract StablePair is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
         MINT_BURN_LOGIC = factory.deploy(ConstantsLib.MINT_BURN_KEY, aToken0, aToken1);
         require(MINT_BURN_LOGIC != address(0), "SP: MINT_BURN_DEPLOYMENT_FAILED");
 

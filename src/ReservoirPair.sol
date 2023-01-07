@@ -1,9 +1,17 @@
 pragma solidity ^0.8.0;
 
-import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
+import { stdMath } from "forge-std/Test.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+import { LogCompression } from "src/libraries/LogCompression.sol";
+
+import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IPair } from "src/interfaces/IPair.sol";
+import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
+
+import { GenericFactory } from "src/GenericFactory.sol";
+import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
 
 struct Slot0 {
     uint104 reserve0;
@@ -29,7 +37,7 @@ struct Observation {
     uint32 timestamp;
 }
 
-abstract contract ReservoirPair is ReservoirERC20 {
+abstract contract ReservoirPair is ReservoirERC20, IPair, IAssetManagedPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 

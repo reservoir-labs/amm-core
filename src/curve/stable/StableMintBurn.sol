@@ -7,12 +7,13 @@ import { Math } from "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-
-import { GenericFactory } from "src/GenericFactory.sol";
-
-import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { IPair } from "src/interfaces/IPair.sol";
+
+import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 
 struct AmplificationData {
@@ -42,7 +43,7 @@ contract StableMintBurn is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
         ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);

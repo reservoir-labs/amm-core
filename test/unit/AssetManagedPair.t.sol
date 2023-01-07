@@ -5,14 +5,14 @@ import "test/__fixtures/BaseTest.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
+import { ReservoirPair } from "src/ReservoirPair.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 contract AssetManagedPairTest is BaseTest {
     AssetManager private _manager = new AssetManager();
 
-    AssetManagedPair[] internal _pairs;
-    AssetManagedPair internal _pair;
+    ReservoirPair[] internal _pairs;
+    ReservoirPair internal _pair;
 
     modifier allPairs() {
         for (uint256 i = 0; i < _pairs.length; ++i) {
