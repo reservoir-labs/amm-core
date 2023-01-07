@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 import { Owned } from "solmate/auth/Owned.sol";
-import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
@@ -18,14 +18,14 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
     using SafeCast for uint256;
 
-    event FundsInvested(IAssetManagedPair pair, IERC20 token, uint256 shares);
-    event FundsDivested(IAssetManagedPair pair, IERC20 token, uint256 shares);
+    event FundsInvested(IAssetManagedPair pair, ERC20 token, uint256 shares);
+    event FundsDivested(IAssetManagedPair pair, ERC20 token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
-    mapping(IAssetManagedPair => mapping(address => uint256)) public shares;
+    mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public shares;
 
     /// @dev for each aToken, tracks the total number of shares issued
-    mapping(address => uint256) public totalShares;
+    mapping(ERC20 => uint256) public totalShares;
 
     /// @dev percentage of the pool's assets, above and below which
     /// the manager will divest the shortfall and invest the excess
@@ -53,18 +53,18 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
-    function getBalance(IAssetManagedPair aOwner, address aToken) external view returns (uint104 rTokenBalance) {
+    function getBalance(IAssetManagedPair aOwner, ERC20 aToken) external view returns (uint104 rTokenBalance) {
         return _getBalance(aOwner, aToken);
     }
 
-    function _getBalance(IAssetManagedPair aOwner, address aToken) private view returns (uint104 rTokenBalance) {
-        address lAaveToken = _getATokenAddress(aToken);
+    function _getBalance(IAssetManagedPair aOwner, ERC20 aToken) private view returns (uint104 rTokenBalance) {
+        ERC20 lAaveToken = _getATokenAddress(aToken);
         uint256 lTotalShares = totalShares[lAaveToken];
         if (lTotalShares == 0) {
             return 0;
         }
         rTokenBalance =
-            (shares[aOwner][aToken] * IERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]).toUint104();
+            (shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]).toUint104();
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -85,17 +85,17 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     {
         require(aAmount0Change != type(int256).min && aAmount1Change != type(int256).min, "AM: CAST_WOULD_OVERFLOW");
 
-        IERC20 lToken0 = IERC20(aPair.token0());
-        IERC20 lToken1 = IERC20(aPair.token1());
+        ERC20 lToken0 = aPair.token0();
+        ERC20 lToken1 = aPair.token1();
 
-        address lToken0AToken = _getATokenAddress(address(lToken0));
-        address lToken1AToken = _getATokenAddress(address(lToken1));
+        ERC20 lToken0AToken = _getATokenAddress(lToken0);
+        ERC20 lToken1AToken = _getATokenAddress(lToken1);
 
         // do not do anything if there isn't a market for the token
-        if (lToken0AToken == address(0)) {
+        if (address(lToken0AToken) == address(0)) {
             aAmount0Change = 0;
         }
-        if (lToken1AToken == address(0)) {
+        if (address(lToken1AToken) == address(0)) {
             aAmount1Change = 0;
         }
 
@@ -119,16 +119,16 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         }
     }
 
-    function _doDivest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
-        uint256 lShares = _decreaseShares(aPair, address(aToken), aAaveToken, aAmount);
+    function _doDivest(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
+        uint256 lShares = _decreaseShares(aPair, aToken, aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
         emit FundsDivested(aPair, aToken, lShares);
         aToken.approve(address(aPair), aAmount);
     }
 
-    function _doInvest(IAssetManagedPair aPair, IERC20 aToken, address aAaveToken, uint256 aAmount) private {
+    function _doInvest(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
-        uint256 lShares = _increaseShares(aPair, address(aToken), aAaveToken, aAmount);
+        uint256 lShares = _increaseShares(aPair, aToken, aAaveToken, aAmount);
         aToken.approve(address(pool), aAmount);
 
         pool.supply(address(aToken), aAmount, address(this), 0);
@@ -151,8 +151,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     function afterLiquidityEvent() external {
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
-        address lToken0 = lPair.token0();
-        address lToken1 = lPair.token1();
+        ERC20 lToken0 = lPair.token0();
+        ERC20 lToken1 = lPair.token1();
         (uint104 lReserve0, uint104 lReserve1,,) = lPair.getReserves();
 
         uint104 lToken0Managed = _getBalance(lPair, lToken0);
@@ -189,15 +189,15 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18
-    function _getExchangeRate(address aAaveToken) private view returns (uint256 rExchangeRate) {
+    function _getExchangeRate(ERC20 aAaveToken) private view returns (uint256 rExchangeRate) {
         uint256 lTotalShares = totalShares[aAaveToken];
         if (lTotalShares == 0) {
             return 1e18;
         }
-        rExchangeRate = IERC20(aAaveToken).balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
+        rExchangeRate = aAaveToken.balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
     }
 
-    function _increaseShares(IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount)
+    function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
@@ -206,7 +206,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         totalShares[aAaveToken] += rShares;
     }
 
-    function _decreaseShares(IAssetManagedPair aPair, address aToken, address aAaveToken, uint256 aAmount)
+    function _decreaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
@@ -217,7 +217,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     /// @notice returns the address of the AAVE token.
     /// If an AAVE token doesn't exist for the asset, returns address 0
-    function _getATokenAddress(address aToken) private view returns (address rATokenAddress) {
-        (rATokenAddress,,) = dataProvider.getReserveTokensAddresses(aToken);
+    function _getATokenAddress(ERC20 aToken) private view returns (ERC20) {
+        (address lATokenAddress,,) = dataProvider.getReserveTokensAddresses(address(aToken));
+        return ERC20(lATokenAddress);
     }
 }

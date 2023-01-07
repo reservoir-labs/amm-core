@@ -1,5 +1,7 @@
 pragma solidity ^0.8.0;
 
+import { ERC20 } from "solmate/tokens/ERC20.sol";
+
 import { AssetManagedPair } from "src/asset-management/AssetManagedPair.sol";
 import { OracleWriter, Observation } from "src/oracle/OracleWriter.sol";
 
@@ -23,19 +25,15 @@ abstract contract ReservoirPair is AssetManagedPair, OracleWriter {
 
     // performs a transfer, if it fails, it attempts to retrieve assets from the
     // AssetManager before retrying the transfer
-    function _checkedTransfer(
-        address aToken,
-        address aDestination,
-        uint256 aAmount,
-        uint256 aReserve0,
-        uint256 aReserve1
-    ) internal {
-        if (!_safeTransfer(aToken, aDestination, aAmount)) {
+    function _checkedTransfer(ERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
+        internal
+    {
+        if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
             uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
             uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
             if (reserveOut - tokenOutManaged < aAmount) {
                 assetManager.returnAsset(aToken == token0, aAmount - (reserveOut - tokenOutManaged));
-                require(_safeTransfer(aToken, aDestination, aAmount), "RP: TRANSFER_FAILED");
+                require(_safeTransfer(address(aToken), aDestination, aAmount), "RP: TRANSFER_FAILED");
             } else {
                 revert("RP: TRANSFER_FAILED");
             }

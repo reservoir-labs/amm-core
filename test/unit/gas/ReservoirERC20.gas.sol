@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
-import { MintableUniswapV2ERC20 } from "test/__fixtures/MintableUniswapV2ERC20.sol";
+import { MintableReservoirERC20 } from "test/__fixtures/MintableReservoirERC20.sol";
 
-contract UniswapV2ERC20Gas is BaseTest {
-    MintableUniswapV2ERC20 private _token = new MintableUniswapV2ERC20(18);
+contract ReservoirERC20Gas is BaseTest {
+    MintableReservoirERC20 private _token = new MintableReservoirERC20(18);
 
     uint256 private _ownerPkey = 0xa11ce;
     address private _owner = vm.addr(_ownerPkey);
@@ -16,7 +16,16 @@ contract UniswapV2ERC20Gas is BaseTest {
         abi.encodePacked(
             "\x19\x01",
             _token.DOMAIN_SEPARATOR(),
-            keccak256(abi.encode(_token.PERMIT_TYPEHASH(), _owner, _spender, _amount, _token.nonces(_owner), _deadline))
+            keccak256(
+                abi.encode(
+                    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                    _owner,
+                    _spender,
+                    _amount,
+                    _token.nonces(_owner),
+                    _deadline
+                )
+            )
         )
     );
     uint8 private _v;

@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import { IERC20 } from "@openzeppelin/interfaces/IERC20.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IAssetManagedPair, IAssetManager } from "src/interfaces/IAssetManagedPair.sol";
 import { Pair } from "src/Pair.sol";
@@ -32,14 +32,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
     uint104 public token1Managed;
 
     function _totalToken0() internal view returns (uint256) {
-        return IERC20(token0).balanceOf(address(this)) + uint256(token0Managed);
+        return token0.balanceOf(address(this)) + uint256(token0Managed);
     }
 
     function _totalToken1() internal view returns (uint256) {
-        return IERC20(token1).balanceOf(address(this)) + uint256(token1Managed);
+        return token1.balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(address aToken, uint104 aReserve, uint104 aPrevBalance, uint104 aNewBalance)
+    function _handleReport(ERC20 aToken, uint104 aReserve, uint104 aPrevBalance, uint104 aNewBalance)
         private
         returns (uint104 rUpdatedReserve)
     {
@@ -86,12 +86,7 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         if (address(assetManager) == address(0)) {
             return;
         }
-        // TODO: Unsure how I feel about this, probably okay but assetManager
-        // is under our control so not sure if we can't just assume this call
-        // won't fail?
-        //
-        // supplying to / withdrawing from 3rd party markets might fail
-        try assetManager.afterLiquidityEvent() { } catch { } // solhint-disable-line no-empty-blocks
+        assetManager.afterLiquidityEvent();
     }
 
     function adjustManagement(int256 token0Change, int256 token1Change) external {
@@ -101,14 +96,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
         if (token0Change > 0) {
             uint104 lDelta = uint104(uint256(int256(token0Change)));
             token0Managed += lDelta;
-            IERC20(token0).transfer(msg.sender, lDelta);
+            token0.transfer(msg.sender, lDelta);
         } else if (token0Change < 0) {
             uint104 lDelta = uint104(uint256(int256(-token0Change)));
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            IERC20(token0).transferFrom(msg.sender, address(this), lDelta);
+            token0.transferFrom(msg.sender, address(this), lDelta);
         }
 
         if (token1Change > 0) {
@@ -117,14 +112,14 @@ abstract contract AssetManagedPair is Pair, IAssetManagedPair {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            IERC20(token1).transfer(msg.sender, lDelta);
+            token1.transfer(msg.sender, lDelta);
         } else if (token1Change < 0) {
             uint104 lDelta = uint104(uint256(int256(-token1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            IERC20(token1).transferFrom(msg.sender, address(this), lDelta);
+            token1.transferFrom(msg.sender, address(this), lDelta);
         }
     }
 }

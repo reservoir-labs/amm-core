@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "@openzeppelin/token/ERC20/ERC20.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -9,7 +9,7 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { IPair } from "src/interfaces/IPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
+import { ReservoirERC20 } from "src/ReservoirERC20.sol";
 
 struct Slot0 {
     uint104 reserve0;
@@ -18,7 +18,7 @@ struct Slot0 {
     uint16 index;
 }
 
-abstract contract Pair is IPair, UniswapV2ERC20 {
+abstract contract Pair is IPair, ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
@@ -33,9 +33,8 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
     uint256 public constant MAX_SWAP_FEE = 20_000; //   2%
 
     GenericFactory public immutable factory;
-    // TODO: Make token0 & token1 IERC20.
-    address public immutable token0;
-    address public immutable token1;
+    ERC20 public immutable token0;
+    ERC20 public immutable token1;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
@@ -59,15 +58,15 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     constructor(address aToken0, address aToken1, string memory aSwapFeeName) {
         factory = GenericFactory(msg.sender);
-        token0 = aToken0;
-        token1 = aToken1;
+        token0 = ERC20(aToken0);
+        token1 = ERC20(aToken1);
 
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
         updateSwapFee();
         updatePlatformFee();
 
-        token0PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken0).decimals());
-        token1PrecisionMultiplier = uint128(10) ** (18 - ERC20(aToken1).decimals());
+        token0PrecisionMultiplier = uint128(10) ** (18 - token0.decimals());
+        token1PrecisionMultiplier = uint128(10) ** (18 - token1.decimals());
     }
 
     function _currentTime() internal view returns (uint32) {
@@ -157,8 +156,8 @@ abstract contract Pair is IPair, UniswapV2ERC20 {
 
     function recoverToken(address token) external {
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
-        require(token != token0, "P: INVALID_TOKEN_TO_RECOVER");
-        require(token != token1, "P: INVALID_TOKEN_TO_RECOVER");
+        require(token != address(token0), "P: INVALID_TOKEN_TO_RECOVER");
+        require(token != address(token1), "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");
 
         uint256 _amountToRecover = ERC20(token).balanceOf(address(this));

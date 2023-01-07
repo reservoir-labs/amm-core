@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
@@ -109,7 +110,7 @@ contract StablePair is ReservoirPair {
     // TODO: Should we use fallback?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address) public returns (uint256) {
+    function mint(address) external returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -129,7 +130,7 @@ contract StablePair is ReservoirPair {
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address) public returns (uint256, uint256) {
+    function burn(address) external returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -151,7 +152,7 @@ contract StablePair is ReservoirPair {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
         uint256 amountIn;
-        address tokenOut;
+        ERC20 tokenOut;
 
         // exact in
         if (inOrOut) {
@@ -288,13 +289,6 @@ contract StablePair is ReservoirPair {
 
     function getCurrentAPrecise() external view returns (uint64) {
         return _getCurrentAPrecise();
-    }
-
-    // TODO: Do we need this function?
-    function getVirtualPrice() public view returns (uint256 virtualPrice) {
-        (uint256 lReserve0, uint256 lReserve1,,) = getReserves();
-        uint256 d = _computeLiquidity(lReserve0, lReserve1);
-        virtualPrice = (d * (uint256(10) ** decimals)) / totalSupply;
     }
 
     /*//////////////////////////////////////////////////////////////////////////

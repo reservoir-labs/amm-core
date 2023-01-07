@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import { UniswapV2ERC20 } from "src/UniswapV2ERC20.sol";
+import { ReservoirERC20 } from "src/ReservoirERC20.sol";
 
-contract MintableUniswapV2ERC20 is UniswapV2ERC20 {
+contract MintableReservoirERC20 is ReservoirERC20 {
     uint8 private _decimals;
 
     constructor(uint8 aDecimals) {

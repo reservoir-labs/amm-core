@@ -1,9 +1,10 @@
 pragma solidity ^0.8.0;
 
-import { GenericFactory } from "src/GenericFactory.sol";
-import { IUniswapV2ERC20 } from "src/interfaces/IUniswapV2ERC20.sol";
+import { ERC20 } from "solmate/tokens/ERC20.sol";
 
-interface IPair is IUniswapV2ERC20 {
+import { GenericFactory } from "src/GenericFactory.sol";
+
+interface IPair {
     // solhint-disable-next-line func-name-mixedcase
     function MINIMUM_LIQUIDITY() external pure returns (uint256);
     // solhint-disable-next-line func-name-mixedcase
@@ -14,8 +15,8 @@ interface IPair is IUniswapV2ERC20 {
     function MAX_SWAP_FEE() external pure returns (uint256);
 
     function factory() external returns (GenericFactory);
-    function token0() external view returns (address);
-    function token1() external view returns (address);
+    function token0() external view returns (ERC20);
+    function token1() external view returns (ERC20);
     function getReserves()
         external
         view
