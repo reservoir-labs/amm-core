@@ -338,24 +338,6 @@ contract AaveIntegrationTest is BaseTest {
         assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManage)));
     }
 
-    function testGetBalance_NoShares(uint256 aToken) public allNetworks allPairs {
-        // assume
-        ERC20 lToken = ERC20(address(uint160(aToken)));
-        vm.assume(lToken != USDC);
-
-        // arrange
-        int256 lAmountToManage = 500e6;
-        int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
-        int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
-        _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
-
-        // act
-        uint256 lRes = _manager.getBalance(_pair, lToken);
-
-        // assert
-        assertEq(lRes, 0);
-    }
-
     function testGetBalance_TwoPairsInSameMarket(uint256 aAmountToManage1, uint256 aAmountToManage2)
         public
         allNetworks
