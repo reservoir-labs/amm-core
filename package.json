@@ -65,9 +65,9 @@
     "submodule:reset": "git submodule update --recursive",
     "test": "npm run test:unit",
     "test:all": "./scripts/patch_mint_burn_key.sh && npm run test:unit && npm run test:integration",
-    "test:integration": "FOUNDRY_PROFILE=integration ./scripts/patch_mint_burn_key.sh && forge test ",
+    "test:integration": "export FOUNDRY_PROFILE=integration && ./scripts/patch_mint_burn_key.sh && forge test ",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
-    "test:balancer": "FOUNDRY_PROFILE=differential ./scripts/patch_mint_burn_key.sh && forge test",
+    "test:balancer": "export FOUNDRY_PROFILE=differential && ./scripts/patch_mint_burn_key.sh && forge test",
     "test:unit": "./scripts/patch_mint_burn_key.sh && forge test"
   },
   "devDependencies": {
