@@ -8,7 +8,6 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IPair } from "src/interfaces/IPair.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
@@ -37,9 +36,12 @@ struct Observation {
     uint32 timestamp;
 }
 
-abstract contract ReservoirPair is ReservoirERC20, IPair, IAssetManagedPair {
+abstract contract ReservoirPair is ReservoirERC20, IPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
+
+    event ProfitReported(ERC20 token, uint104 amount);
+    event LossReported(ERC20 token, uint104 amount);
 
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
