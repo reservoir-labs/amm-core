@@ -212,6 +212,49 @@ abstract contract ReservoirPair is ReservoirERC20, IPair {
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
+    // performs a transfer, if it fails, it attempts to retrieve assets from the
+    // AssetManager before retrying the transfer
+    function _checkedTransfer(ERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
+        internal
+    {
+        if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
+            uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
+            uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
+            if (reserveOut - tokenOutManaged < aAmount) {
+                assetManager.returnAsset(aToken == token0, aAmount - (reserveOut - tokenOutManaged));
+                require(_safeTransfer(address(aToken), aDestination, aAmount), "RP: TRANSFER_FAILED");
+            } else {
+                revert("RP: TRANSFER_FAILED");
+            }
+        }
+    }
+
+    // update reserves and, on the first call per block, price and liq accumulators
+    function _updateAndUnlock(
+        uint256 aBalance0,
+        uint256 aBalance1,
+        uint104 aReserve0,
+        uint104 aReserve1,
+        uint32 aBlockTimestampLast
+    ) internal {
+        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
+
+        uint32 lBlockTimestamp = uint32(_currentTime());
+        uint32 lTimeElapsed;
+        unchecked {
+            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
+        }
+        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
+            _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
+        }
+
+        _slot0.reserve0 = uint104(aBalance0);
+        _slot0.reserve1 = uint104(aBalance1);
+        _writeSlot0Timestamp(lBlockTimestamp, false);
+
+        emit Sync(uint104(aBalance0), uint104(aBalance1));
+    }
+
     /*//////////////////////////////////////////////////////////////////////////
                             ASSET MANAGEMENT
 
@@ -328,7 +371,10 @@ abstract contract ReservoirPair is ReservoirERC20, IPair {
     /*//////////////////////////////////////////////////////////////////////////
                             ORACLE WRITING
 
-    <WHAT TO SAY>
+    Our oracle implementation records both the raw price and clamped price.
+    The clamped price mechanism is introduced by Reservoir to counter the possibility 
+    of oracle manipulation as ETH transitions to PoS when validators can control 
+    multiple blocks in a row. See also https://chainsecurity.com/oracle-manipulation-after-merge/
 
     //////////////////////////////////////////////////////////////////////////*/
 
@@ -400,47 +446,4 @@ abstract contract ReservoirPair is ReservoirERC20, IPair {
     function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast)
         internal
         virtual;
-
-    // performs a transfer, if it fails, it attempts to retrieve assets from the
-    // AssetManager before retrying the transfer
-    function _checkedTransfer(ERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
-        internal
-    {
-        if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
-            uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
-            uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
-            if (reserveOut - tokenOutManaged < aAmount) {
-                assetManager.returnAsset(aToken == token0, aAmount - (reserveOut - tokenOutManaged));
-                require(_safeTransfer(address(aToken), aDestination, aAmount), "RP: TRANSFER_FAILED");
-            } else {
-                revert("RP: TRANSFER_FAILED");
-            }
-        }
-    }
-
-    // update reserves and, on the first call per block, price and liq accumulators
-    function _updateAndUnlock(
-        uint256 aBalance0,
-        uint256 aBalance1,
-        uint104 aReserve0,
-        uint104 aReserve1,
-        uint32 aBlockTimestampLast
-    ) internal {
-        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
-
-        uint32 lBlockTimestamp = uint32(_currentTime());
-        uint32 lTimeElapsed;
-        unchecked {
-            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
-        }
-        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
-        }
-
-        _slot0.reserve0 = uint104(aBalance0);
-        _slot0.reserve1 = uint104(aBalance1);
-        _writeSlot0Timestamp(lBlockTimestamp, false);
-
-        emit Sync(uint104(aBalance0), uint104(aBalance1));
-    }
 }

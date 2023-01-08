@@ -72,10 +72,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @notice if token0 or token1 does not have a market in AAVE, the tokens will not be transferred
-    function adjustManagement(ReservoirPair aPair, int256 aAmount0Change, int256 aAmount1Change)
-        external
-        onlyOwner
-    {
+    function adjustManagement(ReservoirPair aPair, int256 aAmount0Change, int256 aAmount1Change) external onlyOwner {
         _adjustManagement(aPair, aAmount0Change, aAmount1Change);
     }
 
