@@ -11,12 +11,16 @@ import { StableMath } from "src/libraries/StableMath.sol";
 import { Observation } from "src/ReservoirPair.sol";
 import { StablePair, AmplificationData, IReservoirCallee } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
+import { AssetManagerReenter } from "test/__mocks/AssetManagerReenter.sol";
 
 contract StablePairTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
     event RampA(uint64 initialA, uint64 futureA, uint64 initialTime, uint64 futureTime);
     event Burn(address indexed sender, uint256 amount0, uint256 amount1);
+
+    // for testing reentrancy
+    AssetManagerReenter private _reenter = new AssetManagerReenter();
 
     function(address, int256, int256, bytes calldata) internal private _validateCallback;
 
@@ -80,6 +84,16 @@ contract StablePairTest is BaseTest {
         uint256 lAdditionalLpTokens =
             ((INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity) * lLpTokenTotalSupply / lOldLiquidity;
         assertEq(_stablePair.balanceOf(address(this)), lAdditionalLpTokens);
+    }
+
+    function testMint_Reenter() external {
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setManager(_reenter);
+
+        // act & assert
+        vm.expectRevert("REENTRANCY");
+        _stablePair.mint(address(this));
     }
 
     function testMint_OnlyTransferOneToken() public {
@@ -733,6 +747,16 @@ contract StablePairTest is BaseTest {
         assertGt(lExpectedTokenAReceived, 0);
         assertEq(_tokenA.balanceOf(_alice), lExpectedTokenAReceived);
         assertEq(_tokenB.balanceOf(_alice), lExpectedTokenBReceived);
+    }
+
+    function testBurn_Reenter() external {
+        // arrange
+        vm.prank(address(_factory));
+        _stablePair.setManager(_reenter);
+
+        // act & assert
+        vm.expectRevert("REENTRANCY");
+        _stablePair.burn(address(this));
     }
 
     function testBurn_Zero() public {

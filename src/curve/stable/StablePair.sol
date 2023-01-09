@@ -105,7 +105,6 @@ contract StablePair is ReservoirPair {
         emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
-    // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
@@ -124,7 +123,6 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
