@@ -95,7 +95,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
         token1PrecisionMultiplier = uint128(10) ** (18 - token1.decimals());
 
         updateOracleCaller();
-        setAllowedChangePerSecond(factory.read(ALLOWED_CHANGE_NAME).toUint256());
+        setMaxChangeRate(factory.read(MAX_CHANGE_RATE_NAME).toUint256());
     }
 
     function _currentTime() internal view returns (uint32) {
@@ -395,8 +395,8 @@ abstract contract ReservoirPair is ReservoirERC20 {
                             ORACLE WRITING
 
     Our oracle implementation records both the raw price and clamped price.
-    The clamped price mechanism is introduced by Reservoir to counter the possibility 
-    of oracle manipulation as ETH transitions to PoS when validators can control 
+    The clamped price mechanism is introduced by Reservoir to counter the possibility
+    of oracle manipulation as ETH transitions to PoS when validators can control
     multiple blocks in a row. See also https://chainsecurity.com/oracle-manipulation-after-merge/
 
     //////////////////////////////////////////////////////////////////////////*/
@@ -406,16 +406,14 @@ abstract contract ReservoirPair is ReservoirERC20 {
 
     // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
-    string internal constant ALLOWED_CHANGE_NAME = "Shared::allowedChangePerSecond";
+    string internal constant MAX_CHANGE_RATE_NAME = "Shared::maxChangeRate";
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
     Observation[65_536] internal _observations;
 
     // maximum allowed rate of change of price per second
     // to mitigate oracle manipulation attacks in the face of post-merge ETH
-    // TODO: allowedChangePerSecond -> maxChangeRate
-    uint256 public allowedChangePerSecond;
-    // TODO: setAllowedChangePerSecond -> setMaxChangeRate
+    uint256 public maxChangeRate;
     uint256 public prevClampedPrice;
 
     address public oracleCaller;
@@ -433,13 +431,13 @@ abstract contract ReservoirPair is ReservoirERC20 {
         }
     }
 
-    function setAllowedChangePerSecond(uint256 aAllowedChangePerSecond) public onlyFactory {
+    function setMaxChangeRate(uint256 aMaxChangeRate) public onlyFactory {
         require(
-            0 < aAllowedChangePerSecond && aAllowedChangePerSecond <= MAX_CHANGE_PER_SEC,
+            0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC,
             "OW: INVALID_CHANGE_PER_SECOND"
         );
-        emit MaxChangeRateUpdated(allowedChangePerSecond, aAllowedChangePerSecond);
-        allowedChangePerSecond = aAllowedChangePerSecond;
+        emit MaxChangeRateUpdated(maxChangeRate, aMaxChangeRate);
+        maxChangeRate = aMaxChangeRate;
     }
 
     function _calcClampedPrice(uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed)
@@ -451,13 +449,13 @@ abstract contract ReservoirPair is ReservoirERC20 {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
         }
 
-        if (stdMath.percentDelta(aCurrRawPrice, aPrevClampedPrice) > allowedChangePerSecond * aTimeElapsed) {
+        if (stdMath.percentDelta(aCurrRawPrice, aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
             // clamp the price
             if (aCurrRawPrice > aPrevClampedPrice) {
-                rClampedPrice = aPrevClampedPrice * (1e18 + (allowedChangePerSecond * aTimeElapsed)) / 1e18;
+                rClampedPrice = aPrevClampedPrice * (1e18 + (maxChangeRate * aTimeElapsed)) / 1e18;
             } else {
                 assert(aPrevClampedPrice > aCurrRawPrice);
-                rClampedPrice = aPrevClampedPrice * (1e18 - (allowedChangePerSecond * aTimeElapsed)) / 1e18;
+                rClampedPrice = aPrevClampedPrice * (1e18 - (maxChangeRate * aTimeElapsed)) / 1e18;
             }
             rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
         } else {

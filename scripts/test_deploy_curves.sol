@@ -28,7 +28,7 @@ contract VaultScript is BaseScript
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         // _factory.write("Shared::platformFeeTo", _platformFeeTo);
         // _factory.write("Shared::defaultRecoverer", _recoverer);
-        _factory.write("Shared::allowedChangePerSecond", DEFAULT_ALLOWED_CHANGE_PER_SECOND);
+        _factory.write("Shared::maxChangeRate", DEFAULT_ALLOWED_CHANGE_PER_SECOND);
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
