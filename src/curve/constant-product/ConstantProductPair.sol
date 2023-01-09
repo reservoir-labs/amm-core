@@ -12,7 +12,6 @@ import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
-import { IPair, Pair } from "src/Pair.sol";
 
 contract ConstantProductPair is ReservoirPair {
     using FactoryStoreLib for GenericFactory;
@@ -29,7 +28,7 @@ contract ConstantProductPair is ReservoirPair {
     uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
 
     // TODO: Use library function to DRY?
     function _getAmountOut(uint256 aAmountIn, uint256 aReserveIn, uint256 aReserveOut, uint256 aSwapFee)
@@ -118,8 +117,7 @@ contract ConstantProductPair is ReservoirPair {
         }
     }
 
-    // this low-level function should be called from a contract which performs important safety checks
-    function mint(address aTo) external returns (uint256 rLiquidity) {
+    function mint(address aTo) external override returns (uint256 rLiquidity) {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
 
@@ -147,8 +145,7 @@ contract ConstantProductPair is ReservoirPair {
         _managerCallback();
     }
 
-    // this low-level function should be called from a contract which performs important safety checks
-    function burn(address aTo) external returns (uint256 rAmount0, uint256 rAmount1) {
+    function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
@@ -175,9 +172,9 @@ contract ConstantProductPair is ReservoirPair {
         _managerCallback();
     }
 
-    /// @inheritdoc IPair
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
+        override
         returns (uint256 rAmountOut)
     {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();

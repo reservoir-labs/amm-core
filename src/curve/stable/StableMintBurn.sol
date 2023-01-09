@@ -7,14 +7,13 @@ import { Math } from "@openzeppelin/utils/math/Math.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-
-import { GenericFactory } from "src/GenericFactory.sol";
-
-import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+
+import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+
+import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
-import { IPair, Pair } from "src/Pair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -43,7 +42,7 @@ contract StableMintBurn is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
         ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);
@@ -74,9 +73,7 @@ contract StableMintBurn is ReservoirPair {
         require(token0Fee <= type(uint104).max && token1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
-    /// @dev Mints LP tokens - should be called via the router after transferring tokens.
-    /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address aTo) external returns (uint256 rLiquidity) {
+    function mint(address aTo) external override returns (uint256 rLiquidity) {
         // NB: Must sync management PNL before we load reserves.
         // TODO: Is passing/using reserves as uint256 cheaper and still safe?
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
@@ -117,8 +114,7 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address aTo) external returns (uint256 amount0, uint256 amount1) {
+    function burn(address aTo) external override returns (uint256 amount0, uint256 amount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
@@ -145,8 +141,7 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    /// @inheritdoc IPair
-    function swap(int256, bool, address, bytes calldata) external pure returns (uint256) {
+    function swap(int256, bool, address, bytes calldata) external override pure returns (uint256) {
         revert("SMB: IMPOSSIBLE");
     }
 

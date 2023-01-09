@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { IPair } from "src/interfaces/IPair.sol";
+import { ReservoirPair } from "src/ReservoirPair.sol";
 
 contract PairTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
@@ -10,8 +10,8 @@ contract PairTest is BaseTest {
     event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
     event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
 
-    IPair[] internal _pairs;
-    IPair internal _pair;
+    ReservoirPair[] internal _pairs;
+    ReservoirPair internal _pair;
 
     function setUp() public {
         _pairs.push(_constantProductPair);

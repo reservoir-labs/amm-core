@@ -2,13 +2,13 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { OracleWriter } from "src/oracle/OracleWriter.sol";
+import { ReservoirPair } from "src/ReservoirPair.sol";
 
 contract OracleCallerTest is BaseTest {
     event WhitelistChanged(address caller, bool whitelist);
 
-    OracleWriter[] internal _pairs;
-    OracleWriter internal _pair;
+    ReservoirPair[] internal _pairs;
+    ReservoirPair internal _pair;
 
     function setUp() public {
         _pairs.push(_constantProductPair);

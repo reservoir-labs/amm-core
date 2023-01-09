@@ -6,18 +6,17 @@ import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { IPair, Pair } from "src/Pair.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
-import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -52,7 +51,7 @@ contract StablePair is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) Pair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
+    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
         MINT_BURN_LOGIC = factory.deploy(ConstantsLib.MINT_BURN_KEY, aToken0, aToken1);
         require(MINT_BURN_LOGIC != address(0), "SP: MINT_BURN_DEPLOYMENT_FAILED");
 
@@ -108,9 +107,7 @@ contract StablePair is ReservoirPair {
 
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
-    /// @dev Mints LP tokens - should be called via the router after transferring tokens.
-    /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address) external returns (uint256) {
+    function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -129,8 +126,7 @@ contract StablePair is ReservoirPair {
 
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
-    /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address) external returns (uint256, uint256) {
+    function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -147,8 +143,7 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    /// @inheritdoc IPair
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external returns (uint256 amountOut) {
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external override returns (uint256 amountOut) {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
         uint256 amountIn;

@@ -8,7 +8,7 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
-import { Observation } from "src/oracle/OracleWriter.sol";
+import { Observation } from "src/ReservoirPair.sol";
 import { StablePair, AmplificationData, IReservoirCallee } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
