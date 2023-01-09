@@ -2,12 +2,13 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { IPair } from "src/interfaces/IPair.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
+import { ReservoirPair } from "src/ReservoirPair.sol";
+
 contract FlashSwapTest is BaseTest, IReservoirCallee {
-    IPair[] internal _pairs;
-    IPair internal _pair;
+    ReservoirPair[] internal _pairs;
+    ReservoirPair internal _pair;
 
     modifier allPairs() {
         for (uint256 i = 0; i < _pairs.length; ++i) {

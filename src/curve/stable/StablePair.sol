@@ -6,7 +6,6 @@ import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
-import { IPair } from "src/interfaces/IPair.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
@@ -111,7 +110,7 @@ contract StablePair is ReservoirPair {
     // TODO: Should we use fallback?
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address) external returns (uint256) {
+    function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -131,7 +130,7 @@ contract StablePair is ReservoirPair {
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address) external returns (uint256, uint256) {
+    function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
         assembly {
@@ -148,8 +147,8 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    /// @inheritdoc IPair
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external returns (uint256 amountOut) {
+    /// @inheritdoc ReservoirPair
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external override returns (uint256 amountOut) {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
         uint256 amountIn;

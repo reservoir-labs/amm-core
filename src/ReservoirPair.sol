@@ -7,7 +7,6 @@ import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { IPair } from "src/interfaces/IPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
@@ -36,12 +35,18 @@ struct Observation {
     uint32 timestamp;
 }
 
-abstract contract ReservoirPair is ReservoirERC20, IPair {
+abstract contract ReservoirPair is ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    event ProfitReported(ERC20 token, uint104 amount);
-    event LossReported(ERC20 token, uint104 amount);
+    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
+    event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
+    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
+    event CustomPlatformFeeChanged(uint256 oldCustomPlatformFee, uint256 newCustomPlatformFee);
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
+    event Swap(address indexed sender, bool zeroForOne, uint256 amountIn, uint256 amountOut, address indexed to);
+    event Sync(uint104 reserve0, uint104 reserve1);
 
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
@@ -255,6 +260,18 @@ abstract contract ReservoirPair is ReservoirERC20, IPair {
         emit Sync(uint104(aBalance0), uint104(aBalance1));
     }
 
+    function mint(address to) external virtual returns (uint256 liquidity);
+    function burn(address to) external virtual returns (uint256 amount0, uint256 amount1);
+
+    /// @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much
+    ///         slippage.
+    /// @param amount positive to indicate token0, negative to indicate token1
+    /// @param inOrOut true to indicate exact amount in, false to indicate exact amount out
+    /// @param to address to send the output token and leftover input tokens, callee for the flash swap
+    /// @param data calls to with this data, in the event of a flash swap
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external virtual returns (uint256 amountOut);
+
+
     /*//////////////////////////////////////////////////////////////////////////
                             ASSET MANAGEMENT
 
@@ -265,6 +282,9 @@ abstract contract ReservoirPair is ReservoirERC20, IPair {
     behind the IAssetManager interface.
 
     //////////////////////////////////////////////////////////////////////////*/
+
+    event ProfitReported(ERC20 token, uint104 amount);
+    event LossReported(ERC20 token, uint104 amount);
 
     IAssetManager public assetManager;
 
