@@ -17,7 +17,6 @@ import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
-import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -108,8 +107,6 @@ contract StablePair is ReservoirPair {
 
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
-    /// @dev Mints LP tokens - should be called via the router after transferring tokens.
-    /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
@@ -129,7 +126,6 @@ contract StablePair is ReservoirPair {
 
     // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
-    /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
     function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
@@ -147,7 +143,6 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    /// @inheritdoc ReservoirPair
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external override returns (uint256 amountOut) {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");

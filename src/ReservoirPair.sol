@@ -260,7 +260,11 @@ abstract contract ReservoirPair is ReservoirERC20 {
         emit Sync(uint104(aBalance0), uint104(aBalance1));
     }
 
+    /// @dev Mints LP tokens - should be called via the router after transferring tokens.
+    /// The router must ensure that sufficient LP tokens are minted by using the return value.
     function mint(address to) external virtual returns (uint256 liquidity);
+
+    /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
     function burn(address to) external virtual returns (uint256 amount0, uint256 amount1);
 
     /// @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much
@@ -270,7 +274,6 @@ abstract contract ReservoirPair is ReservoirERC20 {
     /// @param to address to send the output token and leftover input tokens, callee for the flash swap
     /// @param data calls to with this data, in the event of a flash swap
     function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external virtual returns (uint256 amountOut);
-
 
     /*//////////////////////////////////////////////////////////////////////////
                             ASSET MANAGEMENT

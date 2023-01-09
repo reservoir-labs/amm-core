@@ -117,7 +117,6 @@ contract ConstantProductPair is ReservoirPair {
         }
     }
 
-    // this low-level function should be called from a contract which performs important safety checks
     function mint(address aTo) external override returns (uint256 rLiquidity) {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
@@ -146,7 +145,6 @@ contract ConstantProductPair is ReservoirPair {
         _managerCallback();
     }
 
-    // this low-level function should be called from a contract which performs important safety checks
     function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
@@ -174,7 +172,6 @@ contract ConstantProductPair is ReservoirPair {
         _managerCallback();
     }
 
-    /// @inheritdoc ReservoirPair
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
         override
