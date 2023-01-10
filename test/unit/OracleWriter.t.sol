@@ -89,7 +89,7 @@ contract OracleWriterTest is BaseTest {
 
     function testMaxChangeRate_Default() external allPairs {
         // assert
-        assertEq(_pair.maxChangeRate(), DEFAULT_ALLOWED_CHANGE_PER_SECOND);
+        assertEq(_pair.maxChangeRate(), DEFAULT_MAX_CHANGE_RATE);
     }
 
     function testSetMaxChangeRate_OnlyFactory() external allPairs {
