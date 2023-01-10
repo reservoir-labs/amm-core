@@ -229,7 +229,6 @@ contract ConstantProductPair is ReservoirPair {
             );
         }
 
-        // perf: investigate if it is possible/safe to only do one call instead of two
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
