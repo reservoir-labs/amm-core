@@ -102,9 +102,9 @@ abstract contract ReservoirPair is ReservoirERC20 {
         return uint32(block.timestamp % 2 ** 31);
     }
 
-    function _splitSlot0Timestamp(uint32 rRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
-        rLocked = rRawTimestamp >> 31 == 1;
-        rTimestamp = rRawTimestamp & 0x7FFFFFFF;
+    function _splitSlot0Timestamp(uint32 aRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
+        rLocked = aRawTimestamp >> 31 == 1;
+        rTimestamp = aRawTimestamp & 0x7FFFFFFF;
     }
 
     function _writeSlot0Timestamp(uint32 aTimestamp, bool aLocked) internal {
@@ -164,17 +164,17 @@ abstract contract ReservoirPair is ReservoirERC20 {
         _unlock(lBlockTimestampLast);
     }
 
-    function setCustomSwapFee(uint256 _customSwapFee) external onlyFactory {
+    function setCustomSwapFee(uint256 aCustomSwapFee) external onlyFactory {
         // we assume the factory won't spam events, so no early check & return
-        emit CustomSwapFeeChanged(customSwapFee, _customSwapFee);
-        customSwapFee = _customSwapFee;
+        emit CustomSwapFeeChanged(customSwapFee, aCustomSwapFee);
+        customSwapFee = aCustomSwapFee;
 
         updateSwapFee();
     }
 
-    function setCustomPlatformFee(uint256 _customPlatformFee) external onlyFactory {
-        emit CustomPlatformFeeChanged(customPlatformFee, _customPlatformFee);
-        customPlatformFee = _customPlatformFee;
+    function setCustomPlatformFee(uint256 aCustomPlatformFee) external onlyFactory {
+        emit CustomPlatformFeeChanged(customPlatformFee, aCustomPlatformFee);
+        customPlatformFee = aCustomPlatformFee;
 
         updatePlatformFee();
     }
@@ -200,20 +200,19 @@ abstract contract ReservoirPair is ReservoirERC20 {
         platformFee = _platformFee;
     }
 
-    function recoverToken(address token) external {
+    function recoverToken(address aToken) external {
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
-        require(token != address(token0), "P: INVALID_TOKEN_TO_RECOVER");
-        require(token != address(token1), "P: INVALID_TOKEN_TO_RECOVER");
+        require(aToken != address(token0) && aToken != address(token1), "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");
 
-        uint256 _amountToRecover = ERC20(token).balanceOf(address(this));
+        uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
 
-        _safeTransfer(token, _recoverer, _amountToRecover);
+        _safeTransfer(aToken, _recoverer, _amountToRecover);
     }
 
-    function _safeTransfer(address token, address to, uint256 value) internal returns (bool) {
+    function _safeTransfer(address aToken, address aTo, uint256 aValue) internal returns (bool) {
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
+        (bool success, bytes memory data) = aToken.call(abi.encodeWithSelector(SELECTOR, aTo, aValue));
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
@@ -262,18 +261,18 @@ abstract contract ReservoirPair is ReservoirERC20 {
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
     /// The router must ensure that sufficient LP tokens are minted by using the return value.
-    function mint(address to) external virtual returns (uint256 liquidity);
+    function mint(address aTo) external virtual returns (uint256 liquidity);
 
     /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
-    function burn(address to) external virtual returns (uint256 amount0, uint256 amount1);
+    function burn(address aTo) external virtual returns (uint256 amount0, uint256 amount1);
 
     /// @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much
     ///         slippage.
-    /// @param amount positive to indicate token0, negative to indicate token1
-    /// @param inOrOut true to indicate exact amount in, false to indicate exact amount out
-    /// @param to address to send the output token and leftover input tokens, callee for the flash swap
-    /// @param data calls to with this data, in the event of a flash swap
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
+    /// @param aAmount positive to indicate token0, negative to indicate token1
+    /// @param aInOrOut true to indicate exact amount in, false to indicate exact amount out
+    /// @param aTo address to send the output token and leftover input tokens, callee for the flash swap
+    /// @param aData calls to with this data, in the event of a flash swap
+    function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
         virtual
         returns (uint256 amountOut);
@@ -359,16 +358,16 @@ abstract contract ReservoirPair is ReservoirERC20 {
         assetManager.afterLiquidityEvent();
     }
 
-    function adjustManagement(int256 token0Change, int256 token1Change) external {
+    function adjustManagement(int256 aToken0Change, int256 aToken1Change) external {
         require(msg.sender == address(assetManager), "AMP: AUTH_NOT_MANAGER");
-        require(token0Change != type(int256).min && token1Change != type(int256).min, "AMP: CAST_WOULD_OVERFLOW");
+        require(aToken0Change != type(int256).min && aToken1Change != type(int256).min, "AMP: CAST_WOULD_OVERFLOW");
 
-        if (token0Change > 0) {
-            uint104 lDelta = uint104(uint256(int256(token0Change)));
+        if (aToken0Change > 0) {
+            uint104 lDelta = uint104(uint256(int256(aToken0Change)));
             token0Managed += lDelta;
             token0.transfer(msg.sender, lDelta);
-        } else if (token0Change < 0) {
-            uint104 lDelta = uint104(uint256(int256(-token0Change)));
+        } else if (aToken0Change < 0) {
+            uint104 lDelta = uint104(uint256(int256(-aToken0Change)));
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
@@ -376,15 +375,15 @@ abstract contract ReservoirPair is ReservoirERC20 {
             token0.transferFrom(msg.sender, address(this), lDelta);
         }
 
-        if (token1Change > 0) {
-            uint104 lDelta = uint104(uint256(int256(token1Change)));
+        if (aToken1Change > 0) {
+            uint104 lDelta = uint104(uint256(int256(aToken1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
             token1.transfer(msg.sender, lDelta);
-        } else if (token1Change < 0) {
-            uint104 lDelta = uint104(uint256(int256(-token1Change)));
+        } else if (aToken1Change < 0) {
+            uint104 lDelta = uint104(uint256(int256(-aToken1Change)));
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;

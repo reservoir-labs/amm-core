@@ -205,35 +205,35 @@ contract StablePair is ReservoirPair {
         emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
     }
 
-    function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)
+    function _getAmountOut(uint256 aAmountIn, uint256 aReserve0, uint256 aReserve1, bool aToken0In)
         internal
         view
         returns (uint256)
     {
         return StableMath._getAmountOut(
-            amountIn,
-            lReserve0,
-            lReserve1,
+            aAmountIn,
+            aReserve0,
+            aReserve1,
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
-            token0In,
+            aToken0In,
             swapFee,
             _getNA()
         );
     }
 
-    function _getAmountIn(uint256 amountOut, uint256 lReserve0, uint256 lReserve1, bool token0Out)
+    function _getAmountIn(uint256 aAmountOut, uint256 aReserve0, uint256 aReserve1, bool aToken0Out)
         internal
         view
         returns (uint256)
     {
         return StableMath._getAmountIn(
-            amountOut,
-            lReserve0,
-            lReserve1,
+            aAmountOut,
+            aReserve0,
+            aReserve1,
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
-            token0Out,
+            aToken0Out,
             swapFee,
             _getNA()
         );
@@ -243,12 +243,12 @@ contract StablePair is ReservoirPair {
     /// See the StableSwap paper for details.
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
-    /// @return liquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 lReserve0, uint256 lReserve1) internal view returns (uint256 liquidity) {
+    /// @return rLiquidity The invariant, at the precision of the pool.
+    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
         unchecked {
-            uint256 adjustedReserve0 = lReserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = lReserve1 * token1PrecisionMultiplier;
-            liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
+            uint256 adjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
+            uint256 adjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
+            rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
         }
     }
 
