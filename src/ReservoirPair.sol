@@ -273,7 +273,10 @@ abstract contract ReservoirPair is ReservoirERC20 {
     /// @param inOrOut true to indicate exact amount in, false to indicate exact amount out
     /// @param to address to send the output token and leftover input tokens, callee for the flash swap
     /// @param data calls to with this data, in the event of a flash swap
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external virtual returns (uint256 amountOut);
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
+        external
+        virtual
+        returns (uint256 amountOut);
 
     /*//////////////////////////////////////////////////////////////////////////
                             ASSET MANAGEMENT
@@ -432,10 +435,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
     }
 
     function setMaxChangeRate(uint256 aMaxChangeRate) public onlyFactory {
-        require(
-            0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC,
-            "OW: INVALID_CHANGE_PER_SECOND"
-        );
+        require(0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
         emit MaxChangeRateUpdated(maxChangeRate, aMaxChangeRate);
         maxChangeRate = aMaxChangeRate;
     }

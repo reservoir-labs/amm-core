@@ -141,7 +141,11 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external override returns (uint256 amountOut) {
+    function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
+        external
+        override
+        returns (uint256 amountOut)
+    {
         (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(amount != 0, "SP: AMOUNT_ZERO");
         uint256 amountIn;

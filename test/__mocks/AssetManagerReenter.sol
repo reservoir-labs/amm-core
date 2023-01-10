@@ -11,7 +11,7 @@ contract AssetManagerReenter is IAssetManager {
 
     // this is solely to test reentrancy for ReservoirPair::mint/burn when the pair syncs
     // with the asset manager at the beginning of the functions
-    function getBalance(ReservoirPair, ERC20) external returns (uint104){
+    function getBalance(ReservoirPair, ERC20) external returns (uint104) {
         ReservoirPair(msg.sender).mint(address(this));
     }
 
@@ -46,12 +46,8 @@ contract AssetManagerReenter is IAssetManager {
         _getBalance[aOwner][aToken] = aNewAmount;
     }
 
-    function afterLiquidityEvent() external {
-//        (uint256 lReserve0, uint256 lReserve1,,) = ReservoirPair(msg.sender).getReserves();
-//        if (lReserve0 != 0) {
-//            ReservoirPair(msg.sender).mint(address(this));
-//        }
-    }
+    // solhint-disable-next-line no-empty-blocks
+    function afterLiquidityEvent() external { }
 
     function returnAsset(bool aToken0, uint256 aAmount) external {
         (aToken0 ? ReservoirPair(msg.sender).token0() : ReservoirPair(msg.sender).token1()).approve(

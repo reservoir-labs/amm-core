@@ -141,7 +141,7 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    function swap(int256, bool, address, bytes calldata) external override pure returns (uint256) {
+    function swap(int256, bool, address, bytes calldata) external pure override returns (uint256) {
         revert("SMB: IMPOSSIBLE");
     }
 
