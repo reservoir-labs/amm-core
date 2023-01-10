@@ -339,7 +339,6 @@ abstract contract ReservoirPair is ReservoirERC20 {
         returns (uint104 rReserve0, uint104 rReserve1)
     {
         if (address(assetManager) == address(0)) {
-            // PERF: Is assigning to rReserve0 cheaper?
             return (aReserve0, aReserve1);
         }
 
