@@ -12,8 +12,6 @@ import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvid
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 
-// TODO: Should probably move the adapter away from AssetManagedPair because
-// there will be many adapters but only one asset maanged pair.
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
     using SafeCast for uint256;

@@ -2,7 +2,7 @@
 // TODO: License
 pragma solidity ^0.8.0;
 
-import { Math } from "@openzeppelin/utils/Math/Math.sol";
+import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
