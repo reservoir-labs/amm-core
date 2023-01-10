@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import { Math } from "@openzeppelin/utils/Math/Math.sol";
+
 import { SSTORE2 } from "solmate/utils/SSTORE2.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
-import { Math } from "src/libraries/Math.sol";
 
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 

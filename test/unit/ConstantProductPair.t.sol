@@ -4,11 +4,11 @@ import "test/__fixtures/BaseTest.sol";
 import { stdStorage } from "forge-std/Test.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
-import { Math } from "src/libraries/Math.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { Observation } from "src/ReservoirPair.sol";
@@ -79,7 +79,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testMint_InitialMint() public {
         // assert
         uint256 lpTokenBalance = _constantProductPair.balanceOf(_alice);
-        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
+        uint256 lExpectedLpTokenBalance = FixedPointMathLib.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
     }
 
@@ -432,7 +432,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
             ),
-            Math.sqrt(lPrice1 * lPrice2),
+            FixedPointMathLib.sqrt(lPrice1 * lPrice2),
             0.0001e18
         );
     }

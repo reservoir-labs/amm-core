@@ -2,9 +2,11 @@
 // TODO: License
 pragma solidity ^0.8.0;
 
+import { Math } from "@openzeppelin/utils/Math/Math.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
-import { Math } from "src/libraries/Math.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
@@ -100,10 +102,10 @@ contract ConstantProductPair is ReservoirPair {
         rFeeOn = platformFee > 0;
 
         if (rFeeOn) {
-            uint256 lSqrtOldK = Math.sqrt(kLast); // gas savings
+            uint256 lSqrtOldK = FixedPointMathLib.sqrt(kLast); // gas savings
 
             if (lSqrtOldK != 0) {
-                uint256 lSqrtNewK = Math.sqrt(uint256(aReserve0) * aReserve1);
+                uint256 lSqrtNewK = FixedPointMathLib.sqrt(uint256(aReserve0) * aReserve1);
 
                 if (lSqrtNewK > lSqrtOldK) {
                     uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
@@ -129,7 +131,7 @@ contract ConstantProductPair is ReservoirPair {
         _mintFee(uint104(lReserve0), uint104(lReserve1));
         uint256 lTotalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (lTotalSupply == 0) {
-            rLiquidity = Math.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
+            rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
             rLiquidity = Math.min(lAmount0 * lTotalSupply / lReserve0, lAmount1 * lTotalSupply / lReserve1);

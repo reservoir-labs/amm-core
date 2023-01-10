@@ -13,6 +13,7 @@ contract AssetManagerReenter is IAssetManager {
     // with the asset manager at the beginning of the functions
     function getBalance(ReservoirPair, ERC20) external returns (uint104) {
         ReservoirPair(msg.sender).mint(address(this));
+        return 0;
     }
 
     function adjustManagement(ReservoirPair aPair, int256 aToken0Amount, int256 aToken1Amount) external {
