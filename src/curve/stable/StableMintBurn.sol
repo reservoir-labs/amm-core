@@ -59,18 +59,18 @@ contract StableMintBurn is ReservoirPair {
     function _nonOptimalMintFee(uint256 aAmount0, uint256 aAmount1, uint256 aReserve0, uint256 aReserve1)
         internal
         view
-        returns (uint256 token0Fee, uint256 token1Fee)
+        returns (uint256 rToken0Fee, uint256 rToken1Fee)
     {
         if (aReserve0 == 0 || aReserve1 == 0) return (0, 0);
         uint256 amount1Optimal = (aAmount0 * aReserve1) / aReserve0;
 
         if (amount1Optimal <= aAmount1) {
-            token1Fee = (swapFee * (aAmount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
+            rToken1Fee = (swapFee * (aAmount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
         } else {
             uint256 amount0Optimal = (aAmount1 * aReserve0) / aReserve1;
-            token0Fee = (swapFee * (aAmount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
+            rToken0Fee = (swapFee * (aAmount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
         }
-        require(token0Fee <= type(uint104).max && token1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
+        require(rToken0Fee <= type(uint104).max && rToken1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
     function mint(address aTo) external override returns (uint256 rLiquidity) {
@@ -113,7 +113,7 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    function burn(address aTo) external override returns (uint256 amount0, uint256 amount1) {
+    function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1));
@@ -122,19 +122,19 @@ contract StableMintBurn is ReservoirPair {
 
         (uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
 
-        amount0 = (liquidity * lReserve0) / lTotalSupply;
-        amount1 = (liquidity * lReserve1) / lTotalSupply;
+        rAmount0 = (liquidity * lReserve0) / lTotalSupply;
+        rAmount1 = (liquidity * lReserve1) / lTotalSupply;
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, aTo, amount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, aTo, amount1, lReserve0, lReserve1);
+        _checkedTransfer(token0, aTo, rAmount0, lReserve0, lReserve1);
+        _checkedTransfer(token1, aTo, rAmount1, lReserve0, lReserve1);
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
         lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
         lastInvariantAmp = _getCurrentAPrecise();
-        emit Burn(msg.sender, amount0, amount1);
+        emit Burn(msg.sender, rAmount0, rAmount1);
 
         _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
         _managerCallback();

@@ -141,68 +141,68 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data)
+    function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
         override
-        returns (uint256 amountOut)
+        returns (uint256 rAmountOut)
     {
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        require(amount != 0, "SP: AMOUNT_ZERO");
-        uint256 amountIn;
-        ERC20 tokenOut;
+        require(aAmount != 0, "SP: AMOUNT_ZERO");
+        uint256 lAmountIn;
+        ERC20 lTokenOut;
 
         // exact in
-        if (inOrOut) {
+        if (aInOrOut) {
             // swap token0 exact in for token1 variable out
-            if (amount > 0) {
-                tokenOut = token1;
-                amountIn = uint256(amount);
-                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, true);
+            if (aAmount > 0) {
+                lTokenOut = token1;
+                lAmountIn = uint256(aAmount);
+                rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, true);
             }
             // swap token1 exact in for token0 variable out
             else {
-                tokenOut = token0;
-                amountIn = uint256(-amount);
-                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, false);
+                lTokenOut = token0;
+                lAmountIn = uint256(-aAmount);
+                rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, false);
             }
         }
         // exact out
         else {
             // swap token1 variable in for token0 exact out
-            if (amount > 0) {
-                amountOut = uint256(amount);
-                require(amountOut < lReserve0, "SP: NOT_ENOUGH_LIQ");
-                tokenOut = token0;
-                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, true);
+            if (aAmount > 0) {
+                rAmountOut = uint256(aAmount);
+                require(rAmountOut < lReserve0, "SP: NOT_ENOUGH_LIQ");
+                lTokenOut = token0;
+                lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, true);
             }
             // swap token0 variable in for token1 exact out
             else {
-                amountOut = uint256(-amount);
-                require(amountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
-                tokenOut = token1;
-                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, false);
+                rAmountOut = uint256(-aAmount);
+                require(rAmountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
+                lTokenOut = token1;
+                lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, false);
             }
         }
 
-        _checkedTransfer(tokenOut, to, amountOut, lReserve0, lReserve1);
+        _checkedTransfer(lTokenOut, aTo, rAmountOut, lReserve0, lReserve1);
 
-        if (data.length > 0) {
-            IReservoirCallee(to).reservoirCall(
+        if (aData.length > 0) {
+            IReservoirCallee(aTo).reservoirCall(
                 msg.sender,
-                tokenOut == token0 ? int256(amountOut) : -int256(amountIn),
-                tokenOut == token1 ? int256(amountOut) : -int256(amountIn),
-                data
+                lTokenOut == token0 ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token1 ? int256(rAmountOut) : -int256(lAmountIn),
+                aData
             );
         }
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        uint256 lReceived = tokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
-        require(lReceived >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+        uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        require(lReceived >= lAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
         _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
-        emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
+        emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
     }
 
     function _getAmountOut(uint256 aAmountIn, uint256 aReserve0, uint256 aReserve1, bool aToken0In)

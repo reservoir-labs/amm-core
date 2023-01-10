@@ -232,11 +232,11 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        uint256 actualAmountIn = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
-        require(lAmountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
+        uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        require(lAmountIn <= lReceived, "CP: INSUFFICIENT_AMOUNT_IN");
 
         _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
-        emit Swap(msg.sender, lTokenOut == token1, actualAmountIn, rAmountOut, aTo);
+        emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
