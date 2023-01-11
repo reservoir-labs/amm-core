@@ -186,7 +186,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         if (lTotalShares == 0) {
             return 1e18;
         }
-        rExchangeRate = aAaveToken.balanceOf(address(this)).divWadDown(totalShares[aAaveToken]);
+        rExchangeRate = aAaveToken.balanceOf(address(this)).divWadDown(lTotalShares);
     }
 
     function _increaseShares(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
