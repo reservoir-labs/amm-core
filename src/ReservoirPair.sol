@@ -370,7 +370,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
         if (aToken0Change > 0) {
             uint104 lDelta = uint104(uint256(aToken0Change));
             token0Managed += lDelta;
-            token0.transfer(msg.sender, lDelta);
+            token0.safeTransfer(msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint104(uint256(-aToken0Change));
 
@@ -386,7 +386,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            token1.transfer(msg.sender, lDelta);
+            token1.safeTransfer(msg.sender, lDelta);
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint104(uint256(-aToken1Change));
 
