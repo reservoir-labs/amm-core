@@ -366,11 +366,11 @@ abstract contract ReservoirPair is ReservoirERC20 {
         require(aToken0Change != type(int256).min && aToken1Change != type(int256).min, "AMP: CAST_WOULD_OVERFLOW");
 
         if (aToken0Change > 0) {
-            uint104 lDelta = uint104(uint256(int256(aToken0Change)));
+            uint104 lDelta = uint104(uint256(aToken0Change));
             token0Managed += lDelta;
             token0.transfer(msg.sender, lDelta);
         } else if (aToken0Change < 0) {
-            uint104 lDelta = uint104(uint256(int256(-aToken0Change)));
+            uint104 lDelta = uint104(uint256(-aToken0Change));
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
@@ -379,14 +379,14 @@ abstract contract ReservoirPair is ReservoirERC20 {
         }
 
         if (aToken1Change > 0) {
-            uint104 lDelta = uint104(uint256(int256(aToken1Change)));
+            uint104 lDelta = uint104(uint256(aToken1Change));
 
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
             token1.transfer(msg.sender, lDelta);
         } else if (aToken1Change < 0) {
-            uint104 lDelta = uint104(uint256(int256(-aToken1Change)));
+            uint104 lDelta = uint104(uint256(-aToken1Change));
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
