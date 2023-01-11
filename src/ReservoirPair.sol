@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import { stdMath } from "forge-std/Test.sol";
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
+import { SafeTransferLib } from "solmate/utils/SafeTransferLib.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
@@ -40,6 +41,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
+    using SafeTransferLib for ERC20;
 
     event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
     event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
@@ -375,7 +377,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            token0.transferFrom(msg.sender, address(this), lDelta);
+            token0.safeTransferFrom(msg.sender, address(this), lDelta);
         }
 
         if (aToken1Change > 0) {
@@ -391,7 +393,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            token1.transferFrom(msg.sender, address(this), lDelta);
+            token1.safeTransferFrom(msg.sender, address(this), lDelta);
         }
     }
 
