@@ -275,7 +275,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
         virtual
-        returns (uint256 amountOut);
+        returns (uint256 rAmountOut);
 
     /*//////////////////////////////////////////////////////////////////////////
                             ASSET MANAGEMENT
