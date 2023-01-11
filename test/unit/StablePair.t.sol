@@ -2,8 +2,7 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 import "test/__fixtures/MintableERC20.sol";
-
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { Math } from "test/__fixtures/Math.sol";
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
@@ -1524,7 +1523,7 @@ contract StablePairTest is BaseTest {
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
             ),
-            FixedPointMathLib.sqrt(lPrice1 * lPrice2),
+            Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
         );
     }
@@ -1595,7 +1594,7 @@ contract StablePairTest is BaseTest {
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
             ),
-            FixedPointMathLib.sqrt(lSpotPrice1 * lSpotPrice2),
+            Math.sqrt(lSpotPrice1 * lSpotPrice2),
             0.0001e18
         );
     }

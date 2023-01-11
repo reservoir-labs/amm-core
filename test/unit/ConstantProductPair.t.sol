@@ -1,10 +1,10 @@
 pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
+import { Math } from "test/__fixtures/Math.sol";
 import { stdStorage } from "forge-std/Test.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
@@ -79,8 +79,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testMint_InitialMint() public {
         // assert
         uint256 lpTokenBalance = _constantProductPair.balanceOf(_alice);
-        uint256 lExpectedLpTokenBalance =
-            FixedPointMathLib.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
+        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
     }
 
@@ -433,7 +432,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
             ),
-            FixedPointMathLib.sqrt(lPrice1 * lPrice2),
+            Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
         );
     }
