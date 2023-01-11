@@ -59,7 +59,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         if (lTotalShares == 0) {
             return 0;
         }
-        rTokenBalance = shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken];
+        rTokenBalance = shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / lTotalShares;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
