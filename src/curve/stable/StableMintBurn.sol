@@ -76,7 +76,7 @@ contract StableMintBurn is ReservoirPair {
     function mint(address aTo) external override returns (uint256 rLiquidity) {
         // NB: Must sync management PNL before we load reserves.
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1));
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         (uint256 lBalance0, uint256 lBalance1) = _balances();
 
@@ -109,14 +109,14 @@ contract StableMintBurn is ReservoirPair {
 
         emit Mint(msg.sender, lAmount0, lAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
     function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1));
+        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         uint256 liquidity = balanceOf[address(this)];
 
@@ -136,7 +136,7 @@ contract StableMintBurn is ReservoirPair {
         lastInvariantAmp = _getCurrentAPrecise();
         emit Burn(msg.sender, rAmount0, rAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 

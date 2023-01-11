@@ -7,34 +7,34 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 
 contract AssetManagerReenter is IAssetManager {
-    mapping(ReservoirPair => mapping(ERC20 => uint104)) public _getBalance;
+    mapping(ReservoirPair => mapping(ERC20 => uint256)) public _getBalance;
 
     // this is solely to test reentrancy for ReservoirPair::mint/burn when the pair syncs
     // with the asset manager at the beginning of the functions
-    function getBalance(ReservoirPair, ERC20) external returns (uint104) {
+    function getBalance(ReservoirPair, ERC20) external returns (uint256) {
         ReservoirPair(msg.sender).mint(address(this));
         return 0;
     }
 
     function adjustManagement(ReservoirPair aPair, int256 aToken0Amount, int256 aToken1Amount) external {
-        require(aToken0Amount != type(int224).min && aToken1Amount != type(int224).min, "AM: OVERFLOW");
+        require(aToken0Amount != type(int256).min && aToken1Amount != type(int256).min, "AM: OVERFLOW");
 
         if (aToken0Amount >= 0) {
-            uint104 lAbs = uint104(uint256(int256(aToken0Amount)));
+            uint256 lAbs = uint256(int256(aToken0Amount));
 
             _getBalance[aPair][aPair.token0()] += lAbs;
         } else {
-            uint104 lAbs = uint104(uint256(int256(-aToken0Amount)));
+            uint256 lAbs = uint256(int256(-aToken0Amount));
 
             aPair.token0().approve(address(aPair), lAbs);
             _getBalance[aPair][aPair.token0()] -= lAbs;
         }
         if (aToken1Amount >= 0) {
-            uint104 lAbs = uint104(uint256(int256(aToken1Amount)));
+            uint256 lAbs = uint256(int256(aToken1Amount));
 
             _getBalance[aPair][aPair.token1()] += lAbs;
         } else {
-            uint104 lAbs = uint104(uint256(int256(-aToken1Amount)));
+            uint256 lAbs = uint256(int256(-aToken1Amount));
 
             aPair.token1().approve(address(aPair), lAbs);
             _getBalance[aPair][aPair.token1()] -= lAbs;
@@ -43,7 +43,7 @@ contract AssetManagerReenter is IAssetManager {
         aPair.adjustManagement(aToken0Amount, aToken1Amount);
     }
 
-    function adjustBalance(ReservoirPair aOwner, ERC20 aToken, uint104 aNewAmount) external {
+    function adjustBalance(ReservoirPair aOwner, ERC20 aToken, uint256 aNewAmount) external {
         _getBalance[aOwner][aToken] = aNewAmount;
     }
 

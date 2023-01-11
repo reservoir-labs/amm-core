@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 import { stdMath } from "forge-std/Test.sol";
+import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
@@ -38,6 +39,7 @@ struct Observation {
 abstract contract ReservoirPair is ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
+    using SafeCast for uint256;
 
     event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
     event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
@@ -149,7 +151,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
 
     /// @notice Force reserves to match balances.
     function sync() external {
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         _updateAndUnlock(_totalToken0(), _totalToken1(), lReserve0, lReserve1, lBlockTimestampLast);
@@ -157,7 +159,7 @@ abstract contract ReservoirPair is ReservoirERC20 {
 
     /// @notice Force balances to match reserves.
     function skim(address aTo) external {
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
 
         _checkedTransfer(token0, aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
         _checkedTransfer(token1, aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
@@ -237,11 +239,12 @@ abstract contract ReservoirPair is ReservoirERC20 {
     function _updateAndUnlock(
         uint256 aBalance0,
         uint256 aBalance1,
-        uint104 aReserve0,
-        uint104 aReserve1,
+        uint256 aReserve0,
+        uint256 aReserve1,
         uint32 aBlockTimestampLast
     ) internal {
         require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
+        require(aReserve0 <= type(uint104).max && aReserve1 <= type(uint104).max, "RP: OVERFLOW");
 
         uint32 lBlockTimestamp = uint32(_currentTime());
         uint32 lTimeElapsed;
@@ -288,8 +291,8 @@ abstract contract ReservoirPair is ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    event ProfitReported(ERC20 token, uint104 amount);
-    event LossReported(ERC20 token, uint104 amount);
+    event ProfitReported(ERC20 token, uint256 amount);
+    event LossReported(ERC20 token, uint256 amount);
 
     IAssetManager public assetManager;
 
@@ -309,20 +312,20 @@ abstract contract ReservoirPair is ReservoirERC20 {
         return token1.balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(ERC20 aToken, uint104 aReserve, uint104 aPrevBalance, uint104 aNewBalance)
+    function _handleReport(ERC20 aToken, uint256 aReserve, uint256 aPrevBalance, uint256 aNewBalance)
         private
-        returns (uint104 rUpdatedReserve)
+        returns (uint256 rUpdatedReserve)
     {
         if (aNewBalance > aPrevBalance) {
             // report profit
-            uint104 lProfit = aNewBalance - aPrevBalance;
+            uint256 lProfit = aNewBalance - aPrevBalance;
 
             emit ProfitReported(aToken, lProfit);
 
             rUpdatedReserve = aReserve + lProfit;
         } else if (aNewBalance < aPrevBalance) {
             // report loss
-            uint104 lLoss = aPrevBalance - aNewBalance;
+            uint256 lLoss = aPrevBalance - aNewBalance;
 
             emit LossReported(aToken, lLoss);
 
@@ -333,22 +336,22 @@ abstract contract ReservoirPair is ReservoirERC20 {
         }
     }
 
-    function _syncManaged(uint104 aReserve0, uint104 aReserve1)
+    function _syncManaged(uint256 aReserve0, uint256 aReserve1)
         internal
-        returns (uint104 rReserve0, uint104 rReserve1)
+        returns (uint256 rReserve0, uint256 rReserve1)
     {
         if (address(assetManager) == address(0)) {
             return (aReserve0, aReserve1);
         }
 
-        uint104 lToken0Managed = assetManager.getBalance(this, token0);
-        uint104 lToken1Managed = assetManager.getBalance(this, token1);
+        uint256 lToken0Managed = assetManager.getBalance(this, token0);
+        uint256 lToken1Managed = assetManager.getBalance(this, token1);
 
         rReserve0 = _handleReport(token0, aReserve0, token0Managed, lToken0Managed);
         rReserve1 = _handleReport(token1, aReserve1, token1Managed, lToken1Managed);
 
-        token0Managed = lToken0Managed;
-        token1Managed = lToken1Managed;
+        token0Managed = lToken0Managed.toUint104();
+        token1Managed = lToken1Managed.toUint104();
     }
 
     function _managerCallback() internal {

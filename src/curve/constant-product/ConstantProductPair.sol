@@ -98,14 +98,14 @@ contract ConstantProductPair is ReservoirPair {
         }
     }
 
-    function _mintFee(uint104 aReserve0, uint104 aReserve1) private returns (bool rFeeOn) {
+    function _mintFee(uint256 aReserve0, uint256 aReserve1) private returns (bool rFeeOn) {
         rFeeOn = platformFee > 0;
 
         if (rFeeOn) {
             uint256 lSqrtOldK = FixedPointMathLib.sqrt(kLast); // gas savings
 
             if (lSqrtOldK != 0) {
-                uint256 lSqrtNewK = FixedPointMathLib.sqrt(uint256(aReserve0) * aReserve1);
+                uint256 lSqrtNewK = FixedPointMathLib.sqrt(aReserve0 * aReserve1);
 
                 if (lSqrtNewK > lSqrtOldK) {
                     uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
@@ -128,7 +128,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lAmount0 = lBalance0 - lReserve0;
         uint256 lAmount1 = lBalance1 - lReserve1;
 
-        _mintFee(uint104(lReserve0), uint104(lReserve1));
+        _mintFee(lReserve0, lReserve1);
         uint256 lTotalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (lTotalSupply == 0) {
             rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
@@ -143,7 +143,7 @@ contract ConstantProductPair is ReservoirPair {
         kLast = lBalance0 * lBalance1;
         emit Mint(msg.sender, lAmount0, lAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
@@ -154,7 +154,7 @@ contract ConstantProductPair is ReservoirPair {
 
         uint256 liquidity = balanceOf[address(this)];
 
-        _mintFee(uint104(lReserve0), uint104(lReserve1));
+        _mintFee(lReserve0, lReserve1);
         uint256 lTotalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         rAmount0 = liquidity * _totalToken0() / lTotalSupply; // using balances ensures pro-rata distribution
         rAmount1 = liquidity * _totalToken1() / lTotalSupply; // using balances ensures pro-rata distribution
@@ -170,7 +170,7 @@ contract ConstantProductPair is ReservoirPair {
         kLast = lBalance0 * lBalance1;
         emit Burn(msg.sender, rAmount0, rAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
@@ -235,7 +235,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lAmountIn <= lReceived, "CP: INSUFFICIENT_AMOUNT_IN");
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
     }
 

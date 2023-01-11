@@ -4,7 +4,6 @@ import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
-import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
@@ -14,7 +13,6 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
-    using SafeCast for uint256;
 
     event FundsInvested(ReservoirPair pair, ERC20 token, uint256 shares);
     event FundsDivested(ReservoirPair pair, ERC20 token, uint256 shares);
@@ -51,18 +49,17 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
-    function getBalance(ReservoirPair aOwner, ERC20 aToken) external view returns (uint104 rTokenBalance) {
+    function getBalance(ReservoirPair aOwner, ERC20 aToken) external view returns (uint256 rTokenBalance) {
         return _getBalance(aOwner, aToken);
     }
 
-    function _getBalance(ReservoirPair aOwner, ERC20 aToken) private view returns (uint104 rTokenBalance) {
+    function _getBalance(ReservoirPair aOwner, ERC20 aToken) private view returns (uint256 rTokenBalance) {
         ERC20 lAaveToken = _getATokenAddress(aToken);
         uint256 lTotalShares = totalShares[lAaveToken];
         if (lTotalShares == 0) {
             return 0;
         }
-        rTokenBalance =
-            (shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken]).toUint104();
+        rTokenBalance = shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / totalShares[lAaveToken];
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -148,10 +145,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         ReservoirPair lPair = ReservoirPair(msg.sender);
         ERC20 lToken0 = lPair.token0();
         ERC20 lToken1 = lPair.token1();
-        (uint104 lReserve0, uint104 lReserve1,,) = lPair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = lPair.getReserves();
 
-        uint104 lToken0Managed = _getBalance(lPair, lToken0);
-        uint104 lToken1Managed = _getBalance(lPair, lToken1);
+        uint256 lToken0Managed = _getBalance(lPair, lToken0);
+        uint256 lToken1Managed = _getBalance(lPair, lToken1);
 
         int256 lAmount0Change = _calculateChangeAmount(lReserve0, lToken0Managed);
         int256 lAmount1Change = _calculateChangeAmount(lReserve1, lToken1Managed);
