@@ -80,7 +80,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(AssetManager(address(this)));
 
         // act & assert
-        vm.expectRevert();
+        vm.expectRevert(stdError.arithmeticError);
         _pair.adjustManagement(type(int256).min, 0);
     }
 

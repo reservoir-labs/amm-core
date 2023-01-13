@@ -365,7 +365,6 @@ abstract contract ReservoirPair is ReservoirERC20 {
 
     function adjustManagement(int256 aToken0Change, int256 aToken1Change) external {
         require(msg.sender == address(assetManager), "AMP: AUTH_NOT_MANAGER");
-        require(aToken0Change != type(int256).min && aToken1Change != type(int256).min, "AMP: CAST_WOULD_OVERFLOW");
 
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
