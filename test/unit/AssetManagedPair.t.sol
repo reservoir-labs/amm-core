@@ -84,6 +84,30 @@ contract AssetManagedPairTest is BaseTest {
         _pair.adjustManagement(type(int256).min, 0);
     }
 
+    function testAdjustManagement_Uint104() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(AssetManager(address(this)));
+        deal(address(_tokenB), address(_pair), type(uint104).max, true);
+
+        // act
+        _pair.adjustManagement(0, int256(uint256(type(uint104).max)));
+
+        // assert
+        assertEq(_pair.token1Managed(), type(uint104).max);
+        assertEq(_tokenB.balanceOf(address(this)) , type(uint104).max);
+    }
+
+    function testAdjustManagement_GreaterThanUint104() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(AssetManager(address(this)));
+
+        // act & assert
+        vm.expectRevert("SafeCast: value doesn't fit in 104 bits");
+        _pair.adjustManagement(0, int256(uint256(type(uint104).max)) + 1);
+    }
+
     function testAdjustManagement_DecreaseManagement(uint256 aAmount0Decrease, uint256 aAmount1Decrease)
         external
         allPairs
