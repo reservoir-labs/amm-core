@@ -10,3 +10,6 @@
 [submodule "reference/balancer-v2-monorepo"]
 	path = reference/balancer-v2-monorepo
 	url = git@github.com:Reservoir-Labs/balancer-v2-monorepo.git
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/Reservoir-Labs/forge-std
