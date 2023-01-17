@@ -16,7 +16,6 @@ pragma solidity ^0.8.0;
 
 import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
-import { Math } from "src/libraries/Math.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
 library ConstantProductOracleMath {
@@ -47,7 +46,7 @@ library ConstantProductOracleMath {
     /// @param reserve0 amount in native precision
     /// @param reserve1 amount in native precision
     function calcLogLiq(uint256 reserve0, uint256 reserve1) internal pure returns (int112 logLiq) {
-        uint256 sqrtK = Math.sqrt(reserve0 * reserve1);
+        uint256 sqrtK = FixedPointMathLib.sqrt(reserve0 * reserve1);
 
         int256 rawResult = LogCompression.toLowResLog(sqrtK);
         assert(rawResult >= type(int112).min && rawResult <= type(int112).max);

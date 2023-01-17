@@ -82,7 +82,7 @@ contract AaveIntegrationTest is BaseTest {
         _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
-        _factory.write("Shared::allowedChangePerSecond", DEFAULT_ALLOWED_CHANGE_PER_SECOND);
+        _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
         _factory.addCurve(type(ConstantProductPair).creationCode);
         _factory.addBytecode(type(StableMintBurn).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
@@ -331,7 +331,7 @@ contract AaveIntegrationTest is BaseTest {
         _manager.adjustManagement(_pair, lAmountToManage0, lAmountToManage1);
 
         // act
-        uint104 lBalance = _manager.getBalance(_pair, USDC);
+        uint256 lBalance = _manager.getBalance(_pair, USDC);
 
         // assert
         assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManage)));

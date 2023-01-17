@@ -105,7 +105,6 @@ contract StablePair is ReservoirPair {
         emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
-    // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
@@ -124,7 +123,6 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    // TODO: Test re-entrancy.
     // TODO: Should we use fallback?
     function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
@@ -143,95 +141,99 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    function swap(int256 amount, bool inOrOut, address to, bytes calldata data) external override returns (uint256 amountOut) {
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        require(amount != 0, "SP: AMOUNT_ZERO");
-        uint256 amountIn;
-        ERC20 tokenOut;
+    function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
+        external
+        override
+        returns (uint256 rAmountOut)
+    {
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        require(aAmount != 0, "SP: AMOUNT_ZERO");
+        uint256 lAmountIn;
+        ERC20 lTokenOut;
 
         // exact in
-        if (inOrOut) {
+        if (aInOrOut) {
             // swap token0 exact in for token1 variable out
-            if (amount > 0) {
-                tokenOut = token1;
-                amountIn = uint256(amount);
-                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, true);
+            if (aAmount > 0) {
+                lTokenOut = token1;
+                lAmountIn = uint256(aAmount);
+                rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, true);
             }
             // swap token1 exact in for token0 variable out
             else {
-                tokenOut = token0;
-                amountIn = uint256(-amount);
-                amountOut = _getAmountOut(amountIn, lReserve0, lReserve1, false);
+                lTokenOut = token0;
+                lAmountIn = uint256(-aAmount);
+                rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, false);
             }
         }
         // exact out
         else {
             // swap token1 variable in for token0 exact out
-            if (amount > 0) {
-                amountOut = uint256(amount);
-                require(amountOut < lReserve0, "SP: NOT_ENOUGH_LIQ");
-                tokenOut = token0;
-                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, true);
+            if (aAmount > 0) {
+                rAmountOut = uint256(aAmount);
+                require(rAmountOut < lReserve0, "SP: NOT_ENOUGH_LIQ");
+                lTokenOut = token0;
+                lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, true);
             }
             // swap token0 variable in for token1 exact out
             else {
-                amountOut = uint256(-amount);
-                require(amountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
-                tokenOut = token1;
-                amountIn = _getAmountIn(amountOut, lReserve0, lReserve1, false);
+                rAmountOut = uint256(-aAmount);
+                require(rAmountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
+                lTokenOut = token1;
+                lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, false);
             }
         }
 
-        _checkedTransfer(tokenOut, to, amountOut, lReserve0, lReserve1);
+        _checkedTransfer(lTokenOut, aTo, rAmountOut, lReserve0, lReserve1);
 
-        if (data.length > 0) {
-            IReservoirCallee(to).reservoirCall(
+        if (aData.length > 0) {
+            IReservoirCallee(aTo).reservoirCall(
                 msg.sender,
-                tokenOut == token0 ? int256(amountOut) : -int256(amountIn),
-                tokenOut == token1 ? int256(amountOut) : -int256(amountIn),
-                data
+                lTokenOut == token0 ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token1 ? int256(rAmountOut) : -int256(lAmountIn),
+                aData
             );
         }
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        uint256 lReceived = tokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
-        require(lReceived >= amountIn, "SP: INSUFFICIENT_AMOUNT_IN");
+        uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        require(lReceived >= lAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
-        emit Swap(msg.sender, tokenOut == token1, lReceived, amountOut, to);
+        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
     }
 
-    function _getAmountOut(uint256 amountIn, uint256 lReserve0, uint256 lReserve1, bool token0In)
+    function _getAmountOut(uint256 aAmountIn, uint256 aReserve0, uint256 aReserve1, bool aToken0In)
         internal
         view
         returns (uint256)
     {
         return StableMath._getAmountOut(
-            amountIn,
-            lReserve0,
-            lReserve1,
+            aAmountIn,
+            aReserve0,
+            aReserve1,
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
-            token0In,
+            aToken0In,
             swapFee,
             _getNA()
         );
     }
 
-    function _getAmountIn(uint256 amountOut, uint256 lReserve0, uint256 lReserve1, bool token0Out)
+    function _getAmountIn(uint256 aAmountOut, uint256 aReserve0, uint256 aReserve1, bool aToken0Out)
         internal
         view
         returns (uint256)
     {
         return StableMath._getAmountIn(
-            amountOut,
-            lReserve0,
-            lReserve1,
+            aAmountOut,
+            aReserve0,
+            aReserve1,
             token0PrecisionMultiplier,
             token1PrecisionMultiplier,
-            token0Out,
+            aToken0Out,
             swapFee,
             _getNA()
         );
@@ -241,12 +243,12 @@ contract StablePair is ReservoirPair {
     /// See the StableSwap paper for details.
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
-    /// @return liquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 lReserve0, uint256 lReserve1) internal view returns (uint256 liquidity) {
+    /// @return rLiquidity The invariant, at the precision of the pool.
+    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
         unchecked {
-            uint256 adjustedReserve0 = lReserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = lReserve1 * token1PrecisionMultiplier;
-            liquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
+            uint256 adjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
+            uint256 adjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
+            rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
         }
     }
 
@@ -273,7 +275,6 @@ contract StablePair is ReservoirPair {
     }
 
     /// @dev number of coins in the pool multiplied by A precise
-    // perf: is it possible to optimize/simplify by hardcoding to two assets instead of using _getNA() etc
     function _getNA() internal view returns (uint256) {
         return 2 * _getCurrentAPrecise();
     }

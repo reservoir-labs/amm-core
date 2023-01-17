@@ -11,7 +11,7 @@ contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
     event OracleCallerUpdated(address oldCaller, address newCaller);
-    event MaxChangeRateUpdated(uint256 oldAllowedChangePerSecond, uint256 newAllowedChangePerSecond);
+    event MaxChangeRateUpdated(uint256 oldMaxChangeRate, uint256 newMaxChangeRate);
 
     ReservoirPair[] internal _pairs;
     ReservoirPair internal _pair;
@@ -87,38 +87,38 @@ contract OracleWriterTest is BaseTest {
         assertEq(_pair.oracleCaller(), lBefore);
     }
 
-    function testAllowedChangePerSecond_Default() external allPairs {
+    function testMaxChangeRate_Default() external allPairs {
         // assert
-        assertEq(_pair.allowedChangePerSecond(), DEFAULT_ALLOWED_CHANGE_PER_SECOND);
+        assertEq(_pair.maxChangeRate(), DEFAULT_MAX_CHANGE_RATE);
     }
 
-    function testSetAllowedChangePerSecond_OnlyFactory() external allPairs {
+    function testSetMaxChangeRate_OnlyFactory() external allPairs {
         // act & assert
         vm.expectRevert();
-        _pair.setAllowedChangePerSecond(1);
+        _pair.setMaxChangeRate(1);
 
         vm.prank(address(_factory));
         vm.expectEmit(true, true, false, false);
         emit MaxChangeRateUpdated(0.01e18, 1);
-        _pair.setAllowedChangePerSecond(1);
-        assertEq(_pair.allowedChangePerSecond(), 1);
+        _pair.setMaxChangeRate(1);
+        assertEq(_pair.maxChangeRate(), 1);
     }
 
-    function testSetAllowedChangePerSecond_TooLow() external allPairs {
+    function testSetMaxChangeRate_TooLow() external allPairs {
         // act & assert
         vm.prank(address(_factory));
         vm.expectRevert("OW: INVALID_CHANGE_PER_SECOND");
-        _pair.setAllowedChangePerSecond(0);
+        _pair.setMaxChangeRate(0);
     }
 
-    function testSetAllowedChangePerSecond_TooHigh(uint256 aAllowedChangePerSecond) external allPairs {
+    function testSetMaxChangeRate_TooHigh(uint256 aMaxChangeRate) external allPairs {
         // assume
-        uint256 lAllowedChangePerSecond = bound(aAllowedChangePerSecond, 0.01e18 + 1, type(uint256).max);
+        uint256 lMaxChangeRate = bound(aMaxChangeRate, 0.01e18 + 1, type(uint256).max);
 
         // act & assert
         vm.prank(address(_factory));
         vm.expectRevert("OW: INVALID_CHANGE_PER_SECOND");
-        _pair.setAllowedChangePerSecond(lAllowedChangePerSecond);
+        _pair.setMaxChangeRate(lMaxChangeRate);
     }
 
     function testOracle_CompareLiquidityTwoCurves_Balanced() external {

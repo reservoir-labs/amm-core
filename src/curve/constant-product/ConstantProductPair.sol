@@ -2,9 +2,11 @@
 // TODO: License
 pragma solidity ^0.8.0;
 
+import { Math } from "@openzeppelin/utils/math/Math.sol";
+import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
-import { Math } from "src/libraries/Math.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
@@ -87,23 +89,23 @@ contract ConstantProductPair is ReservoirPair {
         // ASSERT: newK & oldK        < uint104
         // ASSERT: aPlatformFee       < FEE_ACCURACY
         // ASSERT: aCirculatingShares < uint104
+        unchecked {
+            uint256 lScaledGrowth = aSqrtNewK * ACCURACY / aSqrtOldK; // ASSERT: < UINT256
+            uint256 lScaledMultiplier = ACCURACY - (SQUARED_ACCURACY / lScaledGrowth); // ASSERT: < UINT128
+            uint256 lScaledTargetOwnership = lScaledMultiplier * aPlatformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
 
-        // perf: can be unchecked
-        uint256 lScaledGrowth = aSqrtNewK * ACCURACY / aSqrtOldK; // ASSERT: < UINT256
-        uint256 lScaledMultiplier = ACCURACY - (SQUARED_ACCURACY / lScaledGrowth); // ASSERT: < UINT128
-        uint256 lScaledTargetOwnership = lScaledMultiplier * aPlatformFee / FEE_ACCURACY; // ASSERT: < UINT144 during maths, ends < UINT128
-
-        rSharesToIssue = lScaledTargetOwnership * aCirculatingShares / (ACCURACY - lScaledTargetOwnership); // ASSERT: lScaledTargetOwnership < ACCURACY
+            rSharesToIssue = lScaledTargetOwnership * aCirculatingShares / (ACCURACY - lScaledTargetOwnership); // ASSERT: lScaledTargetOwnership < ACCURACY
+        }
     }
 
-    function _mintFee(uint104 aReserve0, uint104 aReserve1) private returns (bool rFeeOn) {
+    function _mintFee(uint256 aReserve0, uint256 aReserve1) private returns (bool rFeeOn) {
         rFeeOn = platformFee > 0;
 
         if (rFeeOn) {
-            uint256 lSqrtOldK = Math.sqrt(kLast); // gas savings
+            uint256 lSqrtOldK = FixedPointMathLib.sqrt(kLast); // gas savings
 
             if (lSqrtOldK != 0) {
-                uint256 lSqrtNewK = Math.sqrt(uint256(aReserve0) * aReserve1);
+                uint256 lSqrtNewK = FixedPointMathLib.sqrt(aReserve0 * aReserve1);
 
                 if (lSqrtNewK > lSqrtOldK) {
                     uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
@@ -118,8 +120,8 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     function mint(address aTo) external override returns (uint256 rLiquidity) {
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1)); // check asset-manager pnl
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
@@ -129,7 +131,7 @@ contract ConstantProductPair is ReservoirPair {
         _mintFee(lReserve0, lReserve1);
         uint256 lTotalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (lTotalSupply == 0) {
-            rLiquidity = Math.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
+            rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
             rLiquidity = Math.min(lAmount0 * lTotalSupply / lReserve0, lAmount1 * lTotalSupply / lReserve1);
@@ -147,8 +149,8 @@ contract ConstantProductPair is ReservoirPair {
 
     function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
-        (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1); // check asset-manager pnl
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1)); // check asset-manager pnl
 
         uint256 liquidity = balanceOf[address(this)];
 
@@ -177,7 +179,7 @@ contract ConstantProductPair is ReservoirPair {
         override
         returns (uint256 rAmountOut)
     {
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
         uint256 lAmountIn;
         ERC20 lTokenOut;
@@ -227,15 +229,14 @@ contract ConstantProductPair is ReservoirPair {
             );
         }
 
-        // perf: investigate if it is possible/safe to only do one call instead of two
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        uint256 actualAmountIn = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
-        require(lAmountIn <= actualAmountIn, "CP: INSUFFICIENT_AMOUNT_IN");
+        uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        require(lAmountIn <= lReceived, "CP: INSUFFICIENT_AMOUNT_IN");
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
-        emit Swap(msg.sender, lTokenOut == token1, actualAmountIn, rAmountOut, aTo);
+        emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

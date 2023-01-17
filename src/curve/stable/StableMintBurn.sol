@@ -56,27 +56,26 @@ contract StableMintBurn is ReservoirPair {
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
-    function _nonOptimalMintFee(uint256 _amount0, uint256 _amount1, uint256 lReserve0, uint256 lReserve1)
+    function _nonOptimalMintFee(uint256 aAmount0, uint256 aAmount1, uint256 aReserve0, uint256 aReserve1)
         internal
         view
-        returns (uint256 token0Fee, uint256 token1Fee)
+        returns (uint256 rToken0Fee, uint256 rToken1Fee)
     {
-        if (lReserve0 == 0 || lReserve1 == 0) return (0, 0);
-        uint256 amount1Optimal = (_amount0 * lReserve1) / lReserve0;
+        if (aReserve0 == 0 || aReserve1 == 0) return (0, 0);
+        uint256 amount1Optimal = (aAmount0 * aReserve1) / aReserve0;
 
-        if (amount1Optimal <= _amount1) {
-            token1Fee = (swapFee * (_amount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
+        if (amount1Optimal <= aAmount1) {
+            rToken1Fee = (swapFee * (aAmount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
         } else {
-            uint256 amount0Optimal = (_amount1 * lReserve0) / lReserve1;
-            token0Fee = (swapFee * (_amount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
+            uint256 amount0Optimal = (aAmount1 * aReserve0) / aReserve1;
+            rToken0Fee = (swapFee * (aAmount0 - amount0Optimal)) / (2 * FEE_ACCURACY);
         }
-        require(token0Fee <= type(uint104).max && token1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
+        require(rToken0Fee <= type(uint104).max && rToken1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
     function mint(address aTo) external override returns (uint256 rLiquidity) {
         // NB: Must sync management PNL before we load reserves.
-        // TODO: Is passing/using reserves as uint256 cheaper and still safe?
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         (uint256 lBalance0, uint256 lBalance1) = _balances();
@@ -114,34 +113,34 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    function burn(address aTo) external override returns (uint256 amount0, uint256 amount1) {
+    function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
-        (uint104 lReserve0, uint104 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
         uint256 liquidity = balanceOf[address(this)];
 
         (uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
 
-        amount0 = (liquidity * lReserve0) / lTotalSupply;
-        amount1 = (liquidity * lReserve1) / lTotalSupply;
+        rAmount0 = (liquidity * lReserve0) / lTotalSupply;
+        rAmount1 = (liquidity * lReserve1) / lTotalSupply;
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, aTo, amount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, aTo, amount1, lReserve0, lReserve1);
+        _checkedTransfer(token0, aTo, rAmount0, lReserve0, lReserve1);
+        _checkedTransfer(token1, aTo, rAmount1, lReserve0, lReserve1);
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
         lastInvariant = uint192(_computeLiquidity(lBalance0, lBalance1));
         lastInvariantAmp = _getCurrentAPrecise();
-        emit Burn(msg.sender, amount0, amount1);
+        emit Burn(msg.sender, rAmount0, rAmount1);
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
-    function swap(int256, bool, address, bytes calldata) external override pure returns (uint256) {
+    function swap(int256, bool, address, bytes calldata) external pure override returns (uint256) {
         revert("SMB: IMPOSSIBLE");
     }
 
@@ -216,7 +215,6 @@ contract StableMintBurn is ReservoirPair {
     }
 
     /// @dev number of coins in the pool multiplied by A precise
-    // perf: is it possible to optimize/simplify by hardcoding to two assets instead of using _getNA() etc
     function _getNA() internal view returns (uint256) {
         return 2 * _getCurrentAPrecise();
     }
@@ -225,29 +223,29 @@ contract StableMintBurn is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(uint256 lReserve0, uint256 lReserve1, uint32 timeElapsed, uint32 timestampLast)
+    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast)
         internal
         override
     {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), lReserve0 * token0PrecisionMultiplier, lReserve1 * token1PrecisionMultiplier
+            _getCurrentAPrecise(), aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
-            _calcClampedPrice(currRawPrice, prevClampedPrice, timeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(lReserve0, lReserve1);
+            _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
+        int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(timeElapsed)));
+            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(timeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(timeElapsed)));
+                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
+            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
             _slot0.index += 1;
-            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, timestampLast);
+            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
         }
     }
 }

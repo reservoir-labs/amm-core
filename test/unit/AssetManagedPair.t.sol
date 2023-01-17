@@ -74,6 +74,40 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(this)), uint256(lAmount1));
     }
 
+    function testAdjustManagement_Int256Min() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(AssetManager(address(this)));
+
+        // act & assert
+        vm.expectRevert(stdError.arithmeticError);
+        _pair.adjustManagement(type(int256).min, 0);
+    }
+
+    function testAdjustManagement_Uint104() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(AssetManager(address(this)));
+        deal(address(_tokenB), address(_pair), type(uint104).max, true);
+
+        // act
+        _pair.adjustManagement(0, int256(uint256(type(uint104).max)));
+
+        // assert
+        assertEq(_pair.token1Managed(), type(uint104).max);
+        assertEq(_tokenB.balanceOf(address(this)) , type(uint104).max);
+    }
+
+    function testAdjustManagement_GreaterThanUint104() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(AssetManager(address(this)));
+
+        // act & assert
+        vm.expectRevert("SafeCast: value doesn't fit in 104 bits");
+        _pair.adjustManagement(0, int256(uint256(type(uint104).max)) + 1);
+    }
+
     function testAdjustManagement_DecreaseManagement(uint256 aAmount0Decrease, uint256 aAmount1Decrease)
         external
         allPairs
@@ -384,5 +418,22 @@ contract AssetManagedPairTest is BaseTest {
         // assert - the burner gets less than in the case where the loss didn't happen
         assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
         assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
+    }
+
+    function testManagedAmount_GreaterThanUint104() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // act
+        _manager.adjustManagement(_pair, 10e18, 0);
+        uint256 lNewAmount = uint256(type(uint104).max) + 5;
+        _manager.adjustBalance(_pair, _tokenA, lNewAmount);
+
+        // assert - when the amount managed is greater than uint104, mints and burns will fail
+        // because the new balance returned by the manager is greater than that amount as well
+        // which exceeds the storage type
+        vm.expectRevert();
+        _pair.burn(address(this));
     }
 }

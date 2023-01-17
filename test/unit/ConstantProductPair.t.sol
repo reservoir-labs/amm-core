@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
+import { Math } from "test/__fixtures/Math.sol";
 import { stdStorage } from "forge-std/Test.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
@@ -8,7 +9,6 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
-import { Math } from "src/libraries/Math.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { Observation } from "src/ReservoirPair.sol";
