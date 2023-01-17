@@ -305,8 +305,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         // act
         for (uint256 i = 0; i < lMaxObservations + 4; ++i) {
-            vm.roll(block.number + 1);
-            vm.warp(block.timestamp + 5);
+            _stepTime(5);
             _tokenA.mint(address(_constantProductPair), lAmountToSwap);
             _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
         }
