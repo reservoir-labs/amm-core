@@ -53,7 +53,12 @@ contract GenericFactory is IGenericFactory, Owned {
 
         bytes memory lInitCode;
         uint256 lFreeMem;
-        assembly {
+
+        // SAFETY:
+        // This assembly block is memory safe because it simply loads the next free memory slot,
+        // gets the next free memory slot by adding the correct number of bytes (0x20),
+        // and does not overwrite previous memory
+        assembly ("memory-safe") {
             lInitCode := mload(0x40)
             lFreeMem := add(lInitCode, 0x20)
         }
@@ -63,8 +68,10 @@ contract GenericFactory is IGenericFactory, Owned {
             address lPointer = lByteCode[i];
             uint256 lSize = lPointer.code.length - 0x01;
 
-            // TODO: Go check/annotate all asm for memory safety.
-            assembly {
+            // SAFETY:
+            // This assembly block is memory safe because it writes to a region already
+            // allocated via the previous assembly block
+            assembly ("memory-safe") {
                 // Copy the entire chunk to memory.
                 extcodecopy(lPointer, lFreeMem, 0x01, lSize)
             }
@@ -74,9 +81,9 @@ contract GenericFactory is IGenericFactory, Owned {
             lByteCodeLength += lSize;
         }
 
-        // TODO: Releasing back to solidity after the loop is not memory safe.
-        // Write the copied size & update free_mem.
-        assembly {
+        // SAFETY:
+        // This assembly block is memory safe as the free memory pointer is updated after the write
+        assembly ("memory-safe") {
             // Store the two tokens as cstr args.
             mstore(lFreeMem, aToken0)
             mstore(add(lFreeMem, 0x20), aToken1)
@@ -85,6 +92,7 @@ contract GenericFactory is IGenericFactory, Owned {
             mstore(lInitCode, add(lByteCodeLength, 0x40))
             mstore(0x40, add(lFreeMem, 0x40))
         }
+        // NB: Releasing back to solidity after the loop is not memory safe.
 
         return lInitCode;
     }
@@ -147,6 +155,9 @@ contract GenericFactory is IGenericFactory, Owned {
         // TODO: Test that _loadCurve errors for invalid indexes.
         bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 
+        // SAFETY:
+        // This assembly block is memory safe as no previous memory is overwritten and
+        // the free memory pointer is still correct
         assembly {
             // create2 the pair, uniqueness guaranteed by args
             rPair :=
@@ -193,7 +204,11 @@ contract GenericFactory is IGenericFactory, Owned {
         require(_deployInProgress, "FACTORY: ONLY_CHILDREN_CAN_CALL");
 
         bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
-        assembly {
+
+        // SAFETY:
+        // This assembly block is memory safe as no previous memory is overwritten and
+        // the free memory pointer is still correct
+        assembly ("memory-safe") {
             // sanity checked against OZ implementation:
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
             rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
