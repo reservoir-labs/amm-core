@@ -92,7 +92,6 @@ contract GenericFactory is IGenericFactory, Owned {
             mstore(lInitCode, add(lByteCodeLength, 0x40))
             mstore(0x40, add(lFreeMem, 0x40))
         }
-        // NB: Releasing back to solidity after the loop is not memory safe.
 
         return lInitCode;
     }
