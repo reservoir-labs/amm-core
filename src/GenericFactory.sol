@@ -55,9 +55,7 @@ contract GenericFactory is IGenericFactory, Owned {
         uint256 lFreeMem;
 
         // SAFETY:
-        // This assembly block is memory safe because it simply loads the next free memory slot,
-        // gets the next free memory slot by adding the correct number of bytes (0x20),
-        // and does not overwrite previous memory
+        // Writes 1 word of new memory and updates the free memory pointer before returning
         assembly ("memory-safe") {
             lInitCode := mload(0x40)
             lFreeMem := add(lInitCode, 0x20)
