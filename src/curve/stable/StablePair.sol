@@ -110,9 +110,7 @@ contract StablePair is ReservoirPair {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
 
-        // SAFETY:
-        // This assembly block is memory safe as it does not return to solidity
-        assembly ("memory-safe") {
+        assembly {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
@@ -131,9 +129,7 @@ contract StablePair is ReservoirPair {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
 
-        // SAFETY:
-        // This assembly block is memory safe as it does not return to solidity
-        assembly ("memory-safe") {
+        assembly {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
