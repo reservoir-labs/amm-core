@@ -10,6 +10,7 @@ fs_permissions = [
     { access = "write", path = "./scripts/optimized-stable-mint-burn-key" },
     { access = "write", path = "./scripts/unoptimized-stable-mint-burn-key" },
 ]
+extra_output = ["asm"]
 
 [profile.integration]
 match_path = "test/integration/*.sol"
