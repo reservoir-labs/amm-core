@@ -14,7 +14,7 @@
 
 pragma solidity ^0.8.0;
 
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 import { LogCompression } from "src/libraries/LogCompression.sol";
 

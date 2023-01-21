@@ -1,7 +1,7 @@
 // TODO: License, this was taken from Balancer right?
 pragma solidity ^0.8.0;
 
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
@@ -45,13 +45,13 @@ library StableOracleMath {
         uint256 a = (amplificationParameter * 2) / StableMath.A_PRECISION;
         uint256 b = (invariant * a) - invariant;
 
-        uint256 axy2 = (a * 2 * reserve0).mulWadDown(reserve1); // n = 2
+        uint256 axy2 = (a * 2 * reserve0).mulWad(reserve1); // n = 2
 
         // dx = a.x.y.2 + a.y^2 - b.y
-        uint256 derivativeX = axy2 + ((a * reserve1).mulWadDown(reserve1)) - (b.mulWadDown(reserve1));
+        uint256 derivativeX = axy2 + ((a * reserve1).mulWad(reserve1)) - (b.mulWad(reserve1));
 
         // dy = a.x.y.2 + a.x^2 - b.x
-        uint256 derivativeY = axy2 + ((a * reserve0).mulWadDown(reserve0)) - (b.mulWadDown(reserve0));
+        uint256 derivativeY = axy2 + ((a * reserve0).mulWad(reserve0)) - (b.mulWad(reserve0));
 
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A

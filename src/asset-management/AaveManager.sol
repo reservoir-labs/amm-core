@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solmate/utils/SafeTransferLib.sol";
 
 import { ReservoirPair } from "src/ReservoirPair.sol";
@@ -188,14 +188,14 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         if (lTotalShares == 0) {
             return 1e18;
         }
-        rExchangeRate = aAaveToken.balanceOf(address(this)).divWadDown(lTotalShares);
+        rExchangeRate = aAaveToken.balanceOf(address(this)).divWad(lTotalShares);
     }
 
     function _increaseShares(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
         shares[aPair][aToken] += rShares;
         totalShares[aAaveToken] += rShares;
     }
@@ -204,7 +204,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
         shares[aPair][aToken] -= rShares;
         totalShares[aAaveToken] -= rShares;
     }
