@@ -111,7 +111,7 @@ contract StablePair is ReservoirPair {
         address lTarget = MINT_BURN_LOGIC;
 
         // SAFETY:
-        // This block is memory safe as as the delegated call has the same signature as the calling function
+        // The delegated call has the same signature as the calling function
         // and both the calldata and returndata do not exceed 64 bytes
         // This is only valid when lTarget == MINT_BURN_LOGIC
         assembly ("memory-safe") {
@@ -134,7 +134,7 @@ contract StablePair is ReservoirPair {
         address lTarget = MINT_BURN_LOGIC;
 
         // SAFETY:
-        // This block is memory safe as as the delegated call has the same signature as the calling function
+        // The delegated call has the same signature as the calling function
         // and both the calldata and returndata do not exceed 64 bytes
         // This is only valid when lTarget == MINT_BURN_LOGIC
         assembly ("memory-safe") {

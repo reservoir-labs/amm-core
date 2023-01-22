@@ -67,7 +67,7 @@ contract GenericFactory is IGenericFactory, Owned {
             uint256 lSize = lPointer.code.length - 0x01;
 
             // SAFETY:
-            // This assembly block is memory safe because the free memory pointer is updated after the write
+            // Updates the free memory pointer before returning
             assembly ("memory-safe") {
                 // Copy the entire chunk to memory.
                 extcodecopy(lPointer, lFreeMem, 0x01, lSize)
@@ -80,7 +80,7 @@ contract GenericFactory is IGenericFactory, Owned {
         }
 
         // SAFETY:
-        // This assembly block is memory safe as the free memory pointer is updated after the write
+        // Updates the free memory pointer after the write
         assembly ("memory-safe") {
             // Store the two tokens as cstr args.
             mstore(lFreeMem, aToken0)
@@ -153,7 +153,7 @@ contract GenericFactory is IGenericFactory, Owned {
         bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 
         // SAFETY:
-        // This assembly block is memory safe as it does not write to memory
+        // Does not write to memory
         assembly ("memory-safe") {
             // create2 the pair, uniqueness guaranteed by args
             rPair :=
@@ -202,7 +202,7 @@ contract GenericFactory is IGenericFactory, Owned {
         bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
 
         // SAFETY:
-        // This assembly block is memory safe as it does not write to memory
+        // Does not write to memory
         assembly ("memory-safe") {
             // sanity checked against OZ implementation:
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
