@@ -109,7 +109,12 @@ contract StablePair is ReservoirPair {
     function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
-        assembly {
+
+        // SAFETY:
+        // The delegated call has the same signature as the calling function
+        // and both the calldata and returndata do not exceed 64 bytes
+        // This is only valid when lTarget == MINT_BURN_LOGIC
+        assembly ("memory-safe") {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
@@ -127,7 +132,12 @@ contract StablePair is ReservoirPair {
     function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
-        assembly {
+
+        // SAFETY:
+        // The delegated call has the same signature as the calling function
+        // and both the calldata and returndata do not exceed 64 bytes
+        // This is only valid when lTarget == MINT_BURN_LOGIC
+        assembly ("memory-safe") {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 

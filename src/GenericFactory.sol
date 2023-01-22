@@ -53,7 +53,10 @@ contract GenericFactory is IGenericFactory, Owned {
 
         bytes memory lInitCode;
         uint256 lFreeMem;
-        assembly {
+
+        // SAFETY:
+        // Writes 1 word of new memory and updates the free memory pointer before returning
+        assembly ("memory-safe") {
             lInitCode := mload(0x40)
             lFreeMem := add(lInitCode, 0x20)
         }
@@ -63,10 +66,12 @@ contract GenericFactory is IGenericFactory, Owned {
             address lPointer = lByteCode[i];
             uint256 lSize = lPointer.code.length - 0x01;
 
-            // TODO: Go check/annotate all asm for memory safety.
-            assembly {
+            // SAFETY:
+            // Updates the free memory pointer before returning
+            assembly ("memory-safe") {
                 // Copy the entire chunk to memory.
                 extcodecopy(lPointer, lFreeMem, 0x01, lSize)
+                mstore(0x40, add(lFreeMem, lSize))
             }
 
             lFreeMem += lSize;
@@ -74,9 +79,9 @@ contract GenericFactory is IGenericFactory, Owned {
             lByteCodeLength += lSize;
         }
 
-        // TODO: Releasing back to solidity after the loop is not memory safe.
-        // Write the copied size & update free_mem.
-        assembly {
+        // SAFETY:
+        // Updates the free memory pointer after the write
+        assembly ("memory-safe") {
             // Store the two tokens as cstr args.
             mstore(lFreeMem, aToken0)
             mstore(add(lFreeMem, 0x20), aToken1)
@@ -147,7 +152,9 @@ contract GenericFactory is IGenericFactory, Owned {
         // TODO: Test that _loadCurve errors for invalid indexes.
         bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 
-        assembly {
+        // SAFETY:
+        // Does not write to memory
+        assembly ("memory-safe") {
             // create2 the pair, uniqueness guaranteed by args
             rPair :=
                 create2(
@@ -193,7 +200,10 @@ contract GenericFactory is IGenericFactory, Owned {
         require(_deployInProgress, "FACTORY: ONLY_CHILDREN_CAN_CALL");
 
         bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
-        assembly {
+
+        // SAFETY:
+        // Does not write to memory
+        assembly ("memory-safe") {
             // sanity checked against OZ implementation:
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
             rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
