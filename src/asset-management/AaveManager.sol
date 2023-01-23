@@ -14,7 +14,6 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
-//    using SafeTransferLib for ERC20;
 
     event FundsInvested(ReservoirPair pair, ERC20 token, uint256 shares);
     event FundsDivested(ReservoirPair pair, ERC20 token, uint256 shares);
@@ -117,14 +116,12 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         uint256 lShares = _decreaseShares(aPair, aToken, aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
         emit FundsDivested(aPair, aToken, lShares);
-//        aToken.safeApprove(address(aPair), aAmount);
         SafeTransferLib.safeApprove(address(aToken), address(aPair), aAmount);
     }
 
     function _doInvest(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
         uint256 lShares = _increaseShares(aPair, aToken, aAaveToken, aAmount);
-//        aToken.safeApprove(address(pool), aAmount);
         SafeTransferLib.safeApprove(address(aToken), address(pool), aAmount);
 
         pool.supply(address(aToken), aAmount, address(this), 0);
