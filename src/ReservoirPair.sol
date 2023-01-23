@@ -368,7 +368,6 @@ abstract contract ReservoirPair is ReservoirERC20 {
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
             token0Managed += lDelta;
-
             SafeTransferLib.safeTransfer(address(token0), msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
