@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { Address } from "@openzeppelin/utils/Address.sol";
-import { SSTORE2 } from "solmate/utils/SSTORE2.sol";
+import { SSTORE2 } from "solady/utils/SSTORE2.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";

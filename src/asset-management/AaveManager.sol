@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
-import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solmate/utils/SafeTransferLib.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
@@ -14,7 +14,6 @@ import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolData
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
-    using SafeTransferLib for ERC20;
 
     event FundsInvested(ReservoirPair pair, ERC20 token, uint256 shares);
     event FundsDivested(ReservoirPair pair, ERC20 token, uint256 shares);
@@ -117,13 +116,13 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         uint256 lShares = _decreaseShares(aPair, aToken, aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
         emit FundsDivested(aPair, aToken, lShares);
-        aToken.safeApprove(address(aPair), aAmount);
+        SafeTransferLib.safeApprove(address(aToken), address(aPair), aAmount);
     }
 
     function _doInvest(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         require(aToken.balanceOf(address(this)) == aAmount, "AM: TOKEN_AMOUNT_MISMATCH");
         uint256 lShares = _increaseShares(aPair, aToken, aAaveToken, aAmount);
-        aToken.safeApprove(address(pool), aAmount);
+        SafeTransferLib.safeApprove(address(aToken), address(pool), aAmount);
 
         pool.supply(address(aToken), aAmount, address(this), 0);
         emit FundsInvested(aPair, aToken, lShares);
@@ -188,14 +187,14 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         if (lTotalShares == 0) {
             return 1e18;
         }
-        rExchangeRate = aAaveToken.balanceOf(address(this)).divWadDown(lTotalShares);
+        rExchangeRate = aAaveToken.balanceOf(address(this)).divWad(lTotalShares);
     }
 
     function _increaseShares(ReservoirPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
         shares[aPair][aToken] += rShares;
         totalShares[aAaveToken] += rShares;
     }
@@ -204,7 +203,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWadDown(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
         shares[aPair][aToken] -= rShares;
         totalShares[aAaveToken] -= rShares;
     }

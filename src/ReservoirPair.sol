@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import { stdMath } from "forge-std/Test.sol";
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
-import { SafeTransferLib } from "solmate/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
@@ -41,7 +41,6 @@ abstract contract ReservoirPair is ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
-    using SafeTransferLib for ERC20;
 
     event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
     event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
@@ -369,14 +368,14 @@ abstract contract ReservoirPair is ReservoirERC20 {
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
             token0Managed += lDelta;
-            token0.safeTransfer(msg.sender, lDelta);
+            SafeTransferLib.safeTransfer(address(token0), msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            token0.safeTransferFrom(msg.sender, address(this), lDelta);
+            SafeTransferLib.safeTransferFrom(address(token0), msg.sender, address(this), lDelta);
         }
 
         if (aToken1Change > 0) {
@@ -385,14 +384,14 @@ abstract contract ReservoirPair is ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            token1.safeTransfer(msg.sender, lDelta);
+            SafeTransferLib.safeTransfer(address(token1), msg.sender, lDelta);
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            token1.safeTransferFrom(msg.sender, address(this), lDelta);
+            SafeTransferLib.safeTransferFrom(address(token1), msg.sender, address(this), lDelta);
         }
     }
 
