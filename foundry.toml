@@ -3,6 +3,7 @@ solc = "0.8.17"
 via_ir = true
 bytecode_hash = "none"
 optimizer_runs = 1_000_000
+libs = ['lib']
 remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
 match_path = "test/unit/*.sol"
 verbosity = 3
