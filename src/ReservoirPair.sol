@@ -9,6 +9,7 @@ import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
@@ -37,7 +38,7 @@ struct Observation {
     uint32 timestamp;
 }
 
-abstract contract ReservoirPair is ReservoirERC20 {
+abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;

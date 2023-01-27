@@ -95,7 +95,7 @@ contract AssetManagedPairTest is BaseTest {
 
         // assert
         assertEq(_pair.token1Managed(), type(uint104).max);
-        assertEq(_tokenB.balanceOf(address(this)) , type(uint104).max);
+        assertEq(_tokenB.balanceOf(address(this)), type(uint104).max);
     }
 
     function testAdjustManagement_GreaterThanUint104() external allPairs {

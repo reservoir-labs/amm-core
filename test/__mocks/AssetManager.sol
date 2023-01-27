@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { ReservoirPair } from "src/ReservoirPair.sol";
+import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 
 contract AssetManager is IAssetManager {
-    mapping(ReservoirPair => mapping(ERC20 => uint256)) public getBalance;
+    mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public getBalance;
 
-    function adjustManagement(ReservoirPair aPair, int256 aToken0Amount, int256 aToken1Amount) external {
+    function adjustManagement(IAssetManagedPair aPair, int256 aToken0Amount, int256 aToken1Amount) external {
         require(aToken0Amount != type(int256).min && aToken1Amount != type(int256).min, "AM: OVERFLOW");
 
         if (aToken0Amount >= 0) {
@@ -36,7 +36,7 @@ contract AssetManager is IAssetManager {
         aPair.adjustManagement(aToken0Amount, aToken1Amount);
     }
 
-    function adjustBalance(ReservoirPair aOwner, ERC20 aToken, uint256 aNewAmount) external {
+    function adjustBalance(IAssetManagedPair aOwner, ERC20 aToken, uint256 aNewAmount) external {
         getBalance[aOwner][aToken] = aNewAmount;
     }
 
@@ -44,10 +44,10 @@ contract AssetManager is IAssetManager {
     function afterLiquidityEvent() external { }
 
     function returnAsset(bool aToken0, uint256 aAmount) external {
-        (aToken0 ? ReservoirPair(msg.sender).token0() : ReservoirPair(msg.sender).token1()).approve(
+        (aToken0 ? IAssetManagedPair(msg.sender).token0() : IAssetManagedPair(msg.sender).token1()).approve(
             address(msg.sender), aAmount
         );
-        ReservoirPair(msg.sender).adjustManagement(
+        IAssetManagedPair(msg.sender).adjustManagement(
             aToken0 ? -int256(aAmount) : int256(0), aToken0 ? int256(0) : -int256(aAmount)
         );
     }

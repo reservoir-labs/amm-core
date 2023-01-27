@@ -3,8 +3,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { Math } from "@openzeppelin/utils/math/Math.sol";
-
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
