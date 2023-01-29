@@ -12,18 +12,21 @@ contract BaseScript is Script {
     address internal _create2Factory = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
     GenericFactory internal _factory;
 
-    function _setup() internal {
+    function _setup(uint256 aPrivateKey) internal {
+
+        address lDerivedAddress = vm.rememberKey(aPrivateKey);
+
         _factory = GenericFactory(
             Create2Lib.computeAddress(
                 _create2Factory,
-                abi.encodePacked(type(GenericFactory).creationCode, abi.encode(msg.sender)),
+                abi.encodePacked(type(GenericFactory).creationCode, abi.encode(lDerivedAddress)),
                 bytes32(uint256(0))
             )
         );
 
         if (address(_factory).code.length == 0) {
-            vm.broadcast();
-            GenericFactory lFactory = new GenericFactory{salt: bytes32(uint256(0))}(msg.sender);
+            vm.broadcast(aPrivateKey);
+            GenericFactory lFactory = new GenericFactory{salt: bytes32(uint256(0))}(lDerivedAddress);
 
             require(lFactory == _factory, "Create2 Address Mismatch");
         }
