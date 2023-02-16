@@ -40,9 +40,9 @@ contract StableMintBurn is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
-        ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
-        ampData.futureA = ampData.initialA;
+    constructor(address aToken0, address aToken1, uint64 aInitialA) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
+        ampData.initialA = aInitialA; // factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
+        ampData.futureA = aInitialA;
         ampData.initialATime = uint64(block.timestamp);
         ampData.futureATime = uint64(block.timestamp);
 

@@ -48,7 +48,7 @@ contract GenericFactory is IGenericFactory, Owned {
         }
     }
 
-    function getBytecode(bytes32 aCodeKey, address aToken0, address aToken1) public view returns (bytes memory) {
+    function getBytecode(bytes32 aCodeKey, address aToken0, address aToken1, uint64 aInitialA) public view returns (bytes memory) {
         address[] storage lByteCode = _getByteCode[aCodeKey];
 
         bytes memory lInitCode;
@@ -79,16 +79,32 @@ contract GenericFactory is IGenericFactory, Owned {
             lByteCodeLength += lSize;
         }
 
-        // SAFETY:
-        // Updates the free memory pointer after the write
-        assembly ("memory-safe") {
-            // Store the two tokens as cstr args.
-            mstore(lFreeMem, aToken0)
-            mstore(add(lFreeMem, 0x20), aToken1)
+        if (aInitialA == 0) {
+            // SAFETY:
+            // Updates the free memory pointer after the write
+            assembly ("memory-safe") {
+                // Store the two tokens as cstr args.
+                mstore(lFreeMem, aToken0)
+                mstore(add(lFreeMem, 0x20), aToken1)
 
-            // Write initCode length and update free mem.
-            mstore(lInitCode, add(lByteCodeLength, 0x40))
-            mstore(0x40, add(lFreeMem, 0x40))
+                // Write initCode length and update free mem.
+                mstore(lInitCode, add(lByteCodeLength, 0x40))
+                mstore(0x40, add(lFreeMem, 0x40))
+            }
+        }
+        else {
+            // SAFETY:
+            // Updates the free memory pointer after the write
+            assembly ("memory-safe") {
+                // Store the two tokens and additional args as cstr args.
+                mstore(lFreeMem, aToken0)
+                mstore(add(lFreeMem, 0x20), aToken1)
+                mstore(add(lFreeMem, 0x40), aInitialA)
+
+                // Write initCode length and update free mem.
+                mstore(lInitCode, add(lByteCodeLength, 0x60))
+                mstore(0x40, add(lFreeMem, 0x60))
+            }
         }
 
         return lInitCode;
@@ -118,10 +134,10 @@ contract GenericFactory is IGenericFactory, Owned {
         _writeBytecode(rCodeKey, aInitCode);
     }
 
-    function _loadCurve(uint256 aCurveId, address aToken0, address aToken1) private view returns (bytes memory) {
+    function _loadCurve(uint256 aCurveId, address aToken0, address aToken1, uint64 aInitialA) private view returns (bytes memory) {
         bytes32 lCodeKey = _curves[aCurveId];
 
-        return getBytecode(lCodeKey, aToken0, aToken1);
+        return getBytecode(lCodeKey, aToken0, aToken1, aInitialA);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -150,7 +166,7 @@ contract GenericFactory is IGenericFactory, Owned {
         (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
 
         // TODO: Test that _loadCurve errors for invalid indexes.
-        bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
+        bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1, 0);
 
         // SAFETY:
         // Does not write to memory
@@ -196,10 +212,10 @@ contract GenericFactory is IGenericFactory, Owned {
     event Deployed(bytes32 codeId, address _address);
 
     /// @notice Deploys a given bytecode with provided token0 & token1 args.
-    function deploy(bytes32 aCodeKey, address aToken0, address aToken1) external payable returns (address rContract) {
+    function deploy(bytes32 aCodeKey, address aToken0, address aToken1, uint64 aInitialA) external payable returns (address rContract) {
         require(_deployInProgress, "FACTORY: ONLY_CHILDREN_CAN_CALL");
 
-        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
+        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1, aInitialA);
 
         // SAFETY:
         // Does not write to memory
