@@ -11,8 +11,6 @@ import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
-    bool private _deployInProgress = false;
-
     constructor(address aOwner) Owned(aOwner) { } // solhint-disable-line no-empty-blocks
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -142,7 +140,6 @@ contract GenericFactory is IGenericFactory, Owned {
     }
 
     function createPair(address aTokenA, address aTokenB, uint256 aCurveId) external returns (address rPair) {
-        _deployInProgress = true;
         require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
         require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
@@ -178,7 +175,6 @@ contract GenericFactory is IGenericFactory, Owned {
         _allPairs.push(rPair);
 
         emit PairCreated(lToken0, lToken1, aCurveId, rPair);
-        _deployInProgress = false;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -194,25 +190,6 @@ contract GenericFactory is IGenericFactory, Owned {
     }
 
     event Deployed(bytes32 codeId, address _address);
-
-    /// @notice Deploys a given bytecode with provided token0 & token1 args.
-    function deploy(bytes32 aCodeKey, address aToken0, address aToken1) external payable returns (address rContract) {
-        require(_deployInProgress, "FACTORY: ONLY_CHILDREN_CAN_CALL");
-
-        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
-
-        // SAFETY:
-        // Does not write to memory
-        assembly ("memory-safe") {
-            // sanity checked against OZ implementation:
-            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
-
-            if iszero(extcodesize(rContract)) { revert(0, 0) }
-        }
-
-        emit Deployed(aCodeKey, rContract);
-    }
 
     function deploySharedContract(bytes32 aCodeKey, address aToken0, address aToken1) external onlyOwner returns (address rContract) {
         bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
