@@ -214,7 +214,7 @@ contract GenericFactory is IGenericFactory, Owned {
         emit Deployed(aCodeKey, rContract);
     }
 
-    function deploySharedContract(bytes32 aCodeKey) external onlyOwner returns (address rContract) {
+    function deploySharedContract(bytes32 aCodeKey, address aToken0, address aToken1) external onlyOwner returns (address rContract) {
         bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
 
         // SAFETY:

@@ -63,14 +63,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint256 public constant MAX_SWAP_FEE = 20_000; //   2%
 
     GenericFactory public immutable factory;
-    ERC20 public immutable token0;
-    ERC20 public immutable token1;
+    ERC20 public token0;
+    ERC20 public token1;
 
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint128 internal immutable token0PrecisionMultiplier;
-    uint128 internal immutable token1PrecisionMultiplier;
+    uint128 internal token0PrecisionMultiplier;
+    uint128 internal token1PrecisionMultiplier;
 
     Slot0 internal _slot0 = Slot0({reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max});
 

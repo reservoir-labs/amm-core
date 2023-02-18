@@ -113,7 +113,11 @@ contract GenericFactoryTest is BaseTest {
     }
 
     function testDeploySharedContract_OnlyOwner() external {
+        // assume
+        vm.prank(_alice);
+
+        // act & assert
         vm.expectRevert("UNAUTHORIZED");
-        _factory.deploySharedContract();
+        _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY, address(_tokenB), address(_tokenC));
     }
 }

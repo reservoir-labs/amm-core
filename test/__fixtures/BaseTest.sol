@@ -9,6 +9,7 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
@@ -70,7 +71,7 @@ abstract contract BaseTest is Test {
         _factory.addCurve(type(StablePair).creationCode);
 
         _factory.addBytecode(type(StableMintBurn).creationCode);
-        address lStableMintBurn = _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY);
+        address lStableMintBurn = _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY, address(_tokenA), address(_tokenB));
         _factory.write("SP::STABLE_MINT_BURN", lStableMintBurn);
 
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
