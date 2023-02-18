@@ -75,7 +75,7 @@ abstract contract BaseTest is Test {
         _factory.addBytecode(type(StableMintBurn).creationCode);
         address lStableMintBurn = _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY, address(_tokenA), address(_tokenB));
         _factory.write("SP::STABLE_MINT_BURN", lStableMintBurn);
-g
+
         // set oracle caller
         _factory.write("Shared::oracleCaller", address(_oracleCaller));
         _oracleCaller.whitelistAddress(address(this), true);
