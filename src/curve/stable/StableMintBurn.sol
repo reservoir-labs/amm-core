@@ -125,8 +125,8 @@ contract StableMintBurn is ReservoirPair {
 
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, aTo, rAmount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, aTo, rAmount1, lReserve0, lReserve1);
+        _checkedTransfer(this.token0(), aTo, rAmount0, lReserve0, lReserve1);
+        _checkedTransfer(this.token1(), aTo, rAmount1, lReserve0, lReserve1);
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
@@ -143,8 +143,8 @@ contract StableMintBurn is ReservoirPair {
     }
 
     function _balances() internal view returns (uint256 rBalance0, uint256 rBalance1) {
-        rBalance0 = _totalToken0();
-        rBalance1 = _totalToken1();
+        rBalance0 = this.token0().balanceOf(address(this)) + uint256(token0Managed);
+        rBalance1 = this.token0().balanceOf(address(this)) + uint256(token0Managed);
     }
 
     /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
@@ -154,8 +154,8 @@ contract StableMintBurn is ReservoirPair {
     /// @return rLiquidity The invariant, at the precision of the pool.
     function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
         unchecked {
-            uint256 lAdjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
-            uint256 lAdjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
+            uint256 lAdjustedReserve0 = aReserve0 * this.token0PrecisionMultiplier();
+            uint256 lAdjustedReserve1 = aReserve1 * this.token1PrecisionMultiplier();
             rLiquidity =
                 StableMath._computeLiquidityFromAdjustedBalances(lAdjustedReserve0, lAdjustedReserve1, _getNA());
         }
@@ -165,7 +165,7 @@ contract StableMintBurn is ReservoirPair {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(
-            aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier, 2 * lastInvariantAmp
+            aReserve0 * this.token0PrecisionMultiplier(), aReserve1 * this.token1PrecisionMultiplier(), 2 * lastInvariantAmp
         );
         if (lFeeOn) {
             uint256 lDLast = lastInvariant;
@@ -228,7 +228,7 @@ contract StableMintBurn is ReservoirPair {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier
+            _getCurrentAPrecise(), aReserve0 * this.token0PrecisionMultiplier(), aReserve1 * this.token1PrecisionMultiplier()
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
