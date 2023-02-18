@@ -107,4 +107,13 @@ contract GenericFactoryTest is BaseTest {
         assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
         assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
     }
+
+    function testDeploySharedContract() external {
+
+    }
+
+    function testDeploySharedContract_OnlyOwner() external {
+        vm.expectRevert("UNAUTHORIZED");
+        _factory.deploySharedContract();
+    }
 }

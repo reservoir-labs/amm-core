@@ -68,7 +68,11 @@ abstract contract BaseTest is Test {
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
+
         _factory.addBytecode(type(StableMintBurn).creationCode);
+        address lStableMintBurn = _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY);
+        _factory.write("SP::STABLE_MINT_BURN", lStableMintBurn);
+
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
