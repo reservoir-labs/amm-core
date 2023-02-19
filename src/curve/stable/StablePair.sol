@@ -8,7 +8,6 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
-import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -52,9 +51,7 @@ contract StablePair is ReservoirPair {
     uint64 private lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
-        MINT_BURN_LOGIC = factory.read("SP::STABLE_MINT_BURN").toAddress();
-        require(address(MINT_BURN_LOGIC).code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
-
+        MINT_BURN_LOGIC = ConstantsLib.getMintBurnAddress();
         ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);

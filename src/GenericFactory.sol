@@ -92,12 +92,6 @@ contract GenericFactory is IGenericFactory, Owned {
         return lInitCode;
     }
 
-    function addBytecode(bytes calldata aInitCode) external onlyOwner returns (bytes32 rCodeKey) {
-        rCodeKey = keccak256(aInitCode);
-
-        _writeBytecode(rCodeKey, aInitCode);
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                     CURVES
     //////////////////////////////////////////////////////////////////////////*/
@@ -189,14 +183,14 @@ contract GenericFactory is IGenericFactory, Owned {
         return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
     }
 
-    event Deployed(bytes32 codeId, address _address);
+    event Deployed(address _address);
 
-    function deploySharedContract(bytes32 aCodeKey, address aToken0, address aToken1)
+    function deploySharedContract(bytes calldata aInitCode, address aToken0, address aToken1)
         external
         onlyOwner
         returns (address rContract)
     {
-        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
+        bytes memory lInitCode = bytes.concat(aInitCode, abi.encode(aToken0), abi.encode(aToken1));
 
         // SAFETY:
         // Does not write to memory
@@ -208,6 +202,6 @@ contract GenericFactory is IGenericFactory, Owned {
             if iszero(extcodesize(rContract)) { revert(0, 0) }
         }
 
-        emit Deployed(aCodeKey, rContract);
+        emit Deployed(rContract);
     }
 }
