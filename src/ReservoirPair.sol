@@ -72,7 +72,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint128 public immutable token0PrecisionMultiplier;
     uint128 public immutable token1PrecisionMultiplier;
 
-    Slot0 internal _slot0 = Slot0({reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max});
+    Slot0 internal _slot0 = Slot0({ reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max });
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint256).max;

@@ -165,7 +165,9 @@ contract StableMintBurn is ReservoirPair {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(
-            aReserve0 * this.token0PrecisionMultiplier(), aReserve1 * this.token1PrecisionMultiplier(), 2 * lastInvariantAmp
+            aReserve0 * this.token0PrecisionMultiplier(),
+            aReserve1 * this.token1PrecisionMultiplier(),
+            2 * lastInvariantAmp
         );
         if (lFeeOn) {
             uint256 lDLast = lastInvariant;
@@ -228,7 +230,9 @@ contract StableMintBurn is ReservoirPair {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), aReserve0 * this.token0PrecisionMultiplier(), aReserve1 * this.token1PrecisionMultiplier()
+            _getCurrentAPrecise(),
+            aReserve0 * this.token0PrecisionMultiplier(),
+            aReserve1 * this.token1PrecisionMultiplier()
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price

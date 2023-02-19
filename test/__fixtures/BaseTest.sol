@@ -73,7 +73,8 @@ abstract contract BaseTest is Test {
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
         _factory.addBytecode(type(StableMintBurn).creationCode);
-        address lStableMintBurn = _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY, address(_tokenA), address(_tokenB));
+        address lStableMintBurn =
+            _factory.deploySharedContract(ConstantsLib.MINT_BURN_KEY, address(_tokenA), address(_tokenB));
         _factory.write("SP::STABLE_MINT_BURN", lStableMintBurn);
 
         // set oracle caller

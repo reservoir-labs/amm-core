@@ -108,9 +108,7 @@ contract GenericFactoryTest is BaseTest {
         assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
     }
 
-    function testDeploySharedContract() external {
-
-    }
+    function testDeploySharedContract() external { }
 
     function testDeploySharedContract_OnlyOwner() external {
         // assume
