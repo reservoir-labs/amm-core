@@ -43,12 +43,10 @@ contract StablePair is ReservoirPair {
 
     AmplificationData public ampData;
 
-    uint256 private _locked = 1;
-
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
-    uint192 private lastInvariant;
-    uint64 private lastInvariantAmp;
+    uint192 internal lastInvariant;
+    uint64 internal lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
         MINT_BURN_LOGIC = ConstantsLib.getMintBurnAddress();
@@ -103,7 +101,7 @@ contract StablePair is ReservoirPair {
     }
 
     // TODO: Should we use fallback?
-    function mint(address) external override returns (uint256) {
+    function mint(address) external virtual override returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
 
@@ -126,7 +124,7 @@ contract StablePair is ReservoirPair {
     }
 
     // TODO: Should we use fallback?
-    function burn(address) external override returns (uint256, uint256) {
+    function burn(address) external virtual override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
 
@@ -150,6 +148,7 @@ contract StablePair is ReservoirPair {
 
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
+        virtual
         override
         returns (uint256 rAmountOut)
     {

@@ -6,12 +6,9 @@ pragma solidity ^0.8.0;
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
-import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
-
-import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
+import { StablePair } from "src/curve/stable/StablePair.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -24,34 +21,11 @@ struct AmplificationData {
     uint64 futureATime;
 }
 
-contract StableMintBurn is ReservoirPair {
+contract StableMintBurn is StablePair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
 
-    string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
-    string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
-
-    AmplificationData public ampData;
-
-    uint256 private _locked = 1;
-
-    // We need the 2 variables below to calculate the growth in liquidity between
-    // minting and burning, for the purpose of calculating platformFee.
-    uint192 private lastInvariant;
-    uint64 private lastInvariantAmp;
-
-    constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
-        ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
-        ampData.futureA = ampData.initialA;
-        ampData.initialATime = uint64(block.timestamp);
-        ampData.futureATime = uint64(block.timestamp);
-
-        require(
-            ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
-                && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
-            "SP: INVALID_A"
-        );
-    }
+    constructor(address aToken0, address aToken1) StablePair(aToken0, aToken1) {}
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
     function _nonOptimalMintFee(uint256 aAmount0, uint256 aAmount1, uint256 aReserve0, uint256 aReserve1)
@@ -147,20 +121,6 @@ contract StableMintBurn is ReservoirPair {
         rBalance1 = this.token0().balanceOf(address(this)) + uint256(token0Managed);
     }
 
-    /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
-    /// See the StableSwap paper for details.
-    /// @dev Originally
-    /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
-    /// @return rLiquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
-        unchecked {
-            uint256 lAdjustedReserve0 = aReserve0 * this.token0PrecisionMultiplier();
-            uint256 lAdjustedReserve1 = aReserve1 * this.token1PrecisionMultiplier();
-            rLiquidity =
-                StableMath._computeLiquidityFromAdjustedBalances(lAdjustedReserve0, lAdjustedReserve1, _getNA());
-        }
-    }
-
     function _mintFee(uint256 aReserve0, uint256 aReserve1) internal returns (uint256 rTotalSupply, uint256 rD) {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
@@ -189,65 +149,6 @@ contract StableMintBurn is ReservoirPair {
             }
         } else if (lastInvariant != 0) {
             lastInvariant = 0;
-        }
-    }
-
-    function _getCurrentAPrecise() internal view returns (uint64 rCurrentA) {
-        uint64 futureA = ampData.futureA;
-        uint64 futureATime = ampData.futureATime;
-
-        if (block.timestamp < futureATime) {
-            uint64 initialA = ampData.initialA;
-            uint64 initialATime = ampData.initialATime;
-            uint64 rampDuration = futureATime - initialATime;
-            uint64 rampElapsed = uint64(block.timestamp) - initialATime;
-
-            if (futureA > initialA) {
-                uint64 rampDelta = futureA - initialA;
-                rCurrentA = initialA + rampElapsed * rampDelta / rampDuration;
-            } else {
-                uint64 rampDelta = initialA - futureA;
-                rCurrentA = initialA - rampElapsed * rampDelta / rampDuration;
-            }
-        } else {
-            rCurrentA = futureA;
-        }
-    }
-
-    /// @dev number of coins in the pool multiplied by A precise
-    function _getNA() internal view returns (uint256) {
-        return 2 * _getCurrentAPrecise();
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                ORACLE METHODS
-    //////////////////////////////////////////////////////////////////////////*/
-
-    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast)
-        internal
-        override
-    {
-        Observation storage previous = _observations[_slot0.index];
-
-        (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(),
-            aReserve0 * this.token0PrecisionMultiplier(),
-            aReserve1 * this.token1PrecisionMultiplier()
-        );
-        // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
-        // to figure out the previous clamped price
-        (uint256 currClampedPrice, int112 currLogClampedPrice) =
-            _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
-        prevClampedPrice = currClampedPrice;
-
-        unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
-            int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
-            _slot0.index += 1;
-            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
         }
     }
 }
