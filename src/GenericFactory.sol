@@ -197,6 +197,8 @@ contract GenericFactory is IGenericFactory, Owned {
         // SAFETY:
         // Does not write to memory
         assembly ("memory-safe") {
+            // sanity checked against OZ implementation:
+            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
             rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
 
             if iszero(extcodesize(rContract)) { revert(0, 0) }
