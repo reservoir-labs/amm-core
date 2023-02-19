@@ -196,11 +196,12 @@ contract GenericFactory is IGenericFactory, Owned {
 
         // SAFETY:
         // Does not write to memory
-        assembly("memory-safe") {
+        assembly ("memory-safe") {
             rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
 
-            if iszero(extcodesize(rContract)) { revert(0,0) }
+            if iszero(extcodesize(rContract)) { revert(0, 0) }
         }
+
         emit Deployed(aCodeKey, rContract);
     }
 }
