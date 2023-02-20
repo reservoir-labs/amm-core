@@ -185,19 +185,17 @@ contract GenericFactory is IGenericFactory, Owned {
 
     event Deployed(address _address);
 
-    function deploySharedContract(bytes calldata aInitCode, address aToken0, address aToken1)
+    function deploySharedContract(bytes memory aInitCode)
         external
         onlyOwner
         returns (address rContract)
     {
-        bytes memory lInitCode = bytes.concat(aInitCode, abi.encode(aToken0), abi.encode(aToken1));
-
         // SAFETY:
         // Does not write to memory
         assembly ("memory-safe") {
             // sanity checked against OZ implementation:
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
+            rContract := create2(callvalue(), add(aInitCode, 0x20), mload(aInitCode), 0)
 
             if iszero(extcodesize(rContract)) { revert(0, 0) }
         }
