@@ -19,7 +19,7 @@ import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
 import { Slot0, Observation } from "src/ReservoirPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
-contract StableMintBurn is ReservoirERC20 {
+contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
@@ -93,8 +93,8 @@ contract StableMintBurn is ReservoirERC20 {
             return (aReserve0, aReserve1);
         }
 
-        uint256 lToken0Managed = assetManager.getBalance(IAssetManagedPair(this), this.token0());
-        uint256 lToken1Managed = assetManager.getBalance(IAssetManagedPair(this), this.token1());
+        uint256 lToken0Managed = assetManager.getBalance(this, this.token0());
+        uint256 lToken1Managed = assetManager.getBalance(this, this.token1());
 
         rReserve0 = _handleReport(this.token0(), aReserve0, token0Managed, lToken0Managed);
         rReserve1 = _handleReport(this.token1(), aReserve1, token1Managed, lToken1Managed);
@@ -411,4 +411,8 @@ contract StableMintBurn is ReservoirERC20 {
             rClampedLogPrice = int112(LogCompression.toLowResLog(aCurrRawPrice));
         }
     }
+
+    function adjustManagement(int256 aToken0Change, int256 aToken1Change) external {}
+    function getReserves() public view returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex) {}
+    function setManager(IAssetManager manager) external {}
 }

@@ -8,7 +8,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
-//import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
@@ -72,7 +72,7 @@ abstract contract BaseTest is Test {
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
-//        _factory.deploySharedContract(type(StableMintBurn).creationCode, address(_tokenA), address(_tokenB));
+        _factory.deploySharedContract(type(StableMintBurn).creationCode);
 
         // set oracle caller
         _factory.write("Shared::oracleCaller", address(_oracleCaller));
