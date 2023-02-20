@@ -185,11 +185,7 @@ contract GenericFactory is IGenericFactory, Owned {
 
     event Deployed(address _address);
 
-    function deploySharedContract(bytes memory aInitCode)
-        external
-        onlyOwner
-        returns (address rContract)
-    {
+    function deploySharedContract(bytes memory aInitCode) external onlyOwner returns (address rContract) {
         // SAFETY:
         // Does not write to memory
         assembly ("memory-safe") {

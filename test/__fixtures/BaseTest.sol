@@ -43,20 +43,6 @@ abstract contract BaseTest is Test {
     OracleCaller internal _oracleCaller = new OracleCaller();
 
     constructor() {
-//        try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
-//            if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
-//                vm.writeFile(
-//                    "scripts/unoptimized-stable-mint-burn-key",
-//                    _bytesToHex(abi.encodePacked(keccak256(type(StableMintBurn).creationCode)))
-//                );
-//            }
-//        } catch {
-//            vm.writeFile(
-//                "scripts/optimized-stable-mint-burn-key",
-//                _bytesToHex(abi.encodePacked(keccak256(type(StableMintBurn).creationCode)))
-//            );
-//        }
-
         // set shared variables
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::platformFeeTo", _platformFeeTo);

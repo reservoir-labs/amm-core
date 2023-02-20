@@ -147,9 +147,9 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
 
         uint32 lBlockTimestamp = uint32(_currentTime());
         uint32 lTimeElapsed;
-    unchecked {
-        lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
-    }
+        unchecked {
+            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
+        }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
             _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
         }
@@ -359,29 +359,29 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
         rTimestamp = aRawTimestamp & 0x7FFFFFFF;
     }
 
-    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast)
-        internal
-    {
+    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast) internal {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), aReserve0 * this.token0PrecisionMultiplier(), aReserve1 * this.token1PrecisionMultiplier()
+            _getCurrentAPrecise(),
+            aReserve0 * this.token0PrecisionMultiplier(),
+            aReserve1 * this.token1PrecisionMultiplier()
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
-        _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
+            _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
         int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
-    unchecked {
-        int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
-        int56 logAccClampedPrice =
-        previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
-        int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
-        _slot0.index += 1;
-        _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
-    }
+        unchecked {
+            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
+            int56 logAccClampedPrice =
+                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
+            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
+            _slot0.index += 1;
+            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
+        }
     }
 
     function _currentTime() internal view returns (uint32) {
@@ -412,7 +412,11 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
         }
     }
 
-    function adjustManagement(int256 aToken0Change, int256 aToken1Change) external {}
-    function getReserves() public view returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex) {}
-    function setManager(IAssetManager manager) external {}
+    function adjustManagement(int256 aToken0Change, int256 aToken1Change) external { }
+    function getReserves()
+        public
+        view
+        returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex)
+    { }
+    function setManager(IAssetManager manager) external { }
 }

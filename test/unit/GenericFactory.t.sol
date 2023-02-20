@@ -115,7 +115,7 @@ contract GenericFactoryTest is BaseTest {
         vm.prank(_alice);
 
         // act & assert
-//        vm.expectRevert("UNAUTHORIZED");
-//        _factory.deploySharedContract(type(StableMintBurn).creationCode, address(_tokenB), address(_tokenC));
+        vm.expectRevert("UNAUTHORIZED");
+        _factory.deploySharedContract(type(StableMintBurn).creationCode);
     }
 }
