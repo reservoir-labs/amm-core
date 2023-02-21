@@ -48,7 +48,7 @@ contract StablePair is ReservoirPair {
     uint64 private lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
-        require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED") ;
+        require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
         ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);

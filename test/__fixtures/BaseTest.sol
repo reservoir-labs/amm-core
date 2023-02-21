@@ -94,8 +94,7 @@ abstract contract BaseTest is Test {
         if (lFactory.code.length == 0) {
             rFactory = new GenericFactory{salt: bytes32(0)}(address(this));
             require(address(rFactory) != address(0), "DEPLOY FACTORY FAILED");
-        }
-        else {
+        } else {
             rFactory = GenericFactory(lFactory);
         }
     }
