@@ -1,5 +1,5 @@
 [profile.default]
-solc = "0.8.17"
+solc = "0.8.18"
 #via_ir = true
 bytecode_hash = "none"
 optimizer_runs = 1_000_000
@@ -10,6 +10,17 @@ verbosity = 3
 fs_permissions = [
     { access = "write", path = "./scripts/optimized-stable-mint-burn-key" },
     { access = "write", path = "./scripts/unoptimized-stable-mint-burn-key" },
+]
+
+[profile.default.model_checker]
+#contracts = { "src/curve/stable/StablePair.sol" = [ "StablePair" ] }
+engine = "chc"
+timeout = 100000
+targets = [
+    "assert",
+    "underflow",
+    "overflow",
+    "divByZero"
 ]
 
 [profile.integration]
