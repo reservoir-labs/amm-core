@@ -80,12 +80,11 @@ contract AaveIntegrationTest is BaseTest {
 
         _factory = new GenericFactory(address(this));
         _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
-        _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
         _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.deploySharedContract(type(StableMintBurn).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
+        _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
         _manager = new AaveManager(AAVE_POOL_ADDRESS_PROVIDER);

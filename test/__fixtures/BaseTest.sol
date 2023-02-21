@@ -58,8 +58,6 @@ abstract contract BaseTest is Test {
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
-        _factory.deploySharedContract(type(StableMintBurn).creationCode);
-
         // set oracle caller
         _factory.write("Shared::oracleCaller", address(_oracleCaller));
         _oracleCaller.whitelistAddress(address(this), true);

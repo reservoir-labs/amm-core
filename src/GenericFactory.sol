@@ -7,11 +7,28 @@ import { SSTORE2 } from "solady/utils/SSTORE2.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
-    constructor(address aOwner) Owned(aOwner) { } // solhint-disable-line no-empty-blocks
+    constructor(address aOwner) Owned(aOwner) {
+        bytes memory lInitCode = type(StableMintBurn).creationCode;
+
+        address lStableMintBurn;
+        // SAFETY:
+        // Does not write to memory
+        assembly ("memory-safe") {
+            // sanity checked against OZ implementation:
+            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
+            lStableMintBurn := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
+
+            if iszero(extcodesize(lStableMintBurn)) { revert(0, 0) }
+        }
+        emit Deployed(lStableMintBurn);
+    }
+
+    event Deployed(address _address);
 
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG
@@ -181,21 +198,5 @@ contract GenericFactory is IGenericFactory, Owned {
         returns (bytes memory)
     {
         return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
-    }
-
-    event Deployed(address _address);
-
-    function deploySharedContract(bytes memory aInitCode) external onlyOwner returns (address rContract) {
-        // SAFETY:
-        // Does not write to memory
-        assembly ("memory-safe") {
-            // sanity checked against OZ implementation:
-            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            rContract := create2(callvalue(), add(aInitCode, 0x20), mload(aInitCode), 0)
-
-            if iszero(extcodesize(rContract)) { revert(0, 0) }
-        }
-
-        emit Deployed(rContract);
     }
 }

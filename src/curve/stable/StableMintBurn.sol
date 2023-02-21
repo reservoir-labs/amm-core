@@ -38,7 +38,6 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
     GenericFactory public immutable factory = GenericFactory(0x0000000000000000000000000000000000000000);
     ERC20 public immutable token0 = ERC20(0x0000000000000000000000000000000000000000);
     ERC20 public immutable token1 = ERC20(0x0000000000000000000000000000000000000000);
-
     uint128 public immutable token0PrecisionMultiplier = 0;
     uint128 public immutable token1PrecisionMultiplier = 0;
 
