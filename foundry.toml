@@ -20,7 +20,11 @@ targets = [
     "assert",
     "underflow",
     "overflow",
-    "divByZero"
+    "divByZero",
+    "constantCondition",
+    "popEmptyArray",
+    "outOfBounds",
+    "balance"
 ]
 
 [profile.integration]
