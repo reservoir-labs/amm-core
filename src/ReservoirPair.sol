@@ -69,10 +69,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
     /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
     /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint128 internal immutable token0PrecisionMultiplier;
-    uint128 internal immutable token1PrecisionMultiplier;
+    uint128 public immutable token0PrecisionMultiplier;
+    uint128 public immutable token1PrecisionMultiplier;
 
-    Slot0 internal _slot0 = Slot0({reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max});
+    Slot0 internal _slot0 = Slot0({ reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max });
 
     uint256 public swapFee;
     uint256 public customSwapFee = type(uint256).max;

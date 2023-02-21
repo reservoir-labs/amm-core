@@ -10,6 +10,7 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test {
@@ -22,7 +23,7 @@ abstract contract BaseTest is Test {
     uint256 public constant DEFAULT_AMP_COEFF = 1000;
     uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
 
-    GenericFactory internal _factory = new GenericFactory(address(this));
+    GenericFactory internal _factory = _create2Factory();
 
     address internal _recoverer = _makeAddress("recoverer");
     address internal _platformFeeTo = _makeAddress("platformFeeTo");
@@ -45,17 +46,16 @@ abstract contract BaseTest is Test {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
                 vm.writeFile(
-                    "scripts/unoptimized-stable-mint-burn-key",
-                    _bytesToHex(abi.encodePacked(keccak256(type(StableMintBurn).creationCode)))
+                    "scripts/unoptimized-stable-mint-burn-address",
+                    vm.toString(Create2Lib.computeAddress(address(_factory), type(StableMintBurn).creationCode, 0))
                 );
             }
         } catch {
             vm.writeFile(
-                "scripts/optimized-stable-mint-burn-key",
-                _bytesToHex(abi.encodePacked(keccak256(type(StableMintBurn).creationCode)))
+                "scripts/optimized-stable-mint-burn-address",
+                vm.toString(Create2Lib.computeAddress(address(_factory), type(StableMintBurn).creationCode, 0))
             );
         }
-
         // set shared variables
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::platformFeeTo", _platformFeeTo);
@@ -68,7 +68,6 @@ abstract contract BaseTest is Test {
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
-        _factory.addBytecode(type(StableMintBurn).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
 
@@ -88,19 +87,16 @@ abstract contract BaseTest is Test {
         _stablePair.mint(_alice);
     }
 
-    // From: https://ethereum.stackexchange.com/questions/126899/convert-bytes-to-hexadecimal-string-in-solidity
-    function _bytesToHex(bytes memory buffer) public pure returns (string memory) {
-        // Fixed buffer size for hexadecimal convertion
-        bytes memory converted = new bytes(buffer.length * 2);
+    function _create2Factory() internal returns (GenericFactory rFactory) {
+        bytes memory lInitCode = abi.encodePacked(type(GenericFactory).creationCode, abi.encode(address(this)));
+        address lFactory = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
 
-        bytes memory _base = "0123456789abcdef";
-
-        for (uint256 i = 0; i < buffer.length; i++) {
-            converted[i * 2] = _base[uint8(buffer[i]) / _base.length];
-            converted[i * 2 + 1] = _base[uint8(buffer[i]) % _base.length];
+        if (lFactory.code.length == 0) {
+            rFactory = new GenericFactory{salt: bytes32(0)}(address(this));
+            require(address(rFactory) != address(0), "DEPLOY FACTORY FAILED");
+        } else {
+            rFactory = GenericFactory(lFactory);
         }
-
-        return string(abi.encodePacked("0x", converted));
     }
 
     function _makeAddress(string memory aName) internal returns (address) {

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
-
 library ConstantsLib {
-    bytes32 public constant MINT_BURN_KEY = bytes32(0xfca7c68f711102d77ab0a2765cee66cea90b7f07334352820e7ebf31c0ef3acf);
+    // TODO: to replace this with the actual production address once the deployer address / key has been decided
+    address public constant MINT_BURN_ADDRESS = 0x0e3B95e1836dd25E4D553Ffb68E7dDd1809eA43A;
 }

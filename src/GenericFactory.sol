@@ -7,13 +7,17 @@ import { SSTORE2 } from "solady/utils/SSTORE2.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
-    bool private _deployInProgress = false;
+    constructor(address aOwner) Owned(aOwner) {
+        StableMintBurn lStableMintBurn = new StableMintBurn{salt: bytes32(0)}();
+        emit Deployed(address(lStableMintBurn));
+    }
 
-    constructor(address aOwner) Owned(aOwner) { } // solhint-disable-line no-empty-blocks
+    event Deployed(address _address);
 
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG
@@ -94,12 +98,6 @@ contract GenericFactory is IGenericFactory, Owned {
         return lInitCode;
     }
 
-    function addBytecode(bytes calldata aInitCode) external onlyOwner returns (bytes32 rCodeKey) {
-        rCodeKey = keccak256(aInitCode);
-
-        _writeBytecode(rCodeKey, aInitCode);
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                     CURVES
     //////////////////////////////////////////////////////////////////////////*/
@@ -142,7 +140,6 @@ contract GenericFactory is IGenericFactory, Owned {
     }
 
     function createPair(address aTokenA, address aTokenB, uint256 aCurveId) external returns (address rPair) {
-        _deployInProgress = true;
         require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
         require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
@@ -178,7 +175,6 @@ contract GenericFactory is IGenericFactory, Owned {
         _allPairs.push(rPair);
 
         emit PairCreated(lToken0, lToken1, aCurveId, rPair);
-        _deployInProgress = false;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -191,26 +187,5 @@ contract GenericFactory is IGenericFactory, Owned {
         returns (bytes memory)
     {
         return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
-    }
-
-    event Deployed(bytes32 codeId, address _address);
-
-    /// @notice Deploys a given bytecode with provided token0 & token1 args.
-    function deploy(bytes32 aCodeKey, address aToken0, address aToken1) external payable returns (address rContract) {
-        require(_deployInProgress, "FACTORY: ONLY_CHILDREN_CAN_CALL");
-
-        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
-
-        // SAFETY:
-        // Does not write to memory
-        assembly ("memory-safe") {
-            // sanity checked against OZ implementation:
-            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
-
-            if iszero(extcodesize(rContract)) { revert(0, 0) }
-        }
-
-        emit Deployed(aCodeKey, rContract);
     }
 }
