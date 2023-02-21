@@ -7,11 +7,28 @@ import { SSTORE2 } from "solady/utils/SSTORE2.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
+import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
-    constructor(address aOwner) Owned(aOwner) { } // solhint-disable-line no-empty-blocks
+    constructor(address aOwner) Owned(aOwner) {
+        bytes memory lInitCode = type(StableMintBurn).creationCode;
+
+        address lStableMintBurn;
+        // SAFETY:
+        // Does not write to memory
+        assembly ("memory-safe") {
+            // sanity checked against OZ implementation:
+            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
+            lStableMintBurn := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
+
+            if iszero(extcodesize(lStableMintBurn)) { revert(0, 0) }
+        }
+        emit Deployed(lStableMintBurn);
+    }
+
+    event Deployed(address _address);
 
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG
@@ -90,12 +107,6 @@ contract GenericFactory is IGenericFactory, Owned {
         }
 
         return lInitCode;
-    }
-
-    function addBytecode(bytes calldata aInitCode) external onlyOwner returns (bytes32 rCodeKey) {
-        rCodeKey = keccak256(aInitCode);
-
-        _writeBytecode(rCodeKey, aInitCode);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -187,27 +198,5 @@ contract GenericFactory is IGenericFactory, Owned {
         returns (bytes memory)
     {
         return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
-    }
-
-    event Deployed(bytes32 codeId, address _address);
-
-    function deploySharedContract(bytes32 aCodeKey, address aToken0, address aToken1)
-        external
-        onlyOwner
-        returns (address rContract)
-    {
-        bytes memory lInitCode = getBytecode(aCodeKey, aToken0, aToken1);
-
-        // SAFETY:
-        // Does not write to memory
-        assembly ("memory-safe") {
-            // sanity checked against OZ implementation:
-            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            rContract := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
-
-            if iszero(extcodesize(rContract)) { revert(0, 0) }
-        }
-
-        emit Deployed(aCodeKey, rContract);
     }
 }

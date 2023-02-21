@@ -8,12 +8,10 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
-import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
-import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
@@ -34,7 +32,7 @@ contract StablePair is ReservoirPair {
     using Bytes32Lib for bytes32;
 
     // solhint-disable-next-line var-name-mixedcase
-    address private immutable MINT_BURN_LOGIC;
+    address private immutable MINT_BURN_LOGIC = ConstantsLib.MINT_BURN_ADDRESS;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
     string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
@@ -44,17 +42,13 @@ contract StablePair is ReservoirPair {
 
     AmplificationData public ampData;
 
-    uint256 private _locked = 1;
-
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
-        MINT_BURN_LOGIC = factory.read("SP::STABLE_MINT_BURN").toAddress();
-        require(address(MINT_BURN_LOGIC).code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
-
+        require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED") ;
         ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
         ampData.futureA = ampData.initialA;
         ampData.initialATime = uint64(block.timestamp);
@@ -216,7 +210,7 @@ contract StablePair is ReservoirPair {
     }
 
     function _getAmountOut(uint256 aAmountIn, uint256 aReserve0, uint256 aReserve1, bool aToken0In)
-        internal
+        private
         view
         returns (uint256)
     {
@@ -233,7 +227,7 @@ contract StablePair is ReservoirPair {
     }
 
     function _getAmountIn(uint256 aAmountOut, uint256 aReserve0, uint256 aReserve1, bool aToken0Out)
-        internal
+        private
         view
         returns (uint256)
     {
@@ -254,7 +248,7 @@ contract StablePair is ReservoirPair {
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
     /// @return rLiquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
+    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) private view returns (uint256 rLiquidity) {
         unchecked {
             uint256 adjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
             uint256 adjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
@@ -262,7 +256,7 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    function _getCurrentAPrecise() internal view returns (uint64 rCurrentA) {
+    function _getCurrentAPrecise() private view returns (uint64 rCurrentA) {
         uint64 futureA = ampData.futureA;
         uint64 futureATime = ampData.futureATime;
 
@@ -285,7 +279,7 @@ contract StablePair is ReservoirPair {
     }
 
     /// @dev number of coins in the pool multiplied by A precise
-    function _getNA() internal view returns (uint256) {
+    function _getNA() private view returns (uint256) {
         return 2 * _getCurrentAPrecise();
     }
 
