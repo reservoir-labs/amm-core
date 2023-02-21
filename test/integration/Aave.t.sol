@@ -78,7 +78,7 @@ contract AaveIntegrationTest is BaseTest {
         }
         vm.selectFork(lFork.forkId);
 
-        _factory = new GenericFactory(address(this));
+        _factory = _create2Factory();
         _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);

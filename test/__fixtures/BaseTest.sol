@@ -9,8 +9,8 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { Create2Lib } from "src/libraries/Create2Lib.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test {
@@ -23,7 +23,7 @@ abstract contract BaseTest is Test {
     uint256 public constant DEFAULT_AMP_COEFF = 1000;
     uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
 
-    GenericFactory internal _factory = new GenericFactory(address(this));
+    GenericFactory internal _factory = _create2Factory();
 
     address internal _recoverer = _makeAddress("recoverer");
     address internal _platformFeeTo = _makeAddress("platformFeeTo");
@@ -72,6 +72,19 @@ abstract contract BaseTest is Test {
         _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
+    }
+
+    function _create2Factory() internal returns (GenericFactory rFactory) {
+        bytes memory lInitCode = abi.encodePacked(type(GenericFactory).creationCode, abi.encode(address(this)));
+        address lFactory = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
+
+        if (lFactory.code.length == 0) {
+            rFactory = new GenericFactory{salt: bytes32(0)}(address(this));
+            require(address(rFactory) != address(0), "DEPLOY FACTORY FAILED");
+        }
+        else {
+            rFactory = GenericFactory(lFactory);
+        }
     }
 
     // From: https://ethereum.stackexchange.com/questions/126899/convert-bytes-to-hexadecimal-string-in-solidity
