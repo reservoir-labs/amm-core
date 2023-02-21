@@ -13,19 +13,8 @@ uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
     constructor(address aOwner) Owned(aOwner) {
-        bytes memory lInitCode = type(StableMintBurn).creationCode;
-
-        address lStableMintBurn;
-        // SAFETY:
-        // Does not write to memory
-        assembly ("memory-safe") {
-            // sanity checked against OZ implementation:
-            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/3ac4add548178708f5401c26280b952beb244c1e/contracts/utils/Create2.sol#L40
-            lStableMintBurn := create2(callvalue(), add(lInitCode, 0x20), mload(lInitCode), 0)
-
-            if iszero(extcodesize(lStableMintBurn)) { revert(0, 0) }
-        }
-        emit Deployed(lStableMintBurn);
+        StableMintBurn lStableMintBurn = new StableMintBurn{salt: bytes32(0)}();
+        emit Deployed(address(lStableMintBurn));
     }
 
     event Deployed(address _address);
