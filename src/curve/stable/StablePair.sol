@@ -44,8 +44,8 @@ contract StablePair is ReservoirPair {
 
     // We need the 2 variables below to calculate the growth in liquidity between
     // minting and burning, for the purpose of calculating platformFee.
-    uint192 private lastInvariant;
-    uint64 private lastInvariantAmp;
+    uint192 public lastInvariant;
+    uint64 public lastInvariantAmp;
 
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) {
         require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
