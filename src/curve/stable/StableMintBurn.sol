@@ -24,9 +24,9 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
 
-    uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
+    uint256 private constant FEE_ACCURACY = 1_000_000; // 100%
     bytes4 private constant SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
-    uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
+    uint256 private constant MINIMUM_LIQUIDITY = 10 ** 3;
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
 
     event Mint(address indexed sender, uint256 amount0, uint256 amount1);
@@ -55,13 +55,13 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
     uint104 public token0Managed;
     uint104 public token1Managed;
 
-    Observation[65_536] internal _observations;
+    Observation[65_536] private _observations;
 
-    uint256 public maxChangeRate;
-    uint256 public prevClampedPrice;
-    address public oracleCaller;
+    uint256 private maxChangeRate;
+    uint256 private prevClampedPrice;
+    address private oracleCaller;
 
-    AmplificationData public ampData;
+    AmplificationData private ampData;
 
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
