@@ -13,7 +13,8 @@ fs_permissions = [
 ]
 
 [profile.default.model_checker]
-#contracts = { "src/curve/stable/StablePair.sol" = [ "StablePair" ] }
+contracts = { "src/curve/stable/StablePair.sol" = [ "StablePair" ] }
+solver = "z3"
 engine = "chc"
 timeout = 100000
 targets = [
