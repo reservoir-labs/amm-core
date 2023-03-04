@@ -21,6 +21,7 @@ jobs:
         with:
           version: nightly
       - run: sudo apt install libz3-4 -y
+      - run: ln -s /usr/lib/x86_64-linux-gnu/libz3.so.4 libz3.so.4.11
       - run: forge build
 
   lint:
