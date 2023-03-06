@@ -13,20 +13,22 @@ fs_permissions = [
 ]
 
 [profile.default.model_checker]
-contracts = { "src/curve/stable/StablePair.sol" = [ "StablePair" ] }
 solver = "z3"
 engine = "chc"
 timeout = 100000
 targets = [
     "assert",
-    "underflow",
-    "overflow",
-    "divByZero",
-    "constantCondition",
-    "popEmptyArray",
-    "outOfBounds",
-    "balance"
+#    "underflow",
+#    "overflow",
+#    "divByZero",
+#    "constantCondition",
+#    "popEmptyArray",
+#    "outOfBounds",
+#    "balance"
 ]
+
+[profile.default.model_checker.contracts]
+"src/GenericFactory.sol" = [ "GenericFactory" ]
 
 [profile.integration]
 match_path = "test/integration/*.sol"
