@@ -1,4 +1,3 @@
-// TODO: Can we reduce the nesting by deleting the parent dir?
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
