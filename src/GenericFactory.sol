@@ -146,7 +146,6 @@ contract GenericFactory is IGenericFactory, Owned {
 
         (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
 
-        // TODO: Test that _loadCurve errors for invalid indexes.
         bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 
         // SAFETY:
