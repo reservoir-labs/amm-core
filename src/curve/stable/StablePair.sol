@@ -99,8 +99,7 @@ contract StablePair is ReservoirPair {
         emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
-    function mint(address) external override returns (uint256) {
-        // DELEGATE TO StableMintBurn
+    function _delegateToMintBurn() internal {
         address lTarget = MINT_BURN_LOGIC;
 
         // SAFETY:
@@ -121,26 +120,12 @@ contract StablePair is ReservoirPair {
         }
     }
 
+    function mint(address) external override returns (uint256) {
+        _delegateToMintBurn();
+    }
+
     function burn(address) external override returns (uint256, uint256) {
-        // DELEGATE TO StableMintBurn
-        address lTarget = MINT_BURN_LOGIC;
-
-        // SAFETY:
-        // The delegated call has the same signature as the calling function
-        // and both the calldata and returndata do not exceed 64 bytes
-        // This is only valid when lTarget == MINT_BURN_LOGIC
-        assembly ("memory-safe") {
-            calldatacopy(0, 0, calldatasize())
-            let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
-
-            if success {
-                returndatacopy(0, 0, returndatasize())
-                return(0, returndatasize())
-            }
-
-            returndatacopy(0, 0, returndatasize())
-            revert(0, returndatasize())
-        }
+        _delegateToMintBurn();
     }
 
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
