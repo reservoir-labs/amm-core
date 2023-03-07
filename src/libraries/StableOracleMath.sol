@@ -58,15 +58,4 @@ library StableOracleMath {
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
         spotPrice = derivativeX.divWadUp(derivativeY);
     }
-
-    // TODO: De-dupe between StableOracleMath and ConstantProductOracleMath
-    /// @param reserve0 amount in native precision
-    /// @param reserve1 amount in native precision
-    function calcLogLiq(uint256 reserve0, uint256 reserve1) internal pure returns (int112 logLiq) {
-        uint256 sqrtK = FixedPointMathLib.sqrt(reserve0 * reserve1);
-
-        int256 rawResult = LogCompression.toLowResLog(sqrtK);
-        assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
-        logLiq = int112(rawResult);
-    }
 }

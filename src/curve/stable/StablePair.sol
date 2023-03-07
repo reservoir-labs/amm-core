@@ -15,6 +15,7 @@ import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -308,7 +309,7 @@ contract StablePair is ReservoirPair {
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
+        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {
