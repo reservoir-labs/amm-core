@@ -32,7 +32,6 @@ contract ConstantProductPair is ReservoirPair {
     // solhint-disable-next-line no-empty-blocks
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
 
-    // TODO: Use library function to DRY?
     function _getAmountOut(uint256 aAmountIn, uint256 aReserveIn, uint256 aReserveOut, uint256 aSwapFee)
         internal
         pure
