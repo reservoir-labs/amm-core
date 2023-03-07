@@ -79,7 +79,6 @@ contract GenericFactory is IGenericFactory, Owned {
             }
 
             lFreeMem += lSize;
-            // TODO: Do we need to pad to 32 bytes?
             lByteCodeLength += lSize;
         }
 
