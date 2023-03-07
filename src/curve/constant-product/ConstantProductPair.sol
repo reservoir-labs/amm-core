@@ -9,6 +9,7 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { ConstantProductMath } from "src/libraries/ConstantProductMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 
@@ -31,34 +32,6 @@ contract ConstantProductPair is ReservoirPair {
 
     // solhint-disable-next-line no-empty-blocks
     constructor(address aToken0, address aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME) { }
-
-    function _getAmountOut(uint256 aAmountIn, uint256 aReserveIn, uint256 aReserveOut, uint256 aSwapFee)
-        internal
-        pure
-        returns (uint256 rAmountOut)
-    {
-        require(aAmountIn > 0, "CP: INSUFFICIENT_INPUT_AMOUNT");
-        require(aReserveIn > 0 && aReserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
-
-        uint256 lAmountInWithFee = aAmountIn * (FEE_ACCURACY - aSwapFee);
-        uint256 lNumerator = lAmountInWithFee * aReserveOut;
-        uint256 lDenominator = aReserveIn * FEE_ACCURACY + lAmountInWithFee;
-        rAmountOut = lNumerator / lDenominator;
-    }
-
-    // TODO: Use library function to DRY?
-    function _getAmountIn(uint256 aAmountOut, uint256 aReserveIn, uint256 aReserveOut, uint256 aSwapFee)
-        internal
-        pure
-        returns (uint256 rAmountIn)
-    {
-        require(aAmountOut > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
-        require(aReserveIn > 0 && aReserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
-
-        uint256 lNumerator = aReserveIn * aAmountOut * FEE_ACCURACY;
-        uint256 lDenominator = (aReserveOut - aAmountOut) * (FEE_ACCURACY - aSwapFee);
-        rAmountIn = lNumerator / lDenominator + 1;
-    }
 
     /**
      * _calcFee calculates the appropriate platform fee in terms of tokens that will be minted, based on the growth
@@ -189,13 +162,13 @@ contract ConstantProductPair is ReservoirPair {
             if (aAmount > 0) {
                 lTokenOut = token1;
                 lAmountIn = uint256(aAmount);
-                rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, swapFee);
+                rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve0, lReserve1, swapFee);
             }
             // swap token1 exact in for token0 variable out
             else {
                 lTokenOut = token0;
                 lAmountIn = uint256(-aAmount);
-                rAmountOut = _getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
+                rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
             }
         }
         // exact out
@@ -205,14 +178,14 @@ contract ConstantProductPair is ReservoirPair {
                 rAmountOut = uint256(aAmount);
                 require(rAmountOut < lReserve0, "CP: NOT_ENOUGH_LIQ");
                 lTokenOut = token0;
-                lAmountIn = _getAmountIn(rAmountOut, lReserve1, lReserve0, swapFee);
+                lAmountIn = ConstantProductMath.getAmountIn(rAmountOut, lReserve1, lReserve0, swapFee);
             }
             // swap token0 variable in for token1 exact out
             else {
                 rAmountOut = uint256(-aAmount);
                 require(rAmountOut < lReserve1, "CP: NOT_ENOUGH_LIQ");
                 lTokenOut = token1;
-                lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, swapFee);
+                lAmountIn = ConstantProductMath.getAmountIn(rAmountOut, lReserve0, lReserve1, swapFee);
             }
         }
 
