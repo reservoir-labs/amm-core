@@ -43,7 +43,13 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
         addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
         pool = IPool(addressesProvider.getPool());
-        dataProvider = IAaveProtocolDataProvider(addressesProvider.getPoolDataProvider());
+        updateDataProvider();
+    }
+
+    function updateDataProvider() public onlyOwner {
+        address lNewDataProvider = addressesProvider.getPoolDataProvider();
+        require(lNewDataProvider != address(0), "AM: DATA_PROVIDER_ADDRESS_ZERO");
+        dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
