@@ -99,7 +99,6 @@ contract StablePair is ReservoirPair {
         emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
-    // TODO: Should we use fallback?
     function mint(address) external override returns (uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
@@ -122,7 +121,6 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    // TODO: Should we use fallback?
     function burn(address) external override returns (uint256, uint256) {
         // DELEGATE TO StableMintBurn
         address lTarget = MINT_BURN_LOGIC;
