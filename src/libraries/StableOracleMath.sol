@@ -1,4 +1,4 @@
-// TODO: License, this was taken from Balancer right?
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
@@ -57,16 +57,5 @@ library StableOracleMath {
         // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
         spotPrice = derivativeX.divWadUp(derivativeY);
-    }
-
-    // TODO: De-dupe between StableOracleMath and ConstantProductOracleMath
-    /// @param reserve0 amount in native precision
-    /// @param reserve1 amount in native precision
-    function calcLogLiq(uint256 reserve0, uint256 reserve1) internal pure returns (int112 logLiq) {
-        uint256 sqrtK = FixedPointMathLib.sqrt(reserve0 * reserve1);
-
-        int256 rawResult = LogCompression.toLowResLog(sqrtK);
-        assert(rawResult >= type(int112).min && rawResult <= type(int112).max);
-        logLiq = int112(rawResult);
     }
 }

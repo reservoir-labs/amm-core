@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
@@ -79,7 +79,6 @@ contract GenericFactory is IGenericFactory, Owned {
             }
 
             lFreeMem += lSize;
-            // TODO: Do we need to pad to 32 bytes?
             lByteCodeLength += lSize;
         }
 
@@ -146,7 +145,6 @@ contract GenericFactory is IGenericFactory, Owned {
 
         (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
 
-        // TODO: Test that _loadCurve errors for invalid indexes.
         bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 
         // SAFETY:

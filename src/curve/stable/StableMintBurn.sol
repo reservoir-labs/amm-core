@@ -1,5 +1,3 @@
-// TODO: Can we reduce the nesting by deleting the parent dir?
-// TODO: License
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
@@ -10,6 +8,7 @@ import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
@@ -370,7 +369,7 @@ contract StableMintBurn is ReservoirERC20, IAssetManagedPair {
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
+        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {

@@ -1,4 +1,3 @@
-// TODO: License
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
@@ -15,6 +14,7 @@ import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 
 struct AmplificationData {
     /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
@@ -99,9 +99,7 @@ contract StablePair is ReservoirPair {
         emit StopRampA(lCurrentAPrecise, lTimestamp);
     }
 
-    // TODO: Should we use fallback?
-    function mint(address) external override returns (uint256) {
-        // DELEGATE TO StableMintBurn
+    function _delegateToMintBurn() internal {
         address lTarget = MINT_BURN_LOGIC;
 
         // SAFETY:
@@ -122,27 +120,12 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    // TODO: Should we use fallback?
+    function mint(address) external override returns (uint256) {
+        _delegateToMintBurn();
+    }
+
     function burn(address) external override returns (uint256, uint256) {
-        // DELEGATE TO StableMintBurn
-        address lTarget = MINT_BURN_LOGIC;
-
-        // SAFETY:
-        // The delegated call has the same signature as the calling function
-        // and both the calldata and returndata do not exceed 64 bytes
-        // This is only valid when lTarget == MINT_BURN_LOGIC
-        assembly ("memory-safe") {
-            calldatacopy(0, 0, calldatasize())
-            let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
-
-            if success {
-                returndatacopy(0, 0, returndatasize())
-                return(0, returndatasize())
-            }
-
-            returndatacopy(0, 0, returndatasize())
-            revert(0, returndatasize())
-        }
+        _delegateToMintBurn();
     }
 
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
@@ -308,7 +291,7 @@ contract StablePair is ReservoirPair {
         // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
-        int112 currLogLiq = StableOracleMath.calcLogLiq(aReserve0, aReserve1);
+        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
         unchecked {

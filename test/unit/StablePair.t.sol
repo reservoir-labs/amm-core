@@ -962,7 +962,7 @@ contract StablePairTest is BaseTest {
             lFutureAToSet * uint64(StableMath.A_PRECISION),
             lCurrentTimestamp,
             lFutureATimestamp
-            );
+        );
         _factory.rawCall(
             address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
         );

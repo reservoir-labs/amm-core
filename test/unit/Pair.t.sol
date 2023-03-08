@@ -144,7 +144,7 @@ contract PairTest is BaseTest {
         vm.expectEmit(true, true, false, false);
         emit SwapFeeChanged(
             _pair == _constantProductPair ? DEFAULT_SWAP_FEE_CP : DEFAULT_SWAP_FEE_SP, lNewDefaultSwapFee
-            );
+        );
         _pair.updateSwapFee();
 
         vm.expectEmit(true, true, false, false);
