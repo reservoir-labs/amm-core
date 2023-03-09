@@ -65,6 +65,7 @@
     "submodule:reset": "git submodule update --recursive",
     "test": "npm run test:unit",
     "test:all": "./scripts/coverage_patch_deployer.sh && npm run test:unit && npm run test:integration",
+    "test:e2e": "./test/e2e/deployment.sh",
     "test:integration": "export FOUNDRY_PROFILE=integration && ./scripts/coverage_patch_deployer.sh && forge test ",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
     "test:balancer": "export FOUNDRY_PROFILE=differential && ./scripts/coverage_patch_deployer.sh && forge test",

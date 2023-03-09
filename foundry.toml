@@ -10,6 +10,7 @@ verbosity = 3
 fs_permissions = [
     { access = "write", path = "./scripts/optimized-deployer-meta" },
     { access = "write", path = "./scripts/unoptimized-deployer-meta" },
+    { access = "read", path = "./out/GenericFactory.sol/GenericFactory.json" }
 ]
 ignored_error_codes = []
 

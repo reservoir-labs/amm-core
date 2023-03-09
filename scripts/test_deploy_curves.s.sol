@@ -4,17 +4,30 @@ pragma solidity ^0.8.0;
 import "scripts/BaseScript.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
+import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
-contract VaultScript is BaseScript
-{
+contract VaultScript is BaseScript {
     using FactoryStoreLib for GenericFactory;
+
+    address internal _recoverer = _makeAddress("recoverer");
+    address internal _platformFeeTo = _makeAddress("platformFeeTo");
+
+    OracleCaller private _oracleCaller = new OracleCaller();
+
+    function _makeAddress(string memory aName) internal returns (address) {
+        address lAddress = address(uint160(uint256(keccak256(abi.encodePacked(aName)))));
+        vm.label(lAddress, aName);
+
+        return lAddress;
+    }
 
     function run() external
     {
-        _setup();
+        _setup(vm.envUint("TEST_PRIVATE_KEY"));
 
         vm.startBroadcast();
 
