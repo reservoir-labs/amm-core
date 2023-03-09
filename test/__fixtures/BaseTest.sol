@@ -11,6 +11,7 @@ import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test {
@@ -70,7 +71,7 @@ abstract contract BaseTest is Test {
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
-        _factory.write("SP::StableMintBurn", 0x743b71A5a19ceC73B4cF074E79a931227497Fa82);
+        _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
 
         // set oracle caller
         _factory.write("Shared::oracleCaller", address(_oracleCaller));

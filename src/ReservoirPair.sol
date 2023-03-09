@@ -393,12 +393,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aReserve0, aReserve1);
         }
 
-        // TODO: Check gas savings by caching _token0/1() calls using a local var.
-        uint256 lToken0Managed = assetManager.getBalance(this, _token0());
-        uint256 lToken1Managed = assetManager.getBalance(this, _token1());
+        ERC20 lToken0 = _token0();
+        ERC20 lToken1 = _token1();
 
-        rReserve0 = _handleReport(_token0(), aReserve0, token0Managed, lToken0Managed);
-        rReserve1 = _handleReport(_token1(), aReserve1, token1Managed, lToken1Managed);
+        uint256 lToken0Managed = assetManager.getBalance(this, lToken0);
+        uint256 lToken1Managed = assetManager.getBalance(this, lToken1);
+
+        rReserve0 = _handleReport(lToken0, aReserve0, token0Managed, lToken0Managed);
+        rReserve1 = _handleReport(lToken1, aReserve1, token1Managed, lToken1Managed);
 
         token0Managed = lToken0Managed.toUint104();
         token1Managed = lToken1Managed.toUint104();
