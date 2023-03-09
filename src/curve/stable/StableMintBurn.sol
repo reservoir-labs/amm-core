@@ -30,7 +30,7 @@ contract StableMintBurn is ReservoirPair {
     uint192 private lastInvariant;
     uint64 private lastInvariantAmp;
 
-    constructor() ReservoirPair(address(0), address(0), PAIR_SWAP_FEE_NAME, false) { }
+    constructor() ReservoirPair(ERC20(address(0)), ERC20(address(0)), PAIR_SWAP_FEE_NAME, false) { }
 
     function _token0() internal override view returns (ERC20) {
         return this.token0();

@@ -56,8 +56,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
     string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
-    // TODO: Rename to TRANSFER
-    bytes4 private constant SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
+    bytes4 private constant TRA0NSFER = bytes4(keccak256("transfer(address,uint256)"));
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
@@ -88,23 +87,16 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _;
     }
 
-    constructor(
-        // TODO: Convert to ERC20;
-        address aToken0,
-        // TODO: Convert to ERC20;
-        address aToken1,
-        string memory aSwapFeeName,
-        bool aNormalPair
-    ) {
+    constructor(ERC20 aToken0, ERC20 aToken1, string memory aSwapFeeName, bool aNormalPair) {
         factory = GenericFactory(msg.sender);
-        token0 = ERC20(aToken0);
-        token1 = ERC20(aToken1);
+        token0 = aToken0;
+        token1 = aToken1;
 
         token0PrecisionMultiplier = aNormalPair
-            ? uint128(10) ** (18 - ERC20(aToken0).decimals())
+            ? uint128(10) ** (18 - aToken0.decimals())
             : 0;
         token1PrecisionMultiplier = aNormalPair
-            ? uint128(10) ** (18 - ERC20(aToken1).decimals())
+            ? uint128(10) ** (18 - aToken1.decimals())
             : 0;
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
 
@@ -294,7 +286,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     function _safeTransfer(address aToken, address aTo, uint256 aValue) internal returns (bool) {
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = aToken.call(abi.encodeWithSelector(SELECTOR, aTo, aValue));
+        (bool success, bytes memory data) = aToken.call(abi.encodeWithSelector(TRANSFER, aTo, aValue));
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
