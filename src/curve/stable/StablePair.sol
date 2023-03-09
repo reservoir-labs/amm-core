@@ -32,7 +32,7 @@ contract StablePair is ReservoirPair {
     using Bytes32Lib for bytes32;
 
     // solhint-disable-next-line var-name-mixedcase
-    address private immutable MINT_BURN_LOGIC = ConstantsLib.MINT_BURN_ADDRESS;
+    address private immutable MINT_BURN_LOGIC;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
     string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
@@ -47,18 +47,29 @@ contract StablePair is ReservoirPair {
     uint192 public lastInvariant;
     uint64 public lastInvariantAmp;
 
-    constructor(ERC20 aToken0, ERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) {
-        require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
-        ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
-        ampData.futureA = ampData.initialA;
-        ampData.initialATime = uint64(block.timestamp);
-        ampData.futureATime = uint64(block.timestamp);
+    constructor(ERC20 aToken0, ERC20 aToken1)
+        ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, _isStableMintBurn(aToken0, aToken1) ? false : true)
+    {
+        MINT_BURN_LOGIC =
+            _isStableMintBurn(aToken0, aToken1) ? address(0) : factory.read("SP::StableMintBurn").toAddress();
 
-        require(
-            ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
-                && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
-            "SP: INVALID_A"
-        );
+        if (!_isStableMintBurn(aToken0, aToken1)) {
+            require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
+            ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
+            ampData.futureA = ampData.initialA;
+            ampData.initialATime = uint64(block.timestamp);
+            ampData.futureATime = uint64(block.timestamp);
+
+            require(
+                ampData.initialA >= StableMath.MIN_A * uint64(StableMath.A_PRECISION)
+                    && ampData.initialA <= StableMath.MAX_A * uint64(StableMath.A_PRECISION),
+                "SP: INVALID_A"
+            );
+        }
+    }
+
+    function _isStableMintBurn(ERC20 aToken0, ERC20 aToken1) private pure returns (bool) {
+        return address(aToken0) == address(0) && address(aToken1) == address(0);
     }
 
     function rampA(uint64 aFutureARaw, uint64 aFutureATime) external onlyFactory {
@@ -120,16 +131,17 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    function mint(address) external override returns (uint256) {
+    function mint(address) external virtual override returns (uint256) {
         _delegateToMintBurn();
     }
 
-    function burn(address) external override returns (uint256, uint256) {
+    function burn(address) external virtual override returns (uint256, uint256) {
         _delegateToMintBurn();
     }
 
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
+        virtual
         override
         returns (uint256 rAmountOut)
     {
@@ -201,8 +213,8 @@ contract StablePair is ReservoirPair {
             aAmountIn,
             aReserve0,
             aReserve1,
-            token0PrecisionMultiplier,
-            token1PrecisionMultiplier,
+            _token0PrecisionMultiplier(),
+            _token1PrecisionMultiplier(),
             aToken0In,
             swapFee,
             _getNA()
@@ -218,8 +230,8 @@ contract StablePair is ReservoirPair {
             aAmountOut,
             aReserve0,
             aReserve1,
-            token0PrecisionMultiplier,
-            token1PrecisionMultiplier,
+            _token0PrecisionMultiplier(),
+            _token1PrecisionMultiplier(),
             aToken0Out,
             swapFee,
             _getNA()
@@ -231,15 +243,15 @@ contract StablePair is ReservoirPair {
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.
     /// @return rLiquidity The invariant, at the precision of the pool.
-    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) private view returns (uint256 rLiquidity) {
+    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
         unchecked {
-            uint256 adjustedReserve0 = aReserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = aReserve1 * token1PrecisionMultiplier;
+            uint256 adjustedReserve0 = aReserve0 * _token0PrecisionMultiplier();
+            uint256 adjustedReserve1 = aReserve1 * _token1PrecisionMultiplier();
             rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
         }
     }
 
-    function _getCurrentAPrecise() private view returns (uint64 rCurrentA) {
+    function _getCurrentAPrecise() internal view returns (uint64 rCurrentA) {
         uint64 futureA = ampData.futureA;
         uint64 futureATime = ampData.futureATime;
 
@@ -262,7 +274,7 @@ contract StablePair is ReservoirPair {
     }
 
     /// @dev number of coins in the pool multiplied by A precise
-    function _getNA() private view returns (uint256) {
+    function _getNA() internal view returns (uint256) {
         return 2 * _getCurrentAPrecise();
     }
 
@@ -285,7 +297,7 @@ contract StablePair is ReservoirPair {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), aReserve0 * token0PrecisionMultiplier, aReserve1 * token1PrecisionMultiplier
+            _getCurrentAPrecise(), aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
         );
         // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
         // to figure out the previous clamped price

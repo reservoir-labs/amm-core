@@ -92,12 +92,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         token0 = aToken0;
         token1 = aToken1;
 
-        token0PrecisionMultiplier = aNormalPair
-            ? uint128(10) ** (18 - aToken0.decimals())
-            : 0;
-        token1PrecisionMultiplier = aNormalPair
-            ? uint128(10) ** (18 - aToken1.decimals())
-            : 0;
+        token0PrecisionMultiplier = aNormalPair ? uint128(10) ** (18 - aToken0.decimals()) : 0;
+        token1PrecisionMultiplier = aNormalPair ? uint128(10) ** (18 - aToken1.decimals()) : 0;
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
 
         if (aNormalPair) {
@@ -123,6 +119,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     function _token1() internal view virtual returns (ERC20) {
         return token1;
+    }
+
+    function _token0PrecisionMultiplier() internal view virtual returns (uint128) {
+        return token0PrecisionMultiplier;
+    }
+
+    function _token1PrecisionMultiplier() internal view virtual returns (uint128) {
+        return token1PrecisionMultiplier;
     }
 
     /*//////////////////////////////////////////////////////////////////////////

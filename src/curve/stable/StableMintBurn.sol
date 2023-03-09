@@ -11,33 +11,34 @@ import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
-import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ERC20 } from "src/ReservoirERC20.sol";
 import { ReservoirPair, Slot0, Observation } from "src/ReservoirPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 
-contract StableMintBurn is ReservoirPair {
+contract StableMintBurn is StablePair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
-    AmplificationData private ampData;
+    constructor() StablePair(ERC20(address(0)), ERC20(address(0))) { }
 
-    uint192 private lastInvariant;
-    uint64 private lastInvariantAmp;
-
-    constructor() ReservoirPair(ERC20(address(0)), ERC20(address(0)), PAIR_SWAP_FEE_NAME, false) { }
-
-    function _token0() internal override view returns (ERC20) {
+    function _token0() internal view override returns (ERC20) {
         return this.token0();
     }
 
-    function _token1() internal override view returns (ERC20) {
+    function _token1() internal view override returns (ERC20) {
         return this.token1();
+    }
+
+    function _token0PrecisionMultiplier() internal view override returns (uint128) {
+        return this.token0PrecisionMultiplier();
+    }
+
+    function _token1PrecisionMultiplier() internal view override returns (uint128) {
+        return this.token1PrecisionMultiplier();
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
@@ -126,7 +127,7 @@ contract StableMintBurn is ReservoirPair {
         _managerCallback();
     }
 
-    function swap(int256, bool, address, bytes calldata) external override pure returns (uint256) {
+    function swap(int256, bool, address, bytes calldata) external pure override returns (uint256) {
         revert("SMB: IMPOSSIBLE");
     }
 
@@ -134,8 +135,8 @@ contract StableMintBurn is ReservoirPair {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(
-            aReserve0 * this.token0PrecisionMultiplier(),
-            aReserve1 * this.token1PrecisionMultiplier(),
+            aReserve0 * _token0PrecisionMultiplier(),
+            aReserve1 * _token1PrecisionMultiplier(),
             2 * lastInvariantAmp
         );
         if (lFeeOn) {
@@ -158,65 +159,6 @@ contract StableMintBurn is ReservoirPair {
             }
         } else if (lastInvariant != 0) {
             lastInvariant = 0;
-        }
-    }
-
-    function _getCurrentAPrecise() private view returns (uint64 rCurrentA) {
-        uint64 futureA = ampData.futureA;
-        uint64 futureATime = ampData.futureATime;
-
-        if (block.timestamp < futureATime) {
-            uint64 initialA = ampData.initialA;
-            uint64 initialATime = ampData.initialATime;
-            uint64 rampDuration = futureATime - initialATime;
-            uint64 rampElapsed = uint64(block.timestamp) - initialATime;
-
-            if (futureA > initialA) {
-                uint64 rampDelta = futureA - initialA;
-                rCurrentA = initialA + rampElapsed * rampDelta / rampDuration;
-            } else {
-                uint64 rampDelta = initialA - futureA;
-                rCurrentA = initialA - rampElapsed * rampDelta / rampDuration;
-            }
-        } else {
-            rCurrentA = futureA;
-        }
-    }
-
-    function _getNA() private view returns (uint256) {
-        return 2 * _getCurrentAPrecise();
-    }
-
-    function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) private view returns (uint256 rLiquidity) {
-        unchecked {
-            uint256 adjustedReserve0 = aReserve0 * this.token0PrecisionMultiplier();
-            uint256 adjustedReserve1 = aReserve1 * this.token1PrecisionMultiplier();
-            rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
-        }
-    }
-
-    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aTimestampLast) internal override {
-        Observation storage previous = _observations[_slot0.index];
-
-        (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(),
-            aReserve0 * this.token0PrecisionMultiplier(),
-            aReserve1 * this.token1PrecisionMultiplier()
-        );
-        // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
-        // to figure out the previous clamped price
-        (uint256 currClampedPrice, int112 currLogClampedPrice) =
-            _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
-        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
-        prevClampedPrice = currClampedPrice;
-
-        unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
-            int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
-            _slot0.index += 1;
-            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aTimestampLast);
         }
     }
 }

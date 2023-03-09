@@ -70,6 +70,7 @@ abstract contract BaseTest is Test {
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+        _factory.write("SP::StableMintBurn", 0x743b71A5a19ceC73B4cF074E79a931227497Fa82);
 
         // set oracle caller
         _factory.write("Shared::oracleCaller", address(_oracleCaller));
