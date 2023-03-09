@@ -56,6 +56,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
     string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
+    // TODO: Rename to TRANSFER
     bytes4 private constant SELECTOR = bytes4(keccak256("transfer(address,uint256)"));
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
@@ -87,21 +88,58 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _;
     }
 
-    constructor(address aToken0, address aToken1, string memory aSwapFeeName) {
+    constructor(
+        // TODO: Convert to ERC20;
+        address aToken0,
+        // TODO: Convert to ERC20;
+        address aToken1,
+        string memory aSwapFeeName,
+        bool aNormalPair
+    ) {
         factory = GenericFactory(msg.sender);
         token0 = ERC20(aToken0);
         token1 = ERC20(aToken1);
 
+        token0PrecisionMultiplier = aNormalPair
+            ? uint128(10) ** (18 - ERC20(aToken0).decimals())
+            : 0;
+        token1PrecisionMultiplier = aNormalPair
+            ? uint128(10) ** (18 - ERC20(aToken1).decimals())
+            : 0;
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
-        updateSwapFee();
-        updatePlatformFee();
 
-        token0PrecisionMultiplier = uint128(10) ** (18 - token0.decimals());
-        token1PrecisionMultiplier = uint128(10) ** (18 - token1.decimals());
-
-        updateOracleCaller();
-        setMaxChangeRate(factory.read(MAX_CHANGE_RATE_NAME).toUint256());
+        // TODO: What is the security risk if someone calls these methods on the
+        // StableMintBurn contract? Do we need to take any action?
+        if (aNormalPair) {
+            updateSwapFee();
+            updatePlatformFee();
+            updateOracleCaller();
+            setMaxChangeRate(factory.read(MAX_CHANGE_RATE_NAME).toUint256());
+        }
     }
+
+    /*//////////////////////////////////////////////////////////////////////////
+
+                            IMMUTABLE GETTERS
+
+    Let's StableMintBurn override the immutables to instead make a call to
+    address(this) so the action is delegatecall safe.
+
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function _token0() internal view virtual returns (ERC20) {
+        return token0;
+    }
+
+    function _token1() internal view virtual returns (ERC20) {
+        return token1;
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+
+                            SLOT0 & RESERVES
+
+    //////////////////////////////////////////////////////////////////////////*/
 
     function _currentTime() internal view returns (uint32) {
         return uint32(block.timestamp % 2 ** 31);
@@ -139,6 +177,33 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _writeSlot0Timestamp(aBlockTimestampLast, false);
     }
 
+    // update reserves and, on the first call per block, price and liq accumulators
+    function _updateAndUnlock(
+        uint256 aBalance0,
+        uint256 aBalance1,
+        uint256 aReserve0,
+        uint256 aReserve1,
+        uint32 aBlockTimestampLast
+    ) internal {
+        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
+        require(aReserve0 <= type(uint104).max && aReserve1 <= type(uint104).max, "RP: OVERFLOW");
+
+        uint32 lBlockTimestamp = uint32(_currentTime());
+        uint32 lTimeElapsed;
+        unchecked {
+            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
+        }
+        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
+            _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
+        }
+
+        _slot0.reserve0 = uint104(aBalance0);
+        _slot0.reserve1 = uint104(aBalance1);
+        _writeSlot0Timestamp(lBlockTimestamp, false);
+
+        emit Sync(uint104(aBalance0), uint104(aBalance1));
+    }
+
     function getReserves()
         public
         view
@@ -164,10 +229,16 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     function skim(address aTo) external {
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
 
-        _checkedTransfer(token0, aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
-        _checkedTransfer(token1, aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
+        _checkedTransfer(_token0(), aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
+        _checkedTransfer(_token1(), aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
         _unlock(lBlockTimestampLast);
     }
+
+    /*//////////////////////////////////////////////////////////////////////////
+
+                            ADMING ACTIONS
+
+    //////////////////////////////////////////////////////////////////////////*/
 
     function setCustomSwapFee(uint256 aCustomSwapFee) external onlyFactory {
         // we assume the factory won't spam events, so no early check & return
@@ -207,13 +278,19 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     function recoverToken(address aToken) external {
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
-        require(aToken != address(token0) && aToken != address(token1), "P: INVALID_TOKEN_TO_RECOVER");
+        require(aToken != address(_token0()) && aToken != address(_token1()), "P: INVALID_TOKEN_TO_RECOVER");
         require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");
 
         uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
 
         _safeTransfer(aToken, _recoverer, _amountToRecover);
     }
+
+    /*//////////////////////////////////////////////////////////////////////////
+
+                            TRANSFER HELPERS
+
+    //////////////////////////////////////////////////////////////////////////*/
 
     function _safeTransfer(address aToken, address aTo, uint256 aValue) internal returns (bool) {
         // solhint-disable-next-line avoid-low-level-calls
@@ -227,42 +304,17 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         internal
     {
         if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
-            uint256 tokenOutManaged = aToken == token0 ? token0Managed : token1Managed;
-            uint256 reserveOut = aToken == token0 ? aReserve0 : aReserve1;
-            if (reserveOut - tokenOutManaged < aAmount) {
-                assetManager.returnAsset(aToken == token0, aAmount - (reserveOut - tokenOutManaged));
+            bool lIsToken0 = aToken == _token0();
+            uint256 lTokenOutManaged = lIsToken0 ? token0Managed : token1Managed;
+            uint256 lReserveOut = lIsToken0 ? aReserve0 : aReserve1;
+
+            if (lReserveOut - lTokenOutManaged < aAmount) {
+                assetManager.returnAsset(lIsToken0, aAmount - (lReserveOut - lTokenOutManaged));
                 require(_safeTransfer(address(aToken), aDestination, aAmount), "RP: TRANSFER_FAILED");
             } else {
                 revert("RP: TRANSFER_FAILED");
             }
         }
-    }
-
-    // update reserves and, on the first call per block, price and liq accumulators
-    function _updateAndUnlock(
-        uint256 aBalance0,
-        uint256 aBalance1,
-        uint256 aReserve0,
-        uint256 aReserve1,
-        uint32 aBlockTimestampLast
-    ) internal {
-        require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
-        require(aReserve0 <= type(uint104).max && aReserve1 <= type(uint104).max, "RP: OVERFLOW");
-
-        uint32 lBlockTimestamp = uint32(_currentTime());
-        uint32 lTimeElapsed;
-        unchecked {
-            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
-        }
-        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
-        }
-
-        _slot0.reserve0 = uint104(aBalance0);
-        _slot0.reserve1 = uint104(aBalance1);
-        _writeSlot0Timestamp(lBlockTimestamp, false);
-
-        emit Sync(uint104(aBalance0), uint104(aBalance1));
     }
 
     /// @dev Mints LP tokens - should be called via the router after transferring tokens.
@@ -308,11 +360,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint104 public token1Managed;
 
     function _totalToken0() internal view returns (uint256) {
-        return token0.balanceOf(address(this)) + uint256(token0Managed);
+        return _token0().balanceOf(address(this)) + uint256(token0Managed);
     }
 
     function _totalToken1() internal view returns (uint256) {
-        return token1.balanceOf(address(this)) + uint256(token1Managed);
+        return _token1().balanceOf(address(this)) + uint256(token1Managed);
     }
 
     function _handleReport(ERC20 aToken, uint256 aReserve, uint256 aPrevBalance, uint256 aNewBalance)
@@ -347,11 +399,12 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aReserve0, aReserve1);
         }
 
-        uint256 lToken0Managed = assetManager.getBalance(this, token0);
-        uint256 lToken1Managed = assetManager.getBalance(this, token1);
+        // TODO: Check gas savings by caching _token0/1() calls using a local var.
+        uint256 lToken0Managed = assetManager.getBalance(this, _token0());
+        uint256 lToken1Managed = assetManager.getBalance(this, _token1());
 
-        rReserve0 = _handleReport(token0, aReserve0, token0Managed, lToken0Managed);
-        rReserve1 = _handleReport(token1, aReserve1, token1Managed, lToken1Managed);
+        rReserve0 = _handleReport(_token0(), aReserve0, token0Managed, lToken0Managed);
+        rReserve1 = _handleReport(_token1(), aReserve1, token1Managed, lToken1Managed);
 
         token0Managed = lToken0Managed.toUint104();
         token1Managed = lToken1Managed.toUint104();
@@ -370,14 +423,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
             token0Managed += lDelta;
-            SafeTransferLib.safeTransfer(address(token0), msg.sender, lDelta);
+            SafeTransferLib.safeTransfer(address(_token0()), msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            SafeTransferLib.safeTransferFrom(address(token0), msg.sender, address(this), lDelta);
+            SafeTransferLib.safeTransferFrom(address(_token0()), msg.sender, address(this), lDelta);
         }
 
         if (aToken1Change > 0) {
@@ -386,14 +439,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            SafeTransferLib.safeTransfer(address(token1), msg.sender, lDelta);
+            SafeTransferLib.safeTransfer(address(_token1()), msg.sender, lDelta);
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            SafeTransferLib.safeTransferFrom(address(token1), msg.sender, address(this), lDelta);
+            SafeTransferLib.safeTransferFrom(address(_token1()), msg.sender, address(this), lDelta);
         }
     }
 
