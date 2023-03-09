@@ -86,6 +86,7 @@ contract AaveIntegrationTest is BaseTest {
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+        _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
 
         _manager = new AaveManager(AAVE_POOL_ADDRESS_PROVIDER);
         USDC = ERC20(aNetwork.USDC);
