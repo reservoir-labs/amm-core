@@ -100,8 +100,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             : 0;
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
 
-        // TODO: What is the security risk if someone calls these methods on the
-        // StableMintBurn contract? Do we need to take any action?
         if (aNormalPair) {
             updateSwapFee();
             updatePlatformFee();
