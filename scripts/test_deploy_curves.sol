@@ -8,14 +8,6 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 
-// TODO: Move these to Constants to dedupe?
-uint256 constant INITIAL_MINT_AMOUNT = 100e18;
-uint256 constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
-uint256 constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
-uint256 constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
-uint256 constant DEFAULT_AMP_COEFF = 1000;
-uint256 constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
-
 contract VaultScript is BaseScript
 {
     using FactoryStoreLib for GenericFactory;
@@ -27,19 +19,19 @@ contract VaultScript is BaseScript
         vm.startBroadcast();
 
         // set shared variables
-        _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
+        _factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
         _factory.write("Shared::platformFeeTo", _platformFeeTo);
         _factory.write("Shared::defaultRecoverer", _recoverer);
-        _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
+        _factory.write("Shared::maxChangeRate", ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
 
         // add constant product curve
         _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
+        _factory.write("CP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_CP);
 
         // add stable curve
         _factory.addCurve(type(StablePair).creationCode);
-        _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
-        _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+        _factory.write("SP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_SP);
+        _factory.write("SP::amplificationCoefficient", ConstantsLib.DEFAULT_AMP_COEFF);
         _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
 
         // set oracle caller

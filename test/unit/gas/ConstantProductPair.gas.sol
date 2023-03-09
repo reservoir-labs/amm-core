@@ -76,7 +76,7 @@ contract ConstantProductPairGas is BaseTest {
 
     function testGasBurn() external {
         vm.prank(_bob);
-        _simplePair.transfer(address(_simplePair), INITIAL_MINT_AMOUNT / 2);
+        _simplePair.transfer(address(_simplePair), ConstantsLib.INITIAL_MINT_AMOUNT / 2);
         _simplePair.burn(address(this));
     }
 }

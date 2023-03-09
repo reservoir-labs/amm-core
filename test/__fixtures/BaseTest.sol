@@ -19,16 +19,7 @@ import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
 
-    // TODO: Move these to Constants to dedupe?
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
-    uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
-    uint256 public constant DEFAULT_AMP_COEFF = 1000;
-    uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
-
-    ReservoirDeployer internal _deployer = _ensureDeployerExists();
-    GenericFactory internal _factory;
+    GenericFactory internal _factory = _create2Factory();
 
     address internal _recoverer = address(_deployer);
     address internal _platformFeeTo = address(_deployer);
@@ -81,14 +72,14 @@ abstract contract BaseTest is Test {
 
         // Setup default ConstantProductPair.
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
-        _tokenA.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_constantProductPair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_constantProductPair), ConstantsLib.INITIAL_MINT_AMOUNT);
         _constantProductPair.mint(_alice);
 
         // Setup default StablePair.
         _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
-        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
     }
 

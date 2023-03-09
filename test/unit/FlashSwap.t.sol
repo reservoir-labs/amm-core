@@ -50,7 +50,7 @@ contract FlashSwapTest is BaseTest, IReservoirCallee {
 
     function testSwap_FlashSwap_ExactOut(uint256 aSwapAmt) external allPairs {
         // assume
-        int256 lSwapAmt = -int256(bound(aSwapAmt, 1, INITIAL_MINT_AMOUNT / 2));
+        int256 lSwapAmt = -int256(bound(aSwapAmt, 1, ConstantsLib.INITIAL_MINT_AMOUNT / 2));
 
         // act
         _pair.swap(lSwapAmt, false, address(this), "some bytes");
