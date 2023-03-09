@@ -109,7 +109,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
                             IMMUTABLE GETTERS
 
-    Let's StableMintBurn override the immutables to instead make a call to
+    Allows StableMintBurn override the immutables to instead make a call to
     address(this) so the action is delegatecall safe.
 
     //////////////////////////////////////////////////////////////////////////*/

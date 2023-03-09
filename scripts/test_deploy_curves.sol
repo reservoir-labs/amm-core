@@ -8,6 +8,7 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 
+// TODO: Move these to Constants to dedupe?
 uint256 constant INITIAL_MINT_AMOUNT = 100e18;
 uint256 constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
 uint256 constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
@@ -24,10 +25,11 @@ contract VaultScript is BaseScript
         _setup();
 
         vm.startBroadcast();
+
         // set shared variables
         _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
-        // _factory.write("Shared::platformFeeTo", _platformFeeTo);
-        // _factory.write("Shared::defaultRecoverer", _recoverer);
+        _factory.write("Shared::platformFeeTo", _platformFeeTo);
+        _factory.write("Shared::defaultRecoverer", _recoverer);
         _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
 
         // add constant product curve
@@ -35,10 +37,14 @@ contract VaultScript is BaseScript
         _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
 
         // add stable curve
-        _factory.addBytecode(type(StableMintBurn).creationCode);
         _factory.addCurve(type(StablePair).creationCode);
         _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
         _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+        _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
+
+        // set oracle caller
+        _factory.write("Shared::oracleCaller", address(_oracleCaller));
+        _oracleCaller.whitelistAddress(address(this), true);
 
         _factory.createPair(0x51fCe89b9f6D4c530698f181167043e1bB4abf89, 0xb16F35c0Ae2912430DAc15764477E179D9B9EbEa, 0);
         _factory.createPair(0x51fCe89b9f6D4c530698f181167043e1bB4abf89, 0xb16F35c0Ae2912430DAc15764477E179D9B9EbEa, 1);

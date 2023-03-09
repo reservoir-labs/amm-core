@@ -19,6 +19,7 @@ import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
 
+    // TODO: Move these to Constants to dedupe?
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
     uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
     uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
