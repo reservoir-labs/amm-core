@@ -3,5 +3,5 @@ pragma solidity ^0.8.0;
 
 library ConstantsLib {
     // TODO: to replace this with the actual production address once the deployer address / key has been decided
-    address public constant MINT_BURN_ADDRESS = 0x4876Be8Aa517Bc8cd37F352D6Ae75C7223ee2940;
+    address public constant MINT_BURN_ADDRESS = 0x197121B1A2fd8eF22C24ca74F136B5fF3475aE52;
 }
