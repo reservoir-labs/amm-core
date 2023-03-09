@@ -40,12 +40,6 @@ contract StableMintBurn is ReservoirPair {
         return this.token1();
     }
 
-    // TODO: Why does StableMintBurn introduce this one?
-    function _balances() internal view returns (uint256 rBalance0, uint256 rBalance1) {
-        rBalance0 = this.token0().balanceOf(address(this)) + uint256(token0Managed);
-        rBalance1 = this.token1().balanceOf(address(this)) + uint256(token1Managed);
-    }
-
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
     function _nonOptimalMintFee(uint256 aAmount0, uint256 aAmount1, uint256 aReserve0, uint256 aReserve1)
         internal
@@ -69,7 +63,8 @@ contract StableMintBurn is ReservoirPair {
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
-        (uint256 lBalance0, uint256 lBalance1) = _balances();
+        uint256 lBalance0 = _totalToken0();
+        uint256 lBalance1 = _totalToken1();
 
         uint256 lNewLiq = _computeLiquidity(lBalance0, lBalance1);
         uint256 lAmount0 = lBalance0 - lReserve0;

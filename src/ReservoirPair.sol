@@ -56,7 +56,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
     string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
-    bytes4 private constant TRA0NSFER = bytes4(keccak256("transfer(address,uint256)"));
+    bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
