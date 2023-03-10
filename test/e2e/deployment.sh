@@ -19,4 +19,4 @@ trap cleanup EXIT
 sleep 1
 
 ./test/helpers/setup_create2.sh
-forge script scripts/test_deploy_curves.s.sol --broadcast --rpc-url http://localhost:8545 --private-key $TEST_PRIVATE_KEY
+forge script scripts/test_deploy_curves.s.sol --broadcast --skip-simulation --slow --rpc-url http://localhost:8545 --private-key $TEST_PRIVATE_KEY

@@ -9,14 +9,21 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
+import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 contract VaultScript is BaseScript {
     using FactoryStoreLib for GenericFactory;
 
+    MintableERC20 internal _usdc;
+    MintableERC20 internal _usdt;
+
     address internal _recoverer = _makeAddress("recoverer");
     address internal _platformFeeTo = _makeAddress("platformFeeTo");
 
-    OracleCaller private _oracleCaller = new OracleCaller();
+    OracleCaller private _oracleCaller;
+
+    uint256 private _privateKey = vm.envUint("TEST_PRIVATE_KEY");
+    address private _wallet = vm.rememberKey(_privateKey);
 
     function _makeAddress(string memory aName) internal returns (address) {
         address lAddress = address(uint160(uint256(keccak256(abi.encodePacked(aName)))));
@@ -25,11 +32,21 @@ contract VaultScript is BaseScript {
         return lAddress;
     }
 
-    function run() external
-    {
-        _setup(vm.envUint("TEST_PRIVATE_KEY"));
+    function run() external {
+        _setup(_privateKey);
+        _deployInfra();
+        _deployCore();
+    }
 
-        vm.startBroadcast();
+    function _deployInfra() internal {
+        vm.startBroadcast(_privateKey);
+        _usdc = new MintableERC20("USD Circle", "USDC", 6);
+        _usdt = new MintableERC20("USD Tether", "USDT", 6);
+        vm.stopBroadcast();
+    }
+
+    function _deployCore() internal {
+        vm.startBroadcast(_privateKey);
 
         // set shared variables
         _factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
@@ -48,11 +65,12 @@ contract VaultScript is BaseScript {
         _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
 
         // set oracle caller
+        _oracleCaller = new OracleCaller();
         _factory.write("Shared::oracleCaller", address(_oracleCaller));
-        _oracleCaller.whitelistAddress(address(this), true);
+        _oracleCaller.whitelistAddress(_wallet, true);
 
-        _factory.createPair(0x51fCe89b9f6D4c530698f181167043e1bB4abf89, 0xb16F35c0Ae2912430DAc15764477E179D9B9EbEa, 0);
-        _factory.createPair(0x51fCe89b9f6D4c530698f181167043e1bB4abf89, 0xb16F35c0Ae2912430DAc15764477E179D9B9EbEa, 1);
+        _factory.createPair(address(_usdt), address(_usdc), 0);
+        _factory.createPair(address(_usdt), address(_usdc), 1);
         vm.stopBroadcast();
     }
 }
