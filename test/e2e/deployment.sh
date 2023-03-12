@@ -5,7 +5,7 @@ set -euxo pipefail
 export TEST_PRIVATE_KEY=0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356
 
 # Anvil cannot already be running or this will cause issues
-nohup anvil &>/dev/null &
+nohup anvil --gas-limit 8500000 &>/dev/null &
 anvil_pid=$!
 
 # Kill anvil on exit.
