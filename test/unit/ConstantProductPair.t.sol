@@ -79,7 +79,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testMint_InitialMint() public {
         // assert
         uint256 lpTokenBalance = _constantProductPair.balanceOf(_alice);
-        uint256 lExpectedLpTokenBalance = Math.sqrt(ConstantsLib.INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
+        uint256 lExpectedLpTokenBalance =
+            Math.sqrt(ConstantsLib.INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
     }
 

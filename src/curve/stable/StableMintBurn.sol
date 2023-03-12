@@ -23,6 +23,7 @@ contract StableMintBurn is StablePair {
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
+    // solhint-disable-next-line no-empty-blocks
     constructor() StablePair(ERC20(address(0)), ERC20(address(0))) { }
 
     function _token0() internal view override returns (ERC20) {

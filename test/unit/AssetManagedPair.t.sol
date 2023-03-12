@@ -361,10 +361,14 @@ contract AssetManagedPairTest is BaseTest {
         assertEq(_manager.getBalance(_stablePair, lToken1), lNewManagedBalance1);
         (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         assertTrue(
-            MathUtils.within1(lReserve0, (ConstantsLib.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18)
+            MathUtils.within1(
+                lReserve0, (ConstantsLib.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18
+            )
         );
         assertTrue(
-            MathUtils.within1(lReserve1, (ConstantsLib.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18)
+            MathUtils.within1(
+                lReserve1, (ConstantsLib.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18
+            )
         );
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
         assertLt(_tokenB.balanceOf(address(this)), 10e18);

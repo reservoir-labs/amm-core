@@ -81,8 +81,8 @@ contract StablePairTest is BaseTest {
 
         // assert
         // this works only because the pools are balanced. When the pool is imbalanced the calculation will differ
-        uint256 lAdditionalLpTokens =
-            ((ConstantsLib.INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity) * lLpTokenTotalSupply / lOldLiquidity;
+        uint256 lAdditionalLpTokens = ((ConstantsLib.INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity)
+            * lLpTokenTotalSupply / lOldLiquidity;
         assertEq(_stablePair.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
@@ -441,7 +441,14 @@ contract StablePairTest is BaseTest {
         // arrange
         (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
-            lAmountOut, lReserve0, lReserve1, 1, 1, true, ConstantsLib.DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountOut,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            true,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
@@ -453,7 +460,14 @@ contract StablePairTest is BaseTest {
 
         // assert
         uint256 inverse = StableMath._getAmountOut(
-            lAmountIn, lReserve0, lReserve1, 1, 1, false, ConstantsLib.DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountIn,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            false,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
@@ -467,7 +481,14 @@ contract StablePairTest is BaseTest {
         // arrange
         (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
-            lAmountOut, lReserve0, lReserve1, 1, 1, false, ConstantsLib.DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountOut,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            false,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
@@ -479,7 +500,14 @@ contract StablePairTest is BaseTest {
 
         // assert
         uint256 inverse = StableMath._getAmountOut(
-            lAmountIn, lReserve0, lReserve1, 1, 1, true, ConstantsLib.DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountIn,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            true,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
