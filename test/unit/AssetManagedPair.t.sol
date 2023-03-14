@@ -436,4 +436,17 @@ contract AssetManagedPairTest is BaseTest {
         vm.expectRevert();
         _pair.burn(address(this));
     }
+
+    function testSkimExcessManaged() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // act
+        _manager.adjustManagement(_pair, 10e18, 0);
+
+        // assert
+        _pair.burn(address(this));
+        assertEq(_pair.token0().balanceOf(_recoverer), 5);
+    }
 }

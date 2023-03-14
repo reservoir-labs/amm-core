@@ -385,6 +385,15 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
+    function _skimExcessManaged(ERC20 aToken, uint256 aAmtManaged) internal returns (uint256 rNewTokenManaged) {
+        address lRecoverer = factory.read(RECOVERER_NAME).toAddress();
+        uint256 lSkimAmt = aAmtManaged - type(uint104).max;
+        assetManager.returnAsset(aToken == _token0(), lSkimAmt);
+        _safeTransfer(address(aToken), lRecoverer, lSkimAmt);
+        rNewTokenManaged = assetManager.getBalance(this, aToken);
+        assert(rNewTokenManaged == type(uint104).max);
+    }
+
     function _syncManaged(uint256 aReserve0, uint256 aReserve1)
         internal
         returns (uint256 rReserve0, uint256 rReserve1)
@@ -398,6 +407,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         uint256 lToken0Managed = assetManager.getBalance(this, lToken0);
         uint256 lToken1Managed = assetManager.getBalance(this, lToken1);
+
+        if (lToken0Managed > type(uint104).max) lToken0Managed = _skimExcessManaged(lToken0, lToken0Managed);
+        if (lToken1Managed > type(uint104).max) lToken1Managed = _skimExcessManaged(lToken1, lToken1Managed);
 
         rReserve0 = _handleReport(lToken0, aReserve0, token0Managed, lToken0Managed);
         rReserve1 = _handleReport(lToken1, aReserve1, token1Managed, lToken1Managed);
