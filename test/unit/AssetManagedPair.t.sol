@@ -444,6 +444,7 @@ contract AssetManagedPairTest is BaseTest {
 
         // act
         _manager.adjustManagement(_pair, 10e18, 0);
+        _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max) + 5);
 
         // assert
         _pair.burn(address(this));

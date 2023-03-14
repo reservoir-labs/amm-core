@@ -414,6 +414,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         rReserve0 = _handleReport(lToken0, aReserve0, token0Managed, lToken0Managed);
         rReserve1 = _handleReport(lToken1, aReserve1, token1Managed, lToken1Managed);
 
+        // no need for safe casting here as the new managed amount is guaranteed to be <= type(uint104).max
         token0Managed = lToken0Managed.toUint104();
         token1Managed = lToken1Managed.toUint104();
     }
