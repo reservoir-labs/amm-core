@@ -6,14 +6,22 @@ import { Address } from "@openzeppelin/utils/Address.sol";
 import { SSTORE2 } from "solady/utils/SSTORE2.sol";
 import { Owned } from "solmate/auth/Owned.sol";
 
+import { Bytes32Lib } from "src/libraries/Bytes32.sol";
+
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 
 contract GenericFactory is IGenericFactory, Owned {
-    constructor(address aOwner) Owned(aOwner) {
+    using Bytes32Lib for address;
+
+    constructor() Owned(msg.sender) {
         StableMintBurn lStableMintBurn = new StableMintBurn{salt: bytes32(0)}();
+        require(address(lStableMintBurn) != address(0), "FACTORY: STABLE_MINT_BURN_DEPLOY_FAILED");
+
+        set(keccak256(abi.encodePacked("SP::StableMintBurn")), address(lStableMintBurn).toBytes32());
+
         emit Deployed(address(lStableMintBurn));
     }
 
@@ -25,7 +33,7 @@ contract GenericFactory is IGenericFactory, Owned {
 
     mapping(bytes32 => bytes32) public get;
 
-    function set(bytes32 aKey, bytes32 aValue) external onlyOwner {
+    function set(bytes32 aKey, bytes32 aValue) public onlyOwner {
         get[aKey] = aValue;
     }
 
