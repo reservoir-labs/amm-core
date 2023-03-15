@@ -417,6 +417,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             aReserve1 -= lAmtSkimmed;
         }
 
+        // token0/1Managed used here are up to date even if _skimExcessManaged is called as
+        // they are updated through ReservoirPair::adjustManagement
         rReserve0 = _handleReport(lToken0, aReserve0, token0Managed, lToken0Managed);
         rReserve1 = _handleReport(lToken1, aReserve1, token1Managed, lToken1Managed);
 

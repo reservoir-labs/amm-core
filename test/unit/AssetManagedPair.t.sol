@@ -434,6 +434,7 @@ contract AssetManagedPairTest is BaseTest {
         (uint104 lReserve0, , , ) = _pair.getReserves();
         assertEq(lReserve0, type(uint104).max);
         assertEq(_pair.token0Managed(), type(uint104).max);
+        assertEq(_manager.getBalance(_pair, _pair.token0()), type(uint104).max);
         assertEq(_pair.token0().balanceOf(_recoverer), 5);
     }
 }
