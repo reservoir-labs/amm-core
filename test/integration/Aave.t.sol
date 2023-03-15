@@ -133,6 +133,31 @@ contract AaveIntegrationTest is BaseTest {
         rOtherPair.setManager(_manager);
     }
 
+    function testUpdateDataProvider() external allNetworks allPairs {
+        // arrange
+        vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
+
+        // act
+        _manager.updateDataProvider();
+        vm.clearMockedCalls();
+
+        // assert
+        IAaveProtocolDataProvider lNewDataProvider = _manager.dataProvider();
+        assertEq(address(lNewDataProvider), address(1));
+    }
+
+    function testUpdateDataProvider_NoChange() external allNetworks allPairs {
+        // arrange
+        IAaveProtocolDataProvider lOldDataProvider = _manager.dataProvider();
+
+        // act
+        _manager.updateDataProvider();
+
+        // assert
+        IAaveProtocolDataProvider lNewDataProvider = _manager.dataProvider();
+        assertEq(address(lNewDataProvider), address(lOldDataProvider));
+    }
+
     function testAdjustManagement_NoMarket(uint256 aAmountToManage) public allNetworks allPairs {
         // assume - we want negative numbers too
         int256 lAmountToManage = int256(bound(aAmountToManage, 0, type(uint256).max));
