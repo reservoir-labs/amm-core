@@ -12,19 +12,6 @@ contract AssetManager is IAssetManager {
     function adjustManagement(IAssetManagedPair aPair, int256 aToken0Amount, int256 aToken1Amount) public {
         require(aToken0Amount != type(int256).min && aToken1Amount != type(int256).min, "AM: OVERFLOW");
 
-        if (aToken0Amount >= 0) {
-            uint256 lAbs = uint256(aToken0Amount);
-
-            getBalance[aPair][aPair.token0()] += lAbs;
-        }
-        if (aToken1Amount >= 0) {
-            uint256 lAbs = uint256(aToken1Amount);
-
-            getBalance[aPair][aPair.token1()] += lAbs;
-        }
-
-        aPair.adjustManagement(aToken0Amount, aToken1Amount);
-
         if (aToken0Amount < 0) {
             uint256 lAbs = uint256(-aToken0Amount);
 
@@ -36,6 +23,19 @@ contract AssetManager is IAssetManager {
 
             aPair.token1().approve(address(aPair), lAbs);
             getBalance[aPair][aPair.token1()] -= lAbs;
+        }
+
+        aPair.adjustManagement(aToken0Amount, aToken1Amount);
+
+        if (aToken0Amount >= 0) {
+            uint256 lAbs = uint256(aToken0Amount);
+
+            getBalance[aPair][aPair.token0()] += lAbs;
+        }
+        if (aToken1Amount >= 0) {
+            uint256 lAbs = uint256(aToken1Amount);
+
+            getBalance[aPair][aPair.token1()] += lAbs;
         }
     }
 
