@@ -230,7 +230,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /*//////////////////////////////////////////////////////////////////////////
 
-                            ADMING ACTIONS
+                            ADMIN ACTIONS
 
     //////////////////////////////////////////////////////////////////////////*/
 
@@ -385,13 +385,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function _skimExcessManaged(ERC20 aToken, uint256 aAmtManaged) internal returns (uint256 rNewTokenManaged) {
+    function _skimExcessManaged(ERC20 aToken, uint256 aAmtManaged) internal returns (uint256 rAmtSkimmed) {
         address lRecoverer = factory.read(RECOVERER_NAME).toAddress();
-        uint256 lSkimAmt = aAmtManaged - type(uint104).max;
-        assetManager.returnAsset(aToken == _token0(), lSkimAmt);
-        _safeTransfer(address(aToken), lRecoverer, lSkimAmt);
-        rNewTokenManaged = assetManager.getBalance(this, aToken);
-        assert(rNewTokenManaged == type(uint104).max);
+        rAmtSkimmed = aAmtManaged - type(uint104).max;
+        assetManager.returnAsset(aToken == _token0(), rAmtSkimmed);
+        _safeTransfer(address(aToken), lRecoverer, rAmtSkimmed);
     }
 
     function _syncManaged(uint256 aReserve0, uint256 aReserve1)
@@ -408,15 +406,23 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         uint256 lToken0Managed = assetManager.getBalance(this, lToken0);
         uint256 lToken1Managed = assetManager.getBalance(this, lToken1);
 
-        if (lToken0Managed > type(uint104).max) lToken0Managed = _skimExcessManaged(lToken0, lToken0Managed);
-        if (lToken1Managed > type(uint104).max) lToken1Managed = _skimExcessManaged(lToken1, lToken1Managed);
+        if (lToken0Managed > type(uint104).max) {
+            uint256 lAmtSkimmed = _skimExcessManaged(lToken0, lToken0Managed);
+            lToken0Managed -= lAmtSkimmed;
+            aReserve0 -= lAmtSkimmed;
+        }
+        if (lToken1Managed > type(uint104).max) {
+            uint256 lAmtSkimmed = _skimExcessManaged(lToken1, lToken1Managed);
+            lToken1Managed -= lAmtSkimmed;
+            aReserve1 -= lAmtSkimmed;
+        }
 
         rReserve0 = _handleReport(lToken0, aReserve0, token0Managed, lToken0Managed);
         rReserve1 = _handleReport(lToken1, aReserve1, token1Managed, lToken1Managed);
 
         // no need for safe casting here as the new managed amount is guaranteed to be <= type(uint104).max
-        token0Managed = lToken0Managed.toUint104();
-        token1Managed = lToken1Managed.toUint104();
+        token0Managed = uint104(lToken0Managed);
+        token1Managed = uint104(lToken1Managed);
     }
 
     function _managerCallback() internal {

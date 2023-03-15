@@ -420,34 +420,20 @@ contract AssetManagedPairTest is BaseTest {
         assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * INITIAL_MINT_AMOUNT / lTotalSupply);
     }
 
-    function testManagedAmount_GreaterThanUint104() external allPairs {
-        // arrange
-        vm.prank(address(_factory));
-        _pair.setManager(_manager);
-
-        // act
-        _manager.adjustManagement(_pair, 10e18, 0);
-        uint256 lNewAmount = uint256(type(uint104).max) + 5;
-        _manager.adjustBalance(_pair, _tokenA, lNewAmount);
-
-        // assert - when the amount managed is greater than uint104, mints and burns will fail
-        // because the new balance returned by the manager is greater than that amount as well
-        // which exceeds the storage type
-        vm.expectRevert();
-        _pair.burn(address(this));
-    }
-
     function testSkimExcessManaged() external allPairs {
         // arrange
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
-        // act
-        _manager.adjustManagement(_pair, 10e18, 0);
+        // act - make new managed balance exceed uint104.max
+        _manager.adjustManagement(_pair, int256(INITIAL_MINT_AMOUNT), 0);
         _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max) + 5);
+        _pair.burn(address(this));
 
         // assert
-        _pair.burn(address(this));
+        (uint104 lReserve0, , , ) = _pair.getReserves();
+        assertEq(lReserve0, type(uint104).max);
+        assertEq(_pair.token0Managed(), type(uint104).max);
         assertEq(_pair.token0().balanceOf(_recoverer), 5);
     }
 }
