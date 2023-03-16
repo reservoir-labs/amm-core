@@ -5,6 +5,7 @@ import { Errors } from "test/integration/AaveErrors.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
+import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPoolConfigurator } from "src/interfaces/aave/IPoolConfigurator.sol";
