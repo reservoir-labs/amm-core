@@ -448,4 +448,10 @@ contract AssetManagedPairTest is BaseTest {
         // assert
         assertEq(_pair.token0().balanceOf(_recoverer), 0);
     }
+
+    function testSkimExcessManaged_InvalidToken() external allPairs {
+        // act & assert
+        vm.expectRevert("RP: INVALID_SKIM_TOKEN");
+        _pair.skimExcessManaged(_tokenD);
+    }
 }
