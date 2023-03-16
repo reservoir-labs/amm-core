@@ -388,7 +388,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     function _skimExcessManaged(ERC20 aToken, uint256 aAmtManaged) internal returns (uint256 rAmtSkimmed) {
         address lRecoverer = factory.read(RECOVERER_NAME).toAddress();
+
         rAmtSkimmed = aAmtManaged - type(uint104).max;
+
         assetManager.returnAsset(aToken == _token0(), rAmtSkimmed);
         address(aToken).safeTransfer(lRecoverer, rAmtSkimmed);
     }
