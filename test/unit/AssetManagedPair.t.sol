@@ -428,13 +428,24 @@ contract AssetManagedPairTest is BaseTest {
         // act - make new managed balance exceed uint104.max
         _manager.adjustManagement(_pair, int256(INITIAL_MINT_AMOUNT), 0);
         _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max) + 5);
-        _pair.burn(address(this));
+        _pair.skimExcessManaged(_pair.token0());
 
         // assert
-        (uint104 lReserve0, , , ) = _pair.getReserves();
-        assertEq(lReserve0, type(uint104).max);
-        assertEq(_pair.token0Managed(), type(uint104).max);
         assertEq(_manager.getBalance(_pair, _pair.token0()), type(uint104).max);
         assertEq(_pair.token0().balanceOf(_recoverer), 5);
+    }
+
+    function testSkimExcessManaged_NoExcess() external allPairs {
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setManager(_manager);
+
+        // act
+        _manager.adjustManagement(_pair, int256(INITIAL_MINT_AMOUNT), 0);
+        _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max));
+        _pair.skimExcessManaged(_pair.token0());
+
+        // assert
+        assertEq(_pair.token0().balanceOf(_recoverer), 0);
     }
 }

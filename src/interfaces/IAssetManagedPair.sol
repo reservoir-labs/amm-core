@@ -20,4 +20,5 @@ interface IAssetManagedPair {
     function setManager(IAssetManager manager) external;
 
     function adjustManagement(int256 token0Change, int256 token1Change) external;
+    function skimExcessManaged(ERC20 aToken) external returns (uint256 rAmtSkimmed);
 }
