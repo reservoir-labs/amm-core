@@ -134,12 +134,37 @@ contract AaveIntegrationTest is BaseTest {
         rOtherPair.setManager(_manager);
     }
 
+    function testUpdatePoolAddress() external allNetworks allPairs {
+        // arrange
+        vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
+
+        // act
+        _manager.updatePoolAddress();
+        vm.clearMockedCalls();
+
+        // assert
+        IPool lNewPool = _manager.pool();
+        assertEq(address(lNewPool), address(1));
+    }
+
+    function testUpdatePoolAddress_NoChange() external allNetworks allPairs {
+        // arrange
+        IPool lOldPool = _manager.pool();
+
+        // act
+        _manager.updatePoolAddress();
+
+        // assert
+        IPool lNewPool = _manager.pool();
+        assertEq(address(lNewPool), address(lOldPool));
+    }
+
     function testUpdateDataProvider() external allNetworks allPairs {
         // arrange
         vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
 
         // act
-        _manager.updateDataProvider();
+        _manager.updateDataProviderAddress();
         vm.clearMockedCalls();
 
         // assert
@@ -152,7 +177,7 @@ contract AaveIntegrationTest is BaseTest {
         IAaveProtocolDataProvider lOldDataProvider = _manager.dataProvider();
 
         // act
-        _manager.updateDataProvider();
+        _manager.updateDataProviderAddress();
 
         // assert
         IAaveProtocolDataProvider lNewDataProvider = _manager.dataProvider();
