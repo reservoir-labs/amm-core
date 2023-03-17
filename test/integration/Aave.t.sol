@@ -5,6 +5,7 @@ import { Errors } from "test/integration/AaveErrors.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
+import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPoolConfigurator } from "src/interfaces/aave/IPoolConfigurator.sol";
@@ -17,6 +18,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 struct Network {
     string rpcUrl;
     address USDC;
+    uint256 blockNum;
 }
 
 struct Fork {
@@ -71,7 +73,7 @@ contract AaveIntegrationTest is BaseTest {
         Fork memory lFork = _forks[aNetwork.rpcUrl];
 
         if (lFork.created == false) {
-            uint256 lForkId = vm.createFork(aNetwork.rpcUrl);
+            uint256 lForkId = vm.createFork(aNetwork.rpcUrl, aNetwork.blockNum);
 
             lFork = Fork(true, lForkId);
             _forks[aNetwork.rpcUrl] = lFork;
@@ -116,8 +118,22 @@ contract AaveIntegrationTest is BaseTest {
     }
 
     function setUp() external {
-        _networks.push(Network(vm.rpcUrl("avalanche"), 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E));
-        _networks.push(Network(vm.rpcUrl("polygon"), 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174));
+        _networks.push(
+            Network(
+                getChain("avalanche").rpcUrl,
+                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,
+                // this block number is before AAVE froze the USDC market
+                27_221_985
+            )
+        );
+        _networks.push(
+            Network(
+                getChain("polygon").rpcUrl,
+                0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174,
+                // this block number is before AAVE froze the USDC market
+                40_139_386
+            )
+        );
 
         vm.makePersistent(address(_tokenA));
         vm.makePersistent(address(_tokenB));
@@ -131,6 +147,56 @@ contract AaveIntegrationTest is BaseTest {
         rOtherPair.mint(_alice);
         vm.prank(address(_factory));
         rOtherPair.setManager(_manager);
+    }
+
+    function testUpdatePoolAddress() external allNetworks allPairs {
+        // arrange
+        vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
+
+        // act
+        _manager.updatePoolAddress();
+        vm.clearMockedCalls();
+
+        // assert
+        IPool lNewPool = _manager.pool();
+        assertEq(address(lNewPool), address(1));
+    }
+
+    function testUpdatePoolAddress_NoChange() external allNetworks allPairs {
+        // arrange
+        IPool lOldPool = _manager.pool();
+
+        // act
+        _manager.updatePoolAddress();
+
+        // assert
+        IPool lNewPool = _manager.pool();
+        assertEq(address(lNewPool), address(lOldPool));
+    }
+
+    function testUpdateDataProvider() external allNetworks allPairs {
+        // arrange
+        vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
+
+        // act
+        _manager.updateDataProviderAddress();
+        vm.clearMockedCalls();
+
+        // assert
+        IAaveProtocolDataProvider lNewDataProvider = _manager.dataProvider();
+        assertEq(address(lNewDataProvider), address(1));
+    }
+
+    function testUpdateDataProvider_NoChange() external allNetworks allPairs {
+        // arrange
+        IAaveProtocolDataProvider lOldDataProvider = _manager.dataProvider();
+
+        // act
+        _manager.updateDataProviderAddress();
+
+        // assert
+        IAaveProtocolDataProvider lNewDataProvider = _manager.dataProvider();
+        assertEq(address(lNewDataProvider), address(lOldDataProvider));
     }
 
     function testAdjustManagement_NoMarket(uint256 aAmountToManage) public allNetworks allPairs {

@@ -33,8 +33,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev this contract itself is immutable and is the source of truth for all relevant addresses for aave
     IPoolAddressesProvider public immutable addressesProvider;
 
-    /// @dev this address will never change since it is a proxy and can be upgraded
-    IPool public immutable pool;
+    /// @dev we interact with this address for deposits and withdrawals
+    IPool public pool;
 
     /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
     IAaveProtocolDataProvider public dataProvider;
@@ -42,8 +42,20 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
         addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
-        pool = IPool(addressesProvider.getPool());
-        dataProvider = IAaveProtocolDataProvider(addressesProvider.getPoolDataProvider());
+        updatePoolAddress();
+        updateDataProviderAddress();
+    }
+
+    function updatePoolAddress() public onlyOwner {
+        address lNewPool = addressesProvider.getPool();
+        require(lNewPool != address(0), "AM: POOL_ADDRESS_ZERO");
+        pool = IPool(lNewPool);
+    }
+
+    function updateDataProviderAddress() public onlyOwner {
+        address lNewDataProvider = addressesProvider.getPoolDataProvider();
+        require(lNewDataProvider != address(0), "AM: DATA_PROVIDER_ADDRESS_ZERO");
+        dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
