@@ -135,9 +135,7 @@ contract StableMintBurn is StablePair {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(
-            aReserve0 * _token0PrecisionMultiplier(),
-            aReserve1 * _token1PrecisionMultiplier(),
-            2 * lastInvariantAmp
+            aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier(), 2 * lastInvariantAmp
         );
         if (lFeeOn) {
             uint256 lDLast = lastInvariant;
