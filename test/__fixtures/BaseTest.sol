@@ -1,18 +1,21 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
+import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { Create2Lib } from "src/libraries/Create2Lib.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
+import { OracleCaller } from "src/oracle/OracleCaller.sol";
+
+import { ReservoirDeployer } from "src/ReservoirDeployer.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
-import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-import { Create2Lib } from "src/libraries/Create2Lib.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
-import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
@@ -24,7 +27,8 @@ abstract contract BaseTest is Test {
     uint256 public constant DEFAULT_AMP_COEFF = 1000;
     uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
 
-    GenericFactory internal _factory = _create2Factory();
+    ReservoirDeployer internal _deployer = _ensureDeployerExists();
+    GenericFactory internal _factory;
 
     address internal _recoverer = _makeAddress("recoverer");
     address internal _platformFeeTo = _makeAddress("platformFeeTo");
@@ -41,7 +45,7 @@ abstract contract BaseTest is Test {
     ConstantProductPair internal _constantProductPair;
     StablePair internal _stablePair;
 
-    OracleCaller internal _oracleCaller = new OracleCaller();
+    OracleCaller internal _oracleCaller;
 
     constructor() {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
@@ -57,47 +61,46 @@ abstract contract BaseTest is Test {
                 vm.toString(Create2Lib.computeAddress(address(_factory), type(StableMintBurn).creationCode, 0))
             );
         }
-        // set shared variables
-        _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
-        _factory.write("Shared::platformFeeTo", _platformFeeTo);
-        _factory.write("Shared::defaultRecoverer", _recoverer);
-        _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
 
-        // add constant product curve
-        _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
+        // Execute standard & deterministic Reservoir deployment.
+        _factory = _deployer.deployFactory(type(GenericFactory).creationCode);
+        _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
+        _deployer.deployStable(type(StablePair).creationCode);
+        _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
 
-        // add stable curve
-        _factory.addCurve(type(StablePair).creationCode);
-        _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
-        _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
-        _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
+        // Claim ownership of all contracts for our test contract.
+        vm.prank(address(123));
+        _deployer.proposeOwner(address(this));
+        _deployer.claimOwnership();
+        _deployer.claimFactory();
+        _deployer.claimOracleCaller();
 
-        // set oracle caller
-        _factory.write("Shared::oracleCaller", address(_oracleCaller));
+        // Whitelist our test contract to call the oracle.
         _oracleCaller.whitelistAddress(address(this), true);
 
-        // initial mint
+        // Setup default ConstantProductPair.
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
         _tokenA.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
         _constantProductPair.mint(_alice);
 
+        // Setup default StablePair.
         _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
         _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
     }
 
-    function _create2Factory() internal returns (GenericFactory rFactory) {
-        bytes memory lInitCode = abi.encodePacked(type(GenericFactory).creationCode, abi.encode(address(this)));
-        address lFactory = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
+    function _ensureDeployerExists() internal returns (ReservoirDeployer rDeployer) {
+        bytes memory lInitCode = abi.encodePacked(type(ReservoirDeployer).creationCode);
 
-        if (lFactory.code.length == 0) {
-            rFactory = new GenericFactory{salt: bytes32(0)}(address(this));
-            require(address(rFactory) != address(0), "DEPLOY FACTORY FAILED");
+        address lDeployer = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
+        if (lDeployer.code.length == 0) {
+            rDeployer = new ReservoirDeployer{salt: bytes32(0)}();
+
+            require(address(rDeployer) != address(0), "DEPLOY FACTORY FAILED");
         } else {
-            rFactory = GenericFactory(lFactory);
+            rDeployer = ReservoirDeployer(lDeployer);
         }
     }
 
