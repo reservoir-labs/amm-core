@@ -7,7 +7,6 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 import { ReservoirDeployer } from "src/ReservoirDeployer.sol";
@@ -50,15 +49,15 @@ abstract contract BaseTest is Test {
     constructor() {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
-                vm.writeFile(
-                    "scripts/unoptimized-stable-mint-burn-address",
-                    vm.toString(Create2Lib.computeAddress(address(_factory), type(StableMintBurn).creationCode, 0))
+                vm.writeJson(
+                    _deployerMetadata(),
+                    "scripts/unoptimized-deployer-meta"
                 );
             }
         } catch {
-            vm.writeFile(
-                "scripts/optimized-stable-mint-burn-address",
-                vm.toString(Create2Lib.computeAddress(address(_factory), type(StableMintBurn).creationCode, 0))
+            vm.writeJson(
+                _deployerMetadata(),
+                "scripts/optimized-deployer-meta"
             );
         }
 
@@ -89,6 +88,15 @@ abstract contract BaseTest is Test {
         _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
+    }
+
+    function _deployerMetadata() private returns (string memory rDeployerMetadata) {
+        string memory lObjectKey = "qwerty";
+
+        vm.serializeBytes32(lObjectKey, "factory_hash", keccak256(type(GenericFactory).creationCode));
+        vm.serializeBytes32(lObjectKey, "constant_product_hash", keccak256(type(ConstantProductPair).creationCode));
+        vm.serializeBytes32(lObjectKey, "stable_hash", keccak256(type(StablePair).creationCode));
+        rDeployerMetadata = vm.serializeBytes32(lObjectKey, "oracle_caller_hash", keccak256(type(OracleCaller).creationCode));
     }
 
     function _ensureDeployerExists() internal returns (ReservoirDeployer rDeployer) {
