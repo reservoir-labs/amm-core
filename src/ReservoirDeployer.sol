@@ -28,10 +28,10 @@ contract ReservoirDeployer {
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant factory_hash = bytes32(0x67de66ba417a88060e4b7b0cde0d56b01973a4b9f0066385ba661c58d2d6ca50);
+    bytes32 public constant factory_hash = bytes32(0x9f1cc554aa194d48ae1fe96a6f5ea41fbabfaa04128fd91f6ec1f290f8756324);
     bytes32 public constant constant_product_hash =
-        bytes32(0x043551969376243d49aff4ce627e029219c6d90e16c780a7d2ef4f72b6fcf236);
-    bytes32 public constant stable_hash = bytes32(0x3239f5ad44712803a6036e7a99f6fdfb9f98f22d8e39ebff8de3c1996ab5dfec);
+        bytes32(0xc3c98a193686624a579c5c3324bf9aff1fc419aaa1c47076b76fd381b90d27cb);
+    bytes32 public constant stable_hash = bytes32(0x133955ed8f42488ffb022fe8aa4882b1a2e05daca08c7affb2be519551dc07ef);
     bytes32 public constant oracle_caller_hash =
         bytes32(0x262458524d9c8928fe7fd7661236b93f6d6a9535182f48fd582a75f18bfbf85f);
 
@@ -69,8 +69,7 @@ contract ReservoirDeployer {
         // Set global parameters.
         factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         factory.write("Shared::platformFeeTo", address(this));
-        // TODO: Is it okay to not set defaultRecoverer?
-        // factory.write("Shared::defaultRecoverer", _recoverer);
+        factory.write("Shared::recoverer", msg.sender);
         factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
 
         // Step complete.
@@ -104,7 +103,6 @@ contract ReservoirDeployer {
         step += 1;
     }
 
-    // TODO: Do we want to deploy an oracleCaller as part of standard deployment?
     function deployOracleCaller(bytes memory aOracleCallerBytecode) external returns (OracleCaller) {
         require(step == 3, "OC_STEP: OUT_OF_ORDER");
         require(keccak256(aOracleCallerBytecode) == oracle_caller_hash);

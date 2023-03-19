@@ -55,8 +55,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
-    // TODO: Rename from defaultRecoverer given its always read on recovery?
-    string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
+    string private constant RECOVERER_NAME = "Shared::recoverer";
     bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
