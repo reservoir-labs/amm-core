@@ -91,7 +91,7 @@ contract ReservoirDeployer {
     }
 
     function deployStable(bytes memory aStableBytecode) external {
-        require(step == 2, "CP_STEP: OUT_OF_ORDER");
+        require(step == 2, "SP_STEP: OUT_OF_ORDER");
         require(keccak256(aStableBytecode) == stable_hash);
 
         // Add curve & curve specific parameters.
