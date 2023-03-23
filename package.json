@@ -30,7 +30,7 @@
     "build:balancer": "cd reference/balancer-v2-monorepo/pkg/solidity-utils && yarn build",
     "ci": "forge build --force && npm run lint:check && npm run test:unit && npm run gas:check && npm run slither:check",
     "clean": "forge clean",
-    "coverage": "export FOUNDRY_PROFILE=coverage && ./scripts/coverage_patch_deployer.sh && forge coverage",
+    "coverage": "export FOUNDRY_PROFILE=coverage && ./scripts/coverage_patch_deployer.sh && forge coverage --report lcov",
     "eslint": "npm run eslint:check",
     "eslint:check": "eslint scripts",
     "eslint:fix": "eslint scripts --fix",

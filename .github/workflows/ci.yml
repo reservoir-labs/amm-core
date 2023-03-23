@@ -115,9 +115,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-      - run: ./scripts/patch_mint_burn_key.sh && forge coverage --report lcov
-        env:
-          FOUNDRY_PROFILE: coverage
+      - run: npm run coverage
       - run: sudo apt install -y lcov
       - run: lcov -r lcov.info "src/libraries/*" -o lcov.info
       - run: lcov -r lcov.info "test/*" -o lcov.info
