@@ -29,8 +29,8 @@ abstract contract BaseTest is Test {
     ReservoirDeployer internal _deployer = _ensureDeployerExists();
     GenericFactory internal _factory;
 
-    address internal _recoverer = _makeAddress("recoverer");
-    address internal _platformFeeTo = _makeAddress("platformFeeTo");
+    address internal _recoverer = address(_deployer);
+    address internal _platformFeeTo = address(_deployer);
     address internal _alice = _makeAddress("alice");
     address internal _bob = _makeAddress("bob");
     address internal _cal = _makeAddress("cal");
@@ -66,6 +66,7 @@ abstract contract BaseTest is Test {
         _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
         _deployer.deployStable(type(StablePair).creationCode);
         _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
+
 
         // Claim ownership of all contracts for our test contract.
         vm.prank(address(123));
