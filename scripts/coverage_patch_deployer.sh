@@ -10,8 +10,6 @@ UNOPTIMIZED_ORACLE_CALLER_HASH=$(cat scripts/unoptimized-deployer-meta | jq -r '
 OPTIMIZED_FACTORY_HASH=$(cat scripts/optimized-deployer-meta | jq -r '.factory_hash')
 UNOPTIMIZED_FACTORY_HASH=$(cat scripts/unoptimized-deployer-meta | jq -r '.factory_hash')
 
-echo $OPTIMIZED_FACTORY_HASH
-
 if [ "$FOUNDRY_PROFILE" == "coverage" ]
 then
     echo "Running with coverage profile, patching ReservoirDeployer"
