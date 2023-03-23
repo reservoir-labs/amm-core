@@ -11,6 +11,7 @@ fs_permissions = [
     { access = "write", path = "./scripts/optimized-deployer-meta" },
     { access = "write", path = "./scripts/unoptimized-deployer-meta" },
 ]
+ignored_error_codes=[]
 
 [profile.integration]
 match_path = "test/integration/*.sol"
