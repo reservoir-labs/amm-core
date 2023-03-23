@@ -116,6 +116,8 @@ jobs:
         with:
           version: nightly
       - run: npm run coverage
+        env:
+          FOUNDRY_PROFILE: coverage
       - run: sudo apt install -y lcov
       - run: lcov -r lcov.info "src/libraries/*" -o lcov.info
       - run: lcov -r lcov.info "test/*" -o lcov.info
