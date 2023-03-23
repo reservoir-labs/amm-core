@@ -28,10 +28,10 @@ contract ReservoirDeployer {
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant factory_hash = bytes32(0x9f1cc554aa194d48ae1fe96a6f5ea41fbabfaa04128fd91f6ec1f290f8756324);
+    bytes32 public constant factory_hash = bytes32(0x4bdb9772855466b584d12b105b59885919142d611e2181b19746f114f1e09793);
     bytes32 public constant constant_product_hash =
-        bytes32(0xc3c98a193686624a579c5c3324bf9aff1fc419aaa1c47076b76fd381b90d27cb);
-    bytes32 public constant stable_hash = bytes32(0x133955ed8f42488ffb022fe8aa4882b1a2e05daca08c7affb2be519551dc07ef);
+        bytes32(0x3cfb11376eb389483a55d436723ce1137058d3e6f36b248e57ff59cc1e859f0a);
+    bytes32 public constant stable_hash = bytes32(0x24d92a14502ae039e0e8ca084d31b521849f8158b4303c4bb357ee90a6e9494e);
     bytes32 public constant oracle_caller_hash =
         bytes32(0x262458524d9c8928fe7fd7661236b93f6d6a9535182f48fd582a75f18bfbf85f);
 
@@ -69,7 +69,7 @@ contract ReservoirDeployer {
         // Set global parameters.
         factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
         factory.write("Shared::platformFeeTo", address(this));
-        factory.write("Shared::recoverer", msg.sender);
+        factory.write("Shared::recoverer", address(this));
         factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
 
         // Step complete.
