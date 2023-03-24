@@ -43,6 +43,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
+    using SafeTransferLib for address;
 
     event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
     event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
@@ -275,7 +276,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
 
-        _safeTransfer(aToken, _recoverer, _amountToRecover);
+        address(aToken).safeTransfer(_recoverer, _amountToRecover);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -417,14 +418,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
             token0Managed += lDelta;
-            SafeTransferLib.safeTransfer(address(_token0()), msg.sender, lDelta);
+            address(_token0()).safeTransfer(msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            SafeTransferLib.safeTransferFrom(address(_token0()), msg.sender, address(this), lDelta);
+            address(_token0()).safeTransferFrom(msg.sender, address(this), lDelta);
         }
 
         if (aToken1Change > 0) {
@@ -433,14 +434,28 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            SafeTransferLib.safeTransfer(address(_token1()), msg.sender, lDelta);
+            address(_token1()).safeTransfer(msg.sender, lDelta);
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            SafeTransferLib.safeTransferFrom(address(_token1()), msg.sender, address(this), lDelta);
+            address(_token1()).safeTransferFrom(msg.sender, address(this), lDelta);
+        }
+    }
+
+    function skimExcessManaged(ERC20 aToken) external returns (uint256 rAmtSkimmed) {
+        require(aToken == _token0() || aToken == _token1(), "RP: INVALID_SKIM_TOKEN");
+        uint256 lTokenAmtManaged = assetManager.getBalance(this, aToken);
+
+        if (lTokenAmtManaged > type(uint104).max) {
+            address lRecoverer = factory.read(RECOVERER_NAME).toAddress();
+
+            rAmtSkimmed = lTokenAmtManaged - type(uint104).max;
+
+            assetManager.returnAsset(aToken == _token0(), rAmtSkimmed);
+            address(aToken).safeTransfer(lRecoverer, rAmtSkimmed);
         }
     }
 
