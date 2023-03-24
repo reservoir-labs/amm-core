@@ -430,7 +430,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         // act - make new managed balance exceed uint104.max
-        _manager.adjustManagement(_pair, int256(INITIAL_MINT_AMOUNT), 0);
+        _manager.adjustManagement(_pair, int256(ConstantsLib.INITIAL_MINT_AMOUNT), 0);
         _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max) + 5);
         _pair.skimExcessManaged(_pair.token0());
 
@@ -445,7 +445,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         // act
-        _manager.adjustManagement(_pair, int256(INITIAL_MINT_AMOUNT), 0);
+        _manager.adjustManagement(_pair, int256(ConstantsLib.INITIAL_MINT_AMOUNT), 0);
         _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max));
         _pair.skimExcessManaged(_pair.token0());
 

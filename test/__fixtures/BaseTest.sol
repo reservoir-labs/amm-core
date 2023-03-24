@@ -7,6 +7,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 import { ReservoirDeployer } from "src/ReservoirDeployer.sol";
@@ -19,7 +20,8 @@ import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
 
-    GenericFactory internal _factory = _create2Factory();
+    ReservoirDeployer internal _deployer = _ensureDeployerExists();
+    GenericFactory internal _factory;
 
     address internal _recoverer = address(_deployer);
     address internal _platformFeeTo = address(_deployer);
