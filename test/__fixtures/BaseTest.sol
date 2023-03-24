@@ -43,16 +43,10 @@ abstract contract BaseTest is Test {
     constructor() {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
-                vm.writeJson(
-                    _deployerMetadata(),
-                    "scripts/unoptimized-deployer-meta"
-                );
+                vm.writeJson(_deployerMetadata(), "scripts/unoptimized-deployer-meta");
             }
         } catch {
-            vm.writeJson(
-                _deployerMetadata(),
-                "scripts/optimized-deployer-meta"
-            );
+            vm.writeJson(_deployerMetadata(), "scripts/optimized-deployer-meta");
         }
 
         // Execute standard & deterministic Reservoir deployment.
@@ -60,7 +54,6 @@ abstract contract BaseTest is Test {
         _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
         _deployer.deployStable(type(StablePair).creationCode);
         _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
-
 
         // Claim ownership of all contracts for our test contract.
         vm.prank(address(123));
@@ -91,7 +84,8 @@ abstract contract BaseTest is Test {
         vm.serializeBytes32(lObjectKey, "factory_hash", keccak256(type(GenericFactory).creationCode));
         vm.serializeBytes32(lObjectKey, "constant_product_hash", keccak256(type(ConstantProductPair).creationCode));
         vm.serializeBytes32(lObjectKey, "stable_hash", keccak256(type(StablePair).creationCode));
-        rDeployerMetadata = vm.serializeBytes32(lObjectKey, "oracle_caller_hash", keccak256(type(OracleCaller).creationCode));
+        rDeployerMetadata =
+            vm.serializeBytes32(lObjectKey, "oracle_caller_hash", keccak256(type(OracleCaller).creationCode));
     }
 
     function _ensureDeployerExists() internal returns (ReservoirDeployer rDeployer) {
