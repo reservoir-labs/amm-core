@@ -12,7 +12,6 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 

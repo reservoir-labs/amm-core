@@ -80,15 +80,10 @@ contract AaveIntegrationTest is BaseTest {
         }
         vm.selectFork(lFork.forkId);
 
-        _factory = _create2Factory();
-        _factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
-        _factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
-        _factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
-        _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.addCurve(type(StablePair).creationCode);
-        _factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
-        _factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
-        _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
+        _deployer = _ensureDeployerExists();
+        _factory = _deployer.deployFactory(type(GenericFactory).creationCode);
+        _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
+        _deployer.deployStable(type(StablePair).creationCode);
 
         _manager = new AaveManager(AAVE_POOL_ADDRESS_PROVIDER);
         USDC = ERC20(aNetwork.USDC);

@@ -8,9 +8,10 @@ remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
 match_path = "test/unit/*.sol"
 verbosity = 3
 fs_permissions = [
-    { access = "write", path = "./scripts/optimized-stable-mint-burn-address" },
-    { access = "write", path = "./scripts/unoptimized-stable-mint-burn-address" },
+    { access = "write", path = "./scripts/optimized-deployer-meta" },
+    { access = "write", path = "./scripts/unoptimized-deployer-meta" },
 ]
+ignored_error_codes = []
 
 [profile.integration]
 match_path = "test/integration/*.sol"

@@ -5,7 +5,7 @@ import "test/__fixtures/BaseTest.sol";
 
 contract GenericFactoryGasTest is BaseTest {
     function testCreateFactory() external {
-        new GenericFactory(address(this));
+        new GenericFactory();
     }
 
     function testCreateConstantProductPair() external {

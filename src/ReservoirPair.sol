@@ -56,7 +56,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
-    string private constant RECOVERER_NAME = "Shared::defaultRecoverer";
+    string private constant RECOVERER_NAME = "Shared::recoverer";
     bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
@@ -272,10 +272,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     function recoverToken(address aToken) external {
-        address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         require(aToken != address(_token0()) && aToken != address(_token1()), "P: INVALID_TOKEN_TO_RECOVER");
-        require(_recoverer != address(0), "P: RECOVERER_ZERO_ADDRESS");
-
+        address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
 
         address(aToken).safeTransfer(_recoverer, _amountToRecover);
