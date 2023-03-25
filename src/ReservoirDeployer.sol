@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -14,14 +15,6 @@ import { GenericFactory } from "src/GenericFactory.sol";
 
 contract ReservoirDeployer {
     using FactoryStoreLib for GenericFactory;
-
-    // Default configuration.
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
-    uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
-    uint256 public constant DEFAULT_AMP_COEFF = 1000;
-    uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
 
     // Steps.
     uint256 public constant TERMINAL_STEP = 4;
@@ -67,10 +60,10 @@ contract ReservoirDeployer {
         factory = GenericFactory(lFactoryAddress);
 
         // Set global parameters.
-        factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
+        factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
         factory.write("Shared::platformFeeTo", address(this));
         factory.write("Shared::recoverer", address(this));
-        factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
+        factory.write("Shared::maxChangeRate", ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
 
         // Step complete.
         step += 1;
@@ -84,7 +77,7 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aConstantProductBytecode);
-        factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
+        factory.write("CP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_CP);
 
         // Step complete.
         step += 1;
@@ -96,8 +89,8 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aStableBytecode);
-        factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
-        factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+        factory.write("SP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_SP);
+        factory.write("SP::amplificationCoefficient", ConstantsLib.DEFAULT_AMP_COEFF);
 
         // Step complete.
         step += 1;
