@@ -391,6 +391,18 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.totalShares(lAaveToken), 0);
     }
 
+    function testAdjustManagement_WindDown() external allNetworks allPairs {
+        // arrange
+        _increaseManagementOneToken(300e6);
+        _manager.setWindDownMode(true);
+
+        // act
+        _manager.adjustManagement(_pair, 300e6, 0);
+
+        // assert
+        assertEq(_manager.getBalance(_pair, USDC), 300e6);
+    }
+
     function testGetBalance(uint256 aAmountToManage) public allNetworks allPairs {
         // assume
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
@@ -658,6 +670,33 @@ contract AaveIntegrationTest is BaseTest {
         vm.prank(_alice);
         vm.expectRevert();
         _manager.afterLiquidityEvent();
+    }
+
+    function testAfterLiquidityEvent_WindDown() external allNetworks allPairs {
+        // arrange
+        _pair.burn(address(this));
+        assertGt(_pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed(), 0);
+        uint256 lAmtManaged = _manager.getBalance(_pair, USDC);
+
+        // act
+        _manager.setWindDownMode(true);
+
+        // assert - burn should still succeed
+        _pair.burn(address(this));
+        // this call to increase management should have no effect
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? int256(100e6) : int256(0),
+            _pair.token1() == USDC ? int256(100e6) : int256(0)
+        );
+        assertEq(_manager.getBalance(_pair, USDC), lAmtManaged);
+        // a call to decrease management should have an effect
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? -int256(lAmtManaged) : int256(0),
+            _pair.token1() == USDC ? -int256(lAmtManaged) : int256(0)
+        );
+        assertEq(_manager.getBalance(_pair, USDC), 0);
     }
 
     function testSwap_ReturnAsset() public allNetworks allPairs {
