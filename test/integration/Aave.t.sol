@@ -194,6 +194,17 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(lNewDataProvider), address(lOldDataProvider));
     }
 
+    function testSetWindDownMode() external allNetworks allPairs {
+        // sanity
+        assertEq(_manager.windDownMode(), false);
+
+        // act
+        _manager.setWindDownMode(true);
+
+        // assert
+        assertEq(_manager.windDownMode(), true);
+    }
+
     function testAdjustManagement_NoMarket(uint256 aAmountToManage) public allNetworks allPairs {
         // assume - we want negative numbers too
         int256 lAmountToManage = int256(bound(aAmountToManage, 0, type(uint256).max));
