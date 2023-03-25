@@ -25,7 +25,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev for each aToken, tracks the total number of shares issued
     mapping(ERC20 => uint256) public totalShares;
 
-    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) on behalf of the asset manager
+    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
+    /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
     address public rewardSeller;
 
     /// @dev percentage of the pool's assets, above and below which
@@ -157,10 +158,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         lowerThreshold = aLowerThreshold;
     }
 
-    function claimRewardForMarket() external {
-        require(msg.sender == rewardSeller, "AM: NOT_REWARD_SELLER");
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                 CALLBACKS FROM PAIR
     //////////////////////////////////////////////////////////////////////////*/
@@ -198,6 +195,15 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
             assert(rAmountChange < 0);
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ADDITIONAL REWARDS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function claimRewardForMarket(address aMarket, address aReward) external {
+        require(msg.sender == rewardSeller, "AM: NOT_REWARD_SELLER");
+
     }
 
     /*//////////////////////////////////////////////////////////////////////////
