@@ -18,7 +18,7 @@ contract GenericFactory is IGenericFactory, Owned {
 
     constructor() Owned(msg.sender) {
         StableMintBurn lStableMintBurn = new StableMintBurn{salt: bytes32(0)}();
-        require(address(lStableMintBurn) != address(0), "FACTORY: STABLE_MINT_BURN_DEPLOY_FAILED");
+        require(address(lStableMintBurn) != address(0), "FACTORY: STABLE_MINT_BURN_FAILED");
 
         set(keccak256(abi.encodePacked("SP::StableMintBurn")), address(lStableMintBurn).toBytes32());
 
