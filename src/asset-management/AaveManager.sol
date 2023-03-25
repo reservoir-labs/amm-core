@@ -25,6 +25,9 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev for each aToken, tracks the total number of shares issued
     mapping(ERC20 => uint256) public totalShares;
 
+    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) on behalf of the asset manager
+    address public rewardSeller;
+
     /// @dev percentage of the pool's assets, above and below which
     /// the manager will divest the shortfall and invest the excess
     uint256 public upperThreshold = 70;
@@ -152,6 +155,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
         require(aLowerThreshold <= 100 && aLowerThreshold < upperThreshold, "AM: INVALID_THRESHOLD");
         lowerThreshold = aLowerThreshold;
+    }
+
+    function claimRewardForMarket() external {
+        require(msg.sender == rewardSeller, "AM: NOT_REWARD_SELLER");
     }
 
     /*//////////////////////////////////////////////////////////////////////////
