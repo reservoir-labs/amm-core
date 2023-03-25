@@ -1,25 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { stdMath } from "forge-std/Test.sol";
-import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
-
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
-import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
-import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
-import { LogCompression } from "src/libraries/LogCompression.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
-import { ERC20 } from "src/ReservoirERC20.sol";
-import { ReservoirPair, Slot0, Observation } from "src/ReservoirPair.sol";
-import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
+import { StablePair, ERC20 } from "src/curve/stable/StablePair.sol";
 
 contract StableMintBurn is StablePair {
     using FactoryStoreLib for GenericFactory;
     using Bytes32Lib for bytes32;
-    using SafeCast for uint256;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
