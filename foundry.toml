@@ -9,8 +9,7 @@ match_path = "test/unit/*.sol"
 verbosity = 3
 fs_permissions = [
     { access = "write", path = "./scripts/optimized-deployer-meta" },
-    { access = "write", path = "./scripts/unoptimized-deployer-meta" },
-    { access = "read", path = "./out/GenericFactory.sol/GenericFactory.json" }
+    { access = "write", path = "./scripts/unoptimized-deployer-meta" }
 ]
 ignored_error_codes = []
 
@@ -32,3 +31,6 @@ bracket_spacing   = true
 wrap_comments     = false
 number_underscore = "thousands"
 int_types         = "long"
+
+[profile.script]
+optimizer_runs = 1_000_000

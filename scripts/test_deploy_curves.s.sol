@@ -6,7 +6,6 @@ import "scripts/BaseScript.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
-import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
@@ -20,6 +19,7 @@ contract VaultScript is BaseScript {
     address internal _recoverer = _makeAddress("recoverer");
     address internal _platformFeeTo = _makeAddress("platformFeeTo");
 
+    GenericFactory internal _factory;
     OracleCaller private _oracleCaller;
 
     uint256 private _privateKey = vm.envUint("TEST_PRIVATE_KEY");
@@ -33,7 +33,7 @@ contract VaultScript is BaseScript {
     }
 
     function run() external {
-        _setup(_privateKey);
+        _ensureDeployerExists(_privateKey);
         _deployInfra();
         _deployCore();
     }
@@ -48,26 +48,20 @@ contract VaultScript is BaseScript {
     function _deployCore() internal {
         vm.startBroadcast(_privateKey);
 
-        // set shared variables
-        _factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
-        _factory.write("Shared::platformFeeTo", _platformFeeTo);
-        _factory.write("Shared::defaultRecoverer", _recoverer);
-        _factory.write("Shared::maxChangeRate", ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
+        _factory = _deployer.deployFactory(type(GenericFactory).creationCode);
+        _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
+        _deployer.deployStable(type(StablePair).creationCode);
+        _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
 
-        // add constant product curve
-        _factory.addCurve(type(ConstantProductPair).creationCode);
-        _factory.write("CP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_CP);
+        // Claim ownership of all contracts for our test contract.
+        vm.prank(address(123));
+        _deployer.proposeOwner(address(this));
+        _deployer.claimOwnership();
+        _deployer.claimFactory();
+        _deployer.claimOracleCaller();
 
-        // add stable curve
-        _factory.addCurve(type(StablePair).creationCode);
-        _factory.write("SP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_SP);
-        _factory.write("SP::amplificationCoefficient", ConstantsLib.DEFAULT_AMP_COEFF);
-        _factory.write("SP::StableMintBurn", ConstantsLib.MINT_BURN_ADDRESS);
-
-        // set oracle caller
-        _oracleCaller = new OracleCaller();
-        _factory.write("Shared::oracleCaller", address(_oracleCaller));
-        _oracleCaller.whitelistAddress(_wallet, true);
+        // Whitelist our test contract to call the oracle.
+        _oracleCaller.whitelistAddress(address(this), true);
 
         _factory.createPair(address(_usdt), address(_usdc), 0);
         _factory.createPair(address(_usdt), address(_usdc), 1);
