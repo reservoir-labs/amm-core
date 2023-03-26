@@ -12,6 +12,7 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
+import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
@@ -24,10 +25,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     /// @dev for each aToken, tracks the total number of shares issued
     mapping(ERC20 => uint256) public totalShares;
-
-    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
-    /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
-    address public rewardSeller;
 
     /// @dev percentage of the pool's assets, above and below which
     /// the manager will divest the shortfall and invest the excess
@@ -42,6 +39,12 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
     IAaveProtocolDataProvider public dataProvider;
+
+    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
+    /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
+    address public rewardSeller;
+
+    IRewardsController public rewardsController;
 
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
@@ -60,6 +63,16 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         address lNewDataProvider = addressesProvider.getPoolDataProvider();
         require(lNewDataProvider != address(0), "AM: DATA_PROVIDER_ADDRESS_ZERO");
         dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
+    }
+
+    function setRewardSeller(address aRewardSeller) external onlyOwner {
+        require(aRewardSeller != address(0), "AM: REWARD_SELLER_ADDRESS_ZERO");
+        rewardSeller = aRewardSeller;
+    }
+
+    function setRewardsController(address aRewardsController) external onlyOwner {
+        require(aRewardsController != address(0), "AM: REWARDS_CONTROLLER_ZERO");
+        rewardsController = IRewardsController(aRewardsController);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -201,9 +214,15 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
                                 ADDITIONAL REWARDS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function claimRewardForMarket(address aMarket, address aReward) external {
+    function claimRewardForMarket(address aMarket, address aReward) external returns (uint256 rClaimed) {
         require(msg.sender == rewardSeller, "AM: NOT_REWARD_SELLER");
+        require(aReward != address(0), "AM: REWARD_TOKEN_ZERO");
+        require(aMarket != address(0), "AM: MARKET_ZERO");
 
+        address[] memory lMarkets = new address[](1);
+        lMarkets[0] = aMarket;
+
+        rClaimed = rewardsController.claimRewards(lMarkets, type(uint256).max, rewardSeller, aReward);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

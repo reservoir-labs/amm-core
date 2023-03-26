@@ -9,6 +9,7 @@ import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPoolConfigurator } from "src/interfaces/aave/IPoolConfigurator.sol";
+import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
@@ -28,6 +29,10 @@ struct Fork {
 
 contract AaveIntegrationTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
+
+    event RewardsClaimed(
+        address indexed user, address indexed reward, address indexed to, address claimer, uint256 amount
+    );
 
     // this amount is tailored to USDC as it only has 6 decimal places
     // using the usual 100e18 would be too large and would break AAVE
@@ -825,5 +830,32 @@ contract AaveIntegrationTest is BaseTest {
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
         _manager.setLowerThreshold(lThreshold);
+    }
+
+    function testClaimReward() external allNetworks allPairs {
+        // arrange
+        // this test is only applicable on AVAX as USDC does not have additional rewards on polygon
+        if (vm.activeFork() != 0) return;
+        _increaseManagementOneToken(500e6);
+        _manager.setRewardSeller(address(this));
+        _manager.setRewardsController(address(0x929EC64c34a17401F460460D4B9390518E5B473e));
+        (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        address lWavax = address(0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7);
+        address[] memory lMarkets = new address[](1);
+        lMarkets[0] = lUSDCMarket;
+
+        // act - step time to accumulate some rewards
+        _stepTime(5000);
+        vm.expectEmit(true, true, true, false);
+        emit RewardsClaimed(address(_manager), lWavax, address(this), address(_manager), 0);
+        vm.expectCall(
+            address(_manager.rewardsController()),
+            abi.encodeCall(IRewardsController.claimRewards, (lMarkets, type(uint256).max, address(this), lWavax))
+        );
+        uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
+
+        // assert
+        assertEq(ERC20(lWavax).balanceOf(address(this)), lClaimed);
+        assertGt(lClaimed, 0);
     }
 }
