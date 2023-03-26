@@ -35,7 +35,7 @@ contract OracleWriterTest is BaseTest {
         uint256 lIndex = bound(aIndex, 0, type(uint16).max);
 
         // act & assert
-        vm.expectRevert("OW: NOT_ORACLE_CALLER");
+        vm.expectRevert("RP: NOT_ORACLE_CALLER");
         _pair.observation(lIndex);
     }
 
@@ -107,7 +107,7 @@ contract OracleWriterTest is BaseTest {
     function testSetMaxChangeRate_TooLow() external allPairs {
         // act & assert
         vm.prank(address(_factory));
-        vm.expectRevert("OW: INVALID_CHANGE_PER_SECOND");
+        vm.expectRevert("RP: INVALID_CHANGE_PER_SECOND");
         _pair.setMaxChangeRate(0);
     }
 
@@ -117,7 +117,7 @@ contract OracleWriterTest is BaseTest {
 
         // act & assert
         vm.prank(address(_factory));
-        vm.expectRevert("OW: INVALID_CHANGE_PER_SECOND");
+        vm.expectRevert("RP: INVALID_CHANGE_PER_SECOND");
         _pair.setMaxChangeRate(lMaxChangeRate);
     }
 

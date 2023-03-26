@@ -53,7 +53,7 @@ contract AssetManagedPairTest is BaseTest {
 
         // act & assert
         vm.prank(address(_factory));
-        vm.expectRevert("AMP: AM_STILL_ACTIVE");
+        vm.expectRevert("RP: AM_STILL_ACTIVE");
         _pair.setManager(AssetManager(address(0)));
     }
 
