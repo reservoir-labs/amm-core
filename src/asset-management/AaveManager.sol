@@ -44,6 +44,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
     address public rewardSeller;
 
+    /// @dev contract that manages additional rewards on top of interest bearing aave tokens
+    /// also known as the incentives contract
     IRewardsController public rewardsController;
 
     constructor(address aPoolAddressesProvider) {
