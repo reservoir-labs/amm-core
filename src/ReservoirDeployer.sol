@@ -128,9 +128,9 @@ contract ReservoirDeployer {
     uint256 public constant GUARDIAN_THRESHOLD = 2;
 
     // TODO: Set these addresses.
-    address public constant guardian1 = address(123);
-    address public constant guardian2 = address(123);
-    address public constant guardian3 = address(123);
+    address public constant guardian1 = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
+    address public constant guardian2 = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
+    address public constant guardian3 = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
 
     mapping(address => mapping(address => uint256)) proposals;
 

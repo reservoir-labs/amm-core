@@ -57,8 +57,8 @@ contract VaultScript is BaseScript {
         _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
 
         // Claim ownership of all contracts for our test contract.
-        vm.prank(address(123));
-        _deployer.proposeOwner(address(this));
+        // vm.prank(address(123));
+        _deployer.proposeOwner(msg.sender);
         _deployer.claimOwnership();
         _deployer.claimFactory();
         _deployer.claimOracleCaller();
