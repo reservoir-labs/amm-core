@@ -5,11 +5,11 @@ import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
+import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 import { StablePair, ERC20 } from "src/curve/stable/StablePair.sol";
 
 contract StableMintBurn is StablePair {
-    using FactoryStoreLib for GenericFactory;
+    using FactoryStoreLib for IGenericFactory;
     using Bytes32Lib for bytes32;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";

@@ -5,11 +5,11 @@ import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
@@ -27,7 +27,7 @@ struct AmplificationData {
 }
 
 contract StablePair is ReservoirPair {
-    using FactoryStoreLib for GenericFactory;
+    using FactoryStoreLib for IGenericFactory;
     using Bytes32Lib for bytes32;
 
     // solhint-disable-next-line var-name-mixedcase

@@ -3,12 +3,15 @@ pragma solidity ^0.8.0;
 
 import "scripts/BaseScript.sol";
 
+import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
+
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantsLib } from "src/libraries/Constants.sol";
+
+import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
-import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 contract VaultScript is BaseScript {
     using FactoryStoreLib for GenericFactory;
