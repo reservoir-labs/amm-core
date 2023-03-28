@@ -200,6 +200,17 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(lNewDataProvider), address(lOldDataProvider));
     }
 
+    function testSetWindDownMode() external allNetworks allPairs {
+        // sanity
+        assertEq(_manager.windDownMode(), false);
+
+        // act
+        _manager.setWindDownMode(true);
+
+        // assert
+        assertEq(_manager.windDownMode(), true);
+    }
+
     function testAdjustManagement_NoMarket(uint256 aAmountToManage) public allNetworks allPairs {
         // assume - we want negative numbers too
         int256 lAmountToManage = int256(bound(aAmountToManage, 0, type(uint256).max));
@@ -384,6 +395,23 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(lAaveToken.balanceOf(address(_manager)), 0);
         assertEq(_manager.shares(_pair, USDC), 0);
         assertEq(_manager.totalShares(lAaveToken), 0);
+    }
+
+    function testAdjustManagement_WindDown() external allNetworks allPairs {
+        // arrange
+        _increaseManagementOneToken(300e6);
+        _manager.setWindDownMode(true);
+        int256 lIncreaseAmt = 50e6;
+
+        // act
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? lIncreaseAmt : int256(0),
+            _pair.token1() == USDC ? lIncreaseAmt : int256(0)
+        );
+
+        // assert
+        assertEq(_manager.getBalance(_pair, USDC), 300e6);
     }
 
     function testGetBalance(uint256 aAmountToManage) public allNetworks allPairs {
@@ -655,6 +683,33 @@ contract AaveIntegrationTest is BaseTest {
         _manager.afterLiquidityEvent();
     }
 
+    function testAfterLiquidityEvent_WindDown() external allNetworks allPairs {
+        // arrange
+        _pair.burn(address(this));
+        assertGt(_pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed(), 0);
+        uint256 lAmtManaged = _manager.getBalance(_pair, USDC);
+
+        // act
+        _manager.setWindDownMode(true);
+
+        // assert - burn should still succeed
+        _pair.burn(address(this));
+        // this call to increase management should have no effect
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? int256(100e6) : int256(0),
+            _pair.token1() == USDC ? int256(100e6) : int256(0)
+        );
+        assertEq(_manager.getBalance(_pair, USDC), lAmtManaged);
+        // a call to decrease management should have an effect
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? -int256(lAmtManaged) : int256(0),
+            _pair.token1() == USDC ? -int256(lAmtManaged) : int256(0)
+        );
+        assertEq(_manager.getBalance(_pair, USDC), 0);
+    }
+
     function testSwap_ReturnAsset() public allNetworks allPairs {
         // arrange
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
@@ -674,6 +729,43 @@ contract AaveIntegrationTest is BaseTest {
         int256 lOutputAmt = _pair.token0() == USDC ? int256(MINT_AMOUNT / 2 + 10) : -int256(MINT_AMOUNT / 2 + 10);
         (int256 lExpectedToken0Calldata, int256 lExpectedToken1Calldata) =
             _pair.token0() == USDC ? (int256(-10), int256(0)) : (int256(0), int256(-10));
+        _tokenA.mint(address(_pair), lReserveTokenA * 2);
+        vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (_pair.token0() == USDC, 10)));
+        vm.expectCall(
+            address(_pair), abi.encodeCall(_pair.adjustManagement, (lExpectedToken0Calldata, lExpectedToken1Calldata))
+        );
+        _pair.swap(lOutputAmt, false, address(this), bytes(""));
+
+        // assert
+        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        (lReserve0, lReserve1,,) = _pair.getReserves();
+        lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
+        assertEq(USDC.balanceOf(address(this)), MINT_AMOUNT / 2 + 10);
+        assertEq(USDC.balanceOf(address(_pair)), 0);
+        assertEq(lReserveUSDC, MINT_AMOUNT / 2 - 10);
+        assertEq(_manager.shares(_pair, USDC), MINT_AMOUNT / 2 - 10);
+        assertEq(_manager.totalShares(lAaveToken), MINT_AMOUNT / 2 - 10);
+        assertApproxEqAbs(_manager.getBalance(_pair, USDC), MINT_AMOUNT / 2 - 10, 1);
+    }
+
+    function testSwap_ReturnAsset_WindDown() external allNetworks allPairs {
+        // arrange
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
+        (uint256 lReserveUSDC, uint256 lReserveTokenA) =
+            _pair.token0() == USDC ? (lReserve0, lReserve1) : (lReserve1, lReserve0);
+        // manage half
+        _manager.adjustManagement(
+            _pair,
+            int256(_pair.token0() == USDC ? lReserveUSDC / 2 : 0),
+            int256(_pair.token1() == USDC ? lReserveUSDC / 2 : 0)
+        );
+        _manager.setWindDownMode(true);
+
+        // act - request more than what is available in the pair
+        int256 lOutputAmt = _pair.token0() == USDC ? int256(MINT_AMOUNT / 2 + 10) : -int256(MINT_AMOUNT / 2 + 10);
+        (int256 lExpectedToken0Calldata, int256 lExpectedToken1Calldata) =
+        _pair.token0() == USDC ? (int256(-10), int256(0)) : (int256(0), int256(-10));
         _tokenA.mint(address(_pair), lReserveTokenA * 2);
         vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (_pair.token0() == USDC, 10)));
         vm.expectCall(

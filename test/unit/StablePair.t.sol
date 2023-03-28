@@ -978,7 +978,7 @@ contract StablePairTest is BaseTest {
 
     function testRampA_OnlyFactory() public {
         // act && assert
-        vm.expectRevert("P: FORBIDDEN");
+        vm.expectRevert("RP: FORBIDDEN");
         _stablePair.rampA(100, uint64(block.timestamp + 10 days));
     }
 
@@ -1093,7 +1093,7 @@ contract StablePairTest is BaseTest {
 
     function testStopRampA_OnlyFactory() public {
         // act & assert
-        vm.expectRevert("P: FORBIDDEN");
+        vm.expectRevert("RP: FORBIDDEN");
         _stablePair.stopRampA();
     }
 
