@@ -39,6 +39,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
     IAaveProtocolDataProvider public dataProvider;
 
+    /// @dev when set to true by the owner, it will only allow divesting but not investing by the pairs in this mode
+    /// to facilitate replacement of asset managers to newer versions
+    bool public windDownMode;
+
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
         addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
@@ -56,6 +60,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         address lNewDataProvider = addressesProvider.getPoolDataProvider();
         require(lNewDataProvider != address(0), "AM: DATA_PROVIDER_ADDRESS_ZERO");
         dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
+    }
+
+    function setWindDownMode(bool aWindDown) external onlyOwner {
+        windDownMode = aWindDown;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -106,6 +114,15 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         }
         if (address(lToken1AToken) == address(0)) {
             aAmount1Change = 0;
+        }
+
+        if (windDownMode) {
+            if (aAmount0Change > 0) {
+                aAmount0Change = 0;
+            }
+            if (aAmount1Change > 0) {
+                aAmount1Change = 0;
+            }
         }
 
         // withdraw from the market
