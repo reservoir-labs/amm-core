@@ -40,10 +40,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
     IAaveProtocolDataProvider public dataProvider;
 
-    /// @dev when set to true by the owner, it will only allow divesting but not investing by the pairs in this mode
-    /// to facilitate replacement of asset managers to newer versions
-    bool public windDownMode;
-
     /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
     /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
     address public rewardSeller;
@@ -51,6 +47,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev contract that manages additional rewards on top of interest bearing aave tokens
     /// also known as the incentives contract
     IRewardsController public rewardsController;
+
+    /// @dev when set to true by the owner, it will only allow divesting but not investing by the pairs in this mode
+    /// to facilitate replacement of asset managers to newer versions
+    bool public windDownMode;
 
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
@@ -71,10 +71,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
     }
 
-    function setWindDownMode(bool aWindDown) external onlyOwner {
-        windDownMode = aWindDown;
-    }
-
     function setRewardSeller(address aRewardSeller) external onlyOwner {
         require(aRewardSeller != address(0), "AM: REWARD_SELLER_ADDRESS_ZERO");
         rewardSeller = aRewardSeller;
@@ -83,6 +79,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function setRewardsController(address aRewardsController) external onlyOwner {
         require(aRewardsController != address(0), "AM: REWARDS_CONTROLLER_ZERO");
         rewardsController = IRewardsController(aRewardsController);
+    }
+
+    function setWindDownMode(bool aWindDown) external onlyOwner {
+        windDownMode = aWindDown;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
