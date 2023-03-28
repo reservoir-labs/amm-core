@@ -4,18 +4,20 @@ import "test/__fixtures/BaseTest.sol";
 import { Errors } from "test/integration/AaveErrors.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPoolConfigurator } from "src/interfaces/aave/IPoolConfigurator.sol";
+import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-struct Network {
+    struct Network {
     string rpcUrl;
     address USDC;
     uint256 blockNum;
@@ -28,6 +30,10 @@ struct Fork {
 
 contract AaveIntegrationTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
+    using FixedPointMathLib for uint256;
+    event RewardsClaimed(
+        address indexed user, address indexed reward, address indexed to, address claimer, uint256 amount
+    );
 
     // this amount is tailored to USDC as it only has 6 decimal places
     // using the usual 100e18 would be too large and would break AAVE
@@ -917,5 +923,78 @@ contract AaveIntegrationTest is BaseTest {
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
         _manager.setLowerThreshold(lThreshold);
+    }
+
+    function testClaimReward() external allNetworks allPairs {
+        // this test is only applicable on AVAX as USDC does not have additional rewards on polygon
+        if (vm.activeFork() != 0) return;
+
+        // arrange
+        _increaseManagementOneToken(500e6);
+        _manager.setRewardSeller(address(this));
+        _manager.setRewardsController(address(0x929EC64c34a17401F460460D4B9390518E5B473e));
+        (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        address lWavax = address(0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7);
+        address[] memory lMarkets = new address[](1);
+        lMarkets[0] = lUSDCMarket;
+
+        // act - step time to accumulate some rewards
+        _stepTime(5000);
+        vm.expectEmit(true, true, true, false);
+        emit RewardsClaimed(address(_manager), lWavax, address(this), address(_manager), 0);
+        vm.expectCall(
+            address(_manager.rewardsController()),
+            abi.encodeCall(IRewardsController.claimRewards, (lMarkets, type(uint256).max, address(this), lWavax))
+        );
+        uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
+
+        // assert
+        assertEq(ERC20(lWavax).balanceOf(address(this)), lClaimed);
+        assertGt(lClaimed, 0);
+    }
+
+    function testClaimRewards_SellAndPutRewardsBackIntoManager() external allNetworks allPairs {
+        // this test is only applicable on AVAX as USDC does not have additional rewards on polygon
+        if (vm.activeFork() != 0) return;
+
+        // arrange
+        _increaseManagementOneToken(500e6);
+        ConstantProductPair lOtherPair = _createOtherPair();
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? int256(100e6) : int256(0),
+            lOtherPair.token1() == USDC ? int256(100e6) : int256(0)
+        );
+        _manager.setRewardSeller(address(this));
+        _manager.setRewardsController(address(0x929EC64c34a17401F460460D4B9390518E5B473e));
+        (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        ERC20 lAaveToken = ERC20(lUSDCMarket);
+        address lWavax = address(0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7);
+        address[] memory lMarkets = new address[](1);
+        lMarkets[0] = lUSDCMarket;
+
+        // act - simulate a claiming and selling of the rewards into more aaveUSDC
+        _stepTime(5000);
+        uint256 lBalAfterTimePair = _manager.getBalance(_pair, USDC);
+        uint256 lBalAfterTimeOther = _manager.getBalance(lOtherPair, USDC);
+        uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
+        assertGt(lClaimed, 0);
+        uint256 lAmtUSDC = 9019238;
+        deal(address(USDC), address(this), lAmtUSDC, true);
+        // supply the USDC for aaveUSDC
+        IPool lPool = _manager.pool();
+        USDC.approve(address(lPool), type(uint256).max);
+        lPool.supply(address(USDC), lAmtUSDC, address(this), 0);
+        assertEq(lAaveToken.balanceOf(address(this)), lAmtUSDC);
+        lAaveToken.transfer(address(_manager), lAmtUSDC);
+
+        // assert
+        uint256 lBalAfterCompoundingPair = _manager.getBalance(_pair, USDC);
+        uint256 lBalAfterCompoundingOther = _manager.getBalance(lOtherPair, USDC);
+        // percentage growth is the same
+        uint256 lPercentageIncreasePair = lBalAfterCompoundingPair.divWad(lBalAfterTimePair);
+        uint256 lPercentageIncreaseOther = lBalAfterCompoundingOther.divWad(lBalAfterTimeOther);
+        // percentage diff is no greater than 0.000001%
+        assertApproxEqRel(lPercentageIncreasePair, lPercentageIncreaseOther, 0.00000001e18);
     }
 }
