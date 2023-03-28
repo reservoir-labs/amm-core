@@ -900,8 +900,8 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lBalAfterCompoundingPair = _manager.getBalance(_pair, USDC);
         uint256 lBalAfterCompoundingOther = _manager.getBalance(lOtherPair, USDC);
         // percentage growth is the same
-        uint256 lPercentageIncreasePair = lBalAfterCompoundingPair.divWad( lBalAfterTimePair);
-        uint256 lPercentageIncreaseOther = lBalAfterCompoundingOther.divWad( lBalAfterTimeOther);
+        uint256 lPercentageIncreasePair = lBalAfterCompoundingPair.divWad(lBalAfterTimePair);
+        uint256 lPercentageIncreaseOther = lBalAfterCompoundingOther.divWad(lBalAfterTimeOther);
         // percentage diff is no greater than 0.000001%
         assertApproxEqRel(lPercentageIncreasePair, lPercentageIncreaseOther, 0.00000001e18);
     }
