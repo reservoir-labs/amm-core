@@ -32,6 +32,16 @@ contract ReservoirDeployer {
     GenericFactory public factory;
     OracleCaller public oracleCaller;
 
+    constructor(address aGuardian1, address aGuardian2, address aGuardian3) {
+        require(
+            aGuardian1 != address(0) && aGuardian2 != address(0) && aGuardian3 != address(0),
+            "DEPLOYER: GUARDIAN_ADDRESS_ZERO"
+        );
+        guardian1 = aGuardian1;
+        guardian2 = aGuardian2;
+        guardian3 = aGuardian3;
+    }
+
     function isDone() external view returns (bool) {
         return step == TERMINAL_STEP;
     }
@@ -127,10 +137,9 @@ contract ReservoirDeployer {
 
     uint256 public constant GUARDIAN_THRESHOLD = 2;
 
-    // TODO: Set these addresses.
-    address public constant guardian1 = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
-    address public constant guardian2 = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
-    address public constant guardian3 = address(0x14dC79964da2C08b23698B3D3cc7Ca32193d9955);
+    address public immutable guardian1;
+    address public immutable guardian2;
+    address public immutable guardian3;
 
     mapping(address => mapping(address => uint256)) proposals;
 
@@ -177,6 +186,6 @@ contract ReservoirDeployer {
         onlyOwner
         returns (bytes memory)
     {
-        return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
+        return Address.functionCallWithValue(aTarget, aCalldata, aValue, "DEPLOYER: RAW_CALL_REVERTED");
     }
 }

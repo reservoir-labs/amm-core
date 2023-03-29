@@ -11,12 +11,13 @@ contract BaseScript is Script {
 
     function _ensureDeployerExists(uint256 aPrivateKey) internal {
         bytes memory lInitCode = abi.encodePacked(type(ReservoirDeployer).creationCode);
-
-        address lDeployer = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
+        lInitCode = abi.encodePacked(lInitCode, abi.encode(msg.sender, msg.sender, msg.sender));
+        address lDeployer = Create2Lib.computeAddress(msg.sender, lInitCode, bytes32(0));
+        console.log("ldeployer", lDeployer);
         if (lDeployer.code.length == 0) {
             vm.broadcast(aPrivateKey);
-            _deployer = new ReservoirDeployer{salt: bytes32(0)}();
-
+            _deployer = new ReservoirDeployer{salt: bytes32(0)}(msg.sender, msg.sender, msg.sender);
+            require(address(_deployer) == lDeployer, "CREATE2 ADDRESS MISMATCH");
             require(address(_deployer) != address(0), "DEPLOY FACTORY FAILED");
         } else {
             _deployer = ReservoirDeployer(lDeployer);

@@ -56,7 +56,6 @@ abstract contract BaseTest is Test {
         _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
 
         // Claim ownership of all contracts for our test contract.
-        vm.prank(address(123));
         _deployer.proposeOwner(address(this));
         _deployer.claimOwnership();
         _deployer.claimFactory();
@@ -90,11 +89,12 @@ abstract contract BaseTest is Test {
 
     function _ensureDeployerExists() internal returns (ReservoirDeployer rDeployer) {
         bytes memory lInitCode = abi.encodePacked(type(ReservoirDeployer).creationCode);
-
+        lInitCode = abi.encodePacked(lInitCode, abi.encode(address(this), address(this), address(this)));
         address lDeployer = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
-        if (lDeployer.code.length == 0) {
-            rDeployer = new ReservoirDeployer{salt: bytes32(0)}();
 
+        if (lDeployer.code.length == 0) {
+            rDeployer = new ReservoirDeployer{salt: bytes32(0)}(address(this), address(this), address(this));
+            require(address(rDeployer) == lDeployer, "CREATE2 ADDRESS MISMATCH");
             require(address(rDeployer) != address(0), "DEPLOY FACTORY FAILED");
         } else {
             rDeployer = ReservoirDeployer(lDeployer);
