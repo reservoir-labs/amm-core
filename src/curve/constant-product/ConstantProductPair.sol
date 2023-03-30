@@ -11,12 +11,12 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantProductMath } from "src/libraries/ConstantProductMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
+import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 
 contract ConstantProductPair is ReservoirPair {
-    using FactoryStoreLib for GenericFactory;
+    using FactoryStoreLib for IGenericFactory;
     using Bytes32Lib for bytes32;
 
     // Accuracy^2:

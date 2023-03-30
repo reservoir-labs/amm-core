@@ -69,7 +69,7 @@ contract StablePairGas is BaseTest {
 
     function testGasBurn() external {
         vm.prank(_bob);
-        _oraclePair.transfer(address(_oraclePair), INITIAL_MINT_AMOUNT / 2);
+        _oraclePair.transfer(address(_oraclePair), ConstantsLib.INITIAL_MINT_AMOUNT / 2);
         _oraclePair.burn(address(this));
     }
 }

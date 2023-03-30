@@ -29,9 +29,9 @@ contract ReservoirPairTest is BaseTest {
 
     function testSkim(uint256 aAmountA, uint256 aAmountB) external allPairs {
         // assume - to avoid overflow of the token's total supply
-        // we subtract 2 * INITIAL_MINT_AMOUNT as INITIAL_MINT_AMOUNT was minted to both pairs
-        uint256 lAmountA = bound(aAmountA, 1, type(uint256).max - 2 * INITIAL_MINT_AMOUNT);
-        uint256 lAmountB = bound(aAmountB, 1, type(uint256).max - 2 * INITIAL_MINT_AMOUNT);
+        // we subtract 2 * ConstantsLib.INITIAL_MINT_AMOUNT as ConstantsLib.INITIAL_MINT_AMOUNT was minted to both pairs
+        uint256 lAmountA = bound(aAmountA, 1, type(uint256).max - 2 * ConstantsLib.INITIAL_MINT_AMOUNT);
+        uint256 lAmountB = bound(aAmountB, 1, type(uint256).max - 2 * ConstantsLib.INITIAL_MINT_AMOUNT);
 
         // arrange
         _tokenA.mint(address(_pair), lAmountA);
@@ -43,8 +43,8 @@ contract ReservoirPairTest is BaseTest {
         // assert
         assertEq(_tokenA.balanceOf(address(this)), lAmountA);
         assertEq(_tokenB.balanceOf(address(this)), lAmountB);
-        assertEq(_tokenA.balanceOf(address(_pair)), INITIAL_MINT_AMOUNT);
-        assertEq(_tokenB.balanceOf(address(_pair)), INITIAL_MINT_AMOUNT);
+        assertEq(_tokenA.balanceOf(address(_pair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_tokenB.balanceOf(address(_pair)), ConstantsLib.INITIAL_MINT_AMOUNT);
     }
 
     function testSync() external allPairs {

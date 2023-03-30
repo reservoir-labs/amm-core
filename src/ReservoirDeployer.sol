@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -15,20 +16,12 @@ import { GenericFactory } from "src/GenericFactory.sol";
 contract ReservoirDeployer {
     using FactoryStoreLib for GenericFactory;
 
-    // Default configuration.
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
-    uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
-    uint256 public constant DEFAULT_AMP_COEFF = 1000;
-    uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
-
     // Steps.
     uint256 public constant TERMINAL_STEP = 4;
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant factory_hash = bytes32(0x904f2bbce4cd1b3b87bf8850a1592121240a00affe5df7f732eb958ebb130a16);
+    bytes32 public constant factory_hash = bytes32(0xc5d1b89ce4c2fe36f28cd1510153b15a4bcebe2578b53e2786ac5ec78a6eb344);
     bytes32 public constant constant_product_hash =
         bytes32(0x9abd4ce0035676495b40000c996b86d806f931000aae9883a984f21bc4bb140e);
     bytes32 public constant stable_hash = bytes32(0x73c2f343466f3e5c3252dabf81a675918730afdaecb0bdbe6f20a369bed891e7);
@@ -38,6 +31,16 @@ contract ReservoirDeployer {
     // Deployment addresses.
     GenericFactory public factory;
     OracleCaller public oracleCaller;
+
+    constructor(address aGuardian1, address aGuardian2, address aGuardian3) {
+        require(
+            aGuardian1 != address(0) && aGuardian2 != address(0) && aGuardian3 != address(0),
+            "DEPLOYER: GUARDIAN_ADDRESS_ZERO"
+        );
+        guardian1 = aGuardian1;
+        guardian2 = aGuardian2;
+        guardian3 = aGuardian3;
+    }
 
     function isDone() external view returns (bool) {
         return step == TERMINAL_STEP;
@@ -67,10 +70,10 @@ contract ReservoirDeployer {
         factory = GenericFactory(lFactoryAddress);
 
         // Set global parameters.
-        factory.write("Shared::platformFee", DEFAULT_PLATFORM_FEE);
+        factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
         factory.write("Shared::platformFeeTo", address(this));
         factory.write("Shared::recoverer", address(this));
-        factory.write("Shared::maxChangeRate", DEFAULT_MAX_CHANGE_RATE);
+        factory.write("Shared::maxChangeRate", ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
 
         // Step complete.
         step += 1;
@@ -84,7 +87,7 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aConstantProductBytecode);
-        factory.write("CP::swapFee", DEFAULT_SWAP_FEE_CP);
+        factory.write("CP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_CP);
 
         // Step complete.
         step += 1;
@@ -96,8 +99,8 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aStableBytecode);
-        factory.write("SP::swapFee", DEFAULT_SWAP_FEE_SP);
-        factory.write("SP::amplificationCoefficient", DEFAULT_AMP_COEFF);
+        factory.write("SP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_SP);
+        factory.write("SP::amplificationCoefficient", ConstantsLib.DEFAULT_AMP_COEFF);
 
         // Step complete.
         step += 1;
@@ -134,10 +137,9 @@ contract ReservoirDeployer {
 
     uint256 public constant GUARDIAN_THRESHOLD = 2;
 
-    // TODO: Set these addresses.
-    address public constant guardian1 = address(123);
-    address public constant guardian2 = address(123);
-    address public constant guardian3 = address(123);
+    address public immutable guardian1;
+    address public immutable guardian2;
+    address public immutable guardian3;
 
     mapping(address => mapping(address => uint256)) proposals;
 
@@ -184,6 +186,6 @@ contract ReservoirDeployer {
         onlyOwner
         returns (bytes memory)
     {
-        return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
+        return Address.functionCallWithValue(aTarget, aCalldata, aValue, "DEPLOYER: RAW_CALL_REVERTED");
     }
 }

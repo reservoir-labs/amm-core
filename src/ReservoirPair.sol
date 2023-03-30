@@ -11,8 +11,8 @@ import { LogCompression } from "src/libraries/LogCompression.sol";
 
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
+import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
 
 struct Slot0 {
@@ -40,7 +40,7 @@ struct Observation {
 }
 
 abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
-    using FactoryStoreLib for GenericFactory;
+    using FactoryStoreLib for IGenericFactory;
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
     using SafeTransferLib for address;
@@ -64,7 +64,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint256 public constant MAX_PLATFORM_FEE = 500_000; //  50%
     uint256 public constant MAX_SWAP_FEE = 20_000; //   2%
 
-    GenericFactory public immutable factory;
+    IGenericFactory public immutable factory;
     ERC20 public immutable token0;
     ERC20 public immutable token1;
 
@@ -89,7 +89,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     constructor(ERC20 aToken0, ERC20 aToken1, string memory aSwapFeeName, bool aNormalPair) {
-        factory = GenericFactory(msg.sender);
+        factory = IGenericFactory(msg.sender);
         token0 = aToken0;
         token1 = aToken1;
 
@@ -109,7 +109,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
                             IMMUTABLE GETTERS
 
-    Let's StableMintBurn override the immutables to instead make a call to
+    Allows StableMintBurn override the immutables to instead make a call to
     address(this) so the action is delegatecall safe.
 
     //////////////////////////////////////////////////////////////////////////*/

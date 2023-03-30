@@ -79,7 +79,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testMint_InitialMint() public {
         // assert
         uint256 lpTokenBalance = _constantProductPair.balanceOf(_alice);
-        uint256 lExpectedLpTokenBalance = Math.sqrt(INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
+        uint256 lExpectedLpTokenBalance =
+            Math.sqrt(ConstantsLib.INITIAL_MINT_AMOUNT ** 2) - _constantProductPair.MINIMUM_LIQUIDITY();
         assertEq(lpTokenBalance, lExpectedLpTokenBalance);
     }
 
@@ -121,7 +122,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testSwap() public {
         // arrange
         (uint256 reserve0, uint256 reserve1,,) = _constantProductPair.getReserves();
-        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, DEFAULT_SWAP_FEE_CP);
+        uint256 expectedOutput = _calculateOutput(reserve0, reserve1, 1e18, ConstantsLib.DEFAULT_SWAP_FEE_CP);
 
         // act
         address token0;
@@ -191,23 +192,23 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     function testSwap_ExactOutExceedReserves() public {
         // act & assert
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+        _constantProductPair.swap(int256(ConstantsLib.INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+        _constantProductPair.swap(int256(ConstantsLib.INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+        _constantProductPair.swap(-int256(ConstantsLib.INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
 
         vm.expectRevert("CP: NOT_ENOUGH_LIQ");
-        _constantProductPair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+        _constantProductPair.swap(-int256(ConstantsLib.INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
     }
 
     function testSwap_ExactOut(uint256 aAmountOut) public {
         // assume
-        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint104).max + 1;
+        uint256 lMinNewReservesOut = ConstantsLib.INITIAL_MINT_AMOUNT ** 2 / type(uint104).max + 1;
         // this amount makes the new reserve of the input token stay within uint104 and not overflow
-        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        uint256 lMaxOutputAmt = ConstantsLib.INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         uint256 lAmountOut = bound(aAmountOut, 1, lMaxOutputAmt);
 
         // arrange
@@ -230,8 +231,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // arrange
         vm.prank(address(_factory));
         _constantProductPair.setCustomSwapFee(0);
-        uint256 lMinNewReservesOut = INITIAL_MINT_AMOUNT ** 2 / type(uint104).max + 1;
-        uint256 lMaxOutputAmt = INITIAL_MINT_AMOUNT - lMinNewReservesOut;
+        uint256 lMinNewReservesOut = ConstantsLib.INITIAL_MINT_AMOUNT ** 2 / type(uint104).max + 1;
+        uint256 lMaxOutputAmt = ConstantsLib.INITIAL_MINT_AMOUNT - lMinNewReservesOut;
         // 1 more than the max
         uint256 lAmountOut = lMaxOutputAmt + 1;
         (uint256 lReserve0, uint256 lReserve1,,) = _constantProductPair.getReserves();
@@ -270,8 +271,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // assert
         assertEq(_tokenA.balanceOf(address(this)), 0);
         assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_tokenA.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
-        assertEq(_tokenB.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
+        assertEq(_tokenA.balanceOf(address(_constantProductPair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_tokenB.balanceOf(address(_constantProductPair)), ConstantsLib.INITIAL_MINT_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -533,7 +534,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, lIndex);
         uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
         // we check that it is within 0.01% of accuracy
-        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
+        assertApproxEqRel(lAverageLiq, ConstantsLib.INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
         vm.roll(block.number + 1);
@@ -549,7 +550,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testOracle_LiquidityAtMaximum() public {
         // arrange
-        uint256 lLiquidityToAdd = type(uint104).max - INITIAL_MINT_AMOUNT;
+        uint256 lLiquidityToAdd = type(uint104).max - ConstantsLib.INITIAL_MINT_AMOUNT;
         vm.roll(block.number + 1);
         vm.warp(block.timestamp + 5);
         _tokenA.mint(address(_constantProductPair), lLiquidityToAdd);
@@ -650,7 +651,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.sync();
         ERC20 lToken0 = _constantProductPair.token0();
         ERC20 lToken1 = _constantProductPair.token1();
-        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        uint256 lSwapAmount = ConstantsLib.INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
         // swap lSwapAmount back and forth
@@ -660,9 +661,9 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
 
         _constantProductPair.sync();
-        assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
-        assertEq(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
-        assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertGt(lToken0.balanceOf(address(_constantProductPair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(lToken1.balanceOf(address(_constantProductPair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_constantProductPair.platformFee(), ConstantsLib.DEFAULT_PLATFORM_FEE);
         assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _constantProductPair.burn(address(this));
@@ -690,7 +691,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.sync();
         ERC20 lToken0 = _constantProductPair.token0();
         ERC20 lToken1 = _constantProductPair.token1();
-        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        uint256 lSwapAmount = ConstantsLib.INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
         // act - swap once with platform fee.
@@ -700,9 +701,9 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         lAmountOut = _constantProductPair.swap(-int256(lAmountOut), true, address(this), bytes(""));
 
         _constantProductPair.sync();
-        assertGt(lToken0.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
-        assertGe(lToken1.balanceOf(address(_constantProductPair)), INITIAL_MINT_AMOUNT);
-        assertEq(_constantProductPair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertGt(lToken0.balanceOf(address(_constantProductPair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_constantProductPair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_constantProductPair.platformFee(), ConstantsLib.DEFAULT_PLATFORM_FEE);
         assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _constantProductPair.burn(address(this));

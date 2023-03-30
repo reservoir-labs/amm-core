@@ -31,3 +31,6 @@ bracket_spacing   = true
 wrap_comments     = false
 number_underscore = "thousands"
 int_types         = "long"
+
+[profile.script]
+optimizer_runs = 1_000_000

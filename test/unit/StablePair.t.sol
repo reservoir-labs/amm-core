@@ -81,8 +81,8 @@ contract StablePairTest is BaseTest {
 
         // assert
         // this works only because the pools are balanced. When the pool is imbalanced the calculation will differ
-        uint256 lAdditionalLpTokens =
-            ((INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity) * lLpTokenTotalSupply / lOldLiquidity;
+        uint256 lAdditionalLpTokens = ((ConstantsLib.INITIAL_MINT_AMOUNT + lLiquidityToAdd) * 2 - lOldLiquidity)
+            * lLpTokenTotalSupply / lOldLiquidity;
         assertEq(_stablePair.balanceOf(address(this)), lAdditionalLpTokens);
     }
 
@@ -163,18 +163,18 @@ contract StablePairTest is BaseTest {
         assertEq(_stablePair.platformFee(), 0);
 
         // act
-        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
         _stablePair.mint(address(this));
 
         // assert
-        assertEq(_stablePair.balanceOf(address(this)), 2 * INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.balanceOf(address(this)), 2 * ConstantsLib.INITIAL_MINT_AMOUNT);
     }
 
     function testMint_WhenRampingA(uint256 aFutureA) external {
-        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        // assume - for ramping up or down from ConstantsLib.DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
-        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        vm.assume(lFutureAToSet != ConstantsLib.DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
 
         // arrange
@@ -198,22 +198,22 @@ contract StablePairTest is BaseTest {
         uint256 lLpTokens2 = _stablePair.balanceOf(address(this));
 
         // assert
-        if (lFutureAToSet > DEFAULT_AMP_COEFF) {
+        if (lFutureAToSet > ConstantsLib.DEFAULT_AMP_COEFF) {
             assertGt(lLpTokens2, lLpTokens1);
-        } else if (lFutureAToSet < DEFAULT_AMP_COEFF) {
+        } else if (lFutureAToSet < ConstantsLib.DEFAULT_AMP_COEFF) {
             assertLt(lLpTokens2, lLpTokens1);
         }
     }
 
     function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public {
-        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        // assume - for ramping up or down from ConstantsLib.DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
-        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        vm.assume(lFutureAToSet != ConstantsLib.DEFAULT_AMP_COEFF);
 
         // arrange
         StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
-        _tokenA.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
-        _tokenC.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(lOtherPair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lOtherPair), ConstantsLib.INITIAL_MINT_AMOUNT);
         lOtherPair.mint(_alice);
 
         for (uint256 i = 0; i < 10; ++i) {
@@ -263,14 +263,14 @@ contract StablePairTest is BaseTest {
     }
 
     function testMintFee_WhenRampingA_PoolUnbalanced(uint256 aFutureA) public {
-        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        // assume - for ramping up or down from ConstantsLib.DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
-        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        vm.assume(lFutureAToSet != ConstantsLib.DEFAULT_AMP_COEFF);
 
         // arrange
         StablePair lOtherPair = StablePair(_createPair(address(_tokenA), address(_tokenC), 1));
-        _tokenA.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
-        _tokenC.mint(address(lOtherPair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(lOtherPair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lOtherPair), ConstantsLib.INITIAL_MINT_AMOUNT);
         lOtherPair.mint(_alice);
 
         for (uint256 i = 0; i < 10; ++i) {
@@ -436,12 +436,19 @@ contract StablePairTest is BaseTest {
 
     function testSwap_Token0ExactOut(uint256 aAmountOut) public {
         // assume
-        uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
+        uint256 lAmountOut = bound(aAmountOut, 1e6, ConstantsLib.INITIAL_MINT_AMOUNT - 1);
 
         // arrange
         (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
-            lAmountOut, lReserve0, lReserve1, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountOut,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            true,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
@@ -453,7 +460,14 @@ contract StablePairTest is BaseTest {
 
         // assert
         uint256 inverse = StableMath._getAmountOut(
-            lAmountIn, lReserve0, lReserve1, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountIn,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            false,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
@@ -462,12 +476,19 @@ contract StablePairTest is BaseTest {
 
     function testSwap_Token1ExactOut(uint256 aAmountOut) public {
         // assume
-        uint256 lAmountOut = bound(aAmountOut, 1e6, INITIAL_MINT_AMOUNT - 1);
+        uint256 lAmountOut = bound(aAmountOut, 1e6, ConstantsLib.INITIAL_MINT_AMOUNT - 1);
 
         // arrange
         (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         uint256 lAmountIn = StableMath._getAmountIn(
-            lAmountOut, lReserve0, lReserve1, 1, 1, false, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountOut,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            false,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
 
         // sanity - given a balanced pool, the amountIn should be greater than amountOut
@@ -479,7 +500,14 @@ contract StablePairTest is BaseTest {
 
         // assert
         uint256 inverse = StableMath._getAmountOut(
-            lAmountIn, lReserve0, lReserve1, 1, 1, true, DEFAULT_SWAP_FEE_SP, 2 * _stablePair.getCurrentAPrecise()
+            lAmountIn,
+            lReserve0,
+            lReserve1,
+            1,
+            1,
+            true,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            2 * _stablePair.getCurrentAPrecise()
         );
         // todo: investigate why it has this (small) difference of around (less than 1/10 of a basis point)
         assertApproxEqRel(inverse, lActualOut, 0.00001e18);
@@ -489,21 +517,21 @@ contract StablePairTest is BaseTest {
     function testSwap_ExactOutExceedReserves() public {
         // act & assert
         vm.expectRevert("SP: NOT_ENOUGH_LIQ");
-        _stablePair.swap(int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+        _stablePair.swap(int256(ConstantsLib.INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
 
         vm.expectRevert("SP: NOT_ENOUGH_LIQ");
-        _stablePair.swap(int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+        _stablePair.swap(int256(ConstantsLib.INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
 
         vm.expectRevert("SP: NOT_ENOUGH_LIQ");
-        _stablePair.swap(-int256(INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
+        _stablePair.swap(-int256(ConstantsLib.INITIAL_MINT_AMOUNT), false, address(this), bytes(""));
 
         vm.expectRevert("SP: NOT_ENOUGH_LIQ");
-        _stablePair.swap(-int256(INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
+        _stablePair.swap(-int256(ConstantsLib.INITIAL_MINT_AMOUNT + 1), false, address(this), bytes(""));
     }
 
     function testSwap_ExactInExceedUint104() external {
         // arrange
-        uint256 lSwapAmt = type(uint104).max - INITIAL_MINT_AMOUNT + 1;
+        uint256 lSwapAmt = type(uint104).max - ConstantsLib.INITIAL_MINT_AMOUNT + 1;
 
         // act & assert
         _tokenA.mint(address(_stablePair), lSwapAmt);
@@ -555,7 +583,7 @@ contract StablePairTest is BaseTest {
             1,
             1,
             lPair.token0() == _tokenB,
-            DEFAULT_SWAP_FEE_SP,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
             2 * _stablePair.getCurrentAPrecise()
         );
         assertEq(lAmtOut, lExpectedAmountOut);
@@ -586,7 +614,7 @@ contract StablePairTest is BaseTest {
             1,
             1,
             lPair.token0() == _tokenC,
-            DEFAULT_SWAP_FEE_SP,
+            ConstantsLib.DEFAULT_SWAP_FEE_SP,
             2 * _stablePair.getCurrentAPrecise()
         );
         assertEq(lAmtOut, lExpectedAmountOut);
@@ -768,14 +796,14 @@ contract StablePairTest is BaseTest {
         // assert
         assertEq(_tokenA.balanceOf(address(this)), 0);
         assertEq(_tokenB.balanceOf(address(this)), 0);
-        assertEq(_tokenA.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
-        assertEq(_tokenB.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
+        assertEq(_tokenA.balanceOf(address(_stablePair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_tokenB.balanceOf(address(_stablePair)), ConstantsLib.INITIAL_MINT_AMOUNT);
     }
 
     function testBurn_WhenRampingA(uint256 aFutureA) external {
-        // assume - for ramping up or down from DEFAULT_AMP_COEFF
+        // assume - for ramping up or down from ConstantsLib.DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
-        vm.assume(lFutureAToSet != DEFAULT_AMP_COEFF);
+        vm.assume(lFutureAToSet != ConstantsLib.DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
         uint256 lBalance = _stablePair.balanceOf(_alice);
 
@@ -813,13 +841,13 @@ contract StablePairTest is BaseTest {
         // arrange - tokenD has 6 decimal places, simulating USDC / USDT
         StablePair lPair = StablePair(_createPair(address(_tokenC), address(_tokenD), 1));
 
-        _tokenC.mint(address(lPair), INITIAL_MINT_AMOUNT);
-        _tokenD.mint(address(lPair), INITIAL_MINT_AMOUNT / 1e12);
+        _tokenC.mint(address(lPair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenD.mint(address(lPair), ConstantsLib.INITIAL_MINT_AMOUNT / 1e12);
 
         lPair.mint(address(this));
 
         // sanity
-        assertEq(lPair.balanceOf(address(this)), 2 * INITIAL_MINT_AMOUNT - lPair.MINIMUM_LIQUIDITY());
+        assertEq(lPair.balanceOf(address(this)), 2 * ConstantsLib.INITIAL_MINT_AMOUNT - lPair.MINIMUM_LIQUIDITY());
 
         // act
         lPair.transfer(address(lPair), lAmtToBurn);
@@ -856,7 +884,7 @@ contract StablePairTest is BaseTest {
         _stablePair.sync();
         ERC20 lToken0 = _stablePair.token0();
         ERC20 lToken1 = _stablePair.token1();
-        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        uint256 lSwapAmount = ConstantsLib.INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
         // swap lSwapAmount back and forth
@@ -866,9 +894,9 @@ contract StablePairTest is BaseTest {
         lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
 
         _stablePair.sync();
-        assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
-        assertEq(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
-        assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertGt(lToken0.balanceOf(address(_stablePair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(lToken1.balanceOf(address(_stablePair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.platformFee(), ConstantsLib.DEFAULT_PLATFORM_FEE);
         assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _stablePair.burn(address(this));
@@ -896,7 +924,7 @@ contract StablePairTest is BaseTest {
         _stablePair.sync();
         ERC20 lToken0 = _stablePair.token0();
         ERC20 lToken1 = _stablePair.token1();
-        uint256 lSwapAmount = INITIAL_MINT_AMOUNT / 2;
+        uint256 lSwapAmount = ConstantsLib.INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
         // act - swap once with platform fee.
@@ -906,9 +934,9 @@ contract StablePairTest is BaseTest {
         lAmountOut = _stablePair.swap(-int256(lAmountOut), true, address(this), bytes(""));
 
         _stablePair.sync();
-        assertGt(lToken0.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
-        assertGe(lToken1.balanceOf(address(_stablePair)), INITIAL_MINT_AMOUNT);
-        assertEq(_stablePair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertGt(lToken0.balanceOf(address(_stablePair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_stablePair)), ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(_stablePair.platformFee(), ConstantsLib.DEFAULT_PLATFORM_FEE);
         assertEq(_constantProductPair.balanceOf(address(_platformFeeTo)), 0);
 
         _stablePair.burn(address(this));
@@ -958,7 +986,7 @@ contract StablePairTest is BaseTest {
         // act
         vm.expectEmit(true, true, true, true);
         emit RampA(
-            uint64(DEFAULT_AMP_COEFF) * uint64(StableMath.A_PRECISION),
+            uint64(ConstantsLib.DEFAULT_AMP_COEFF) * uint64(StableMath.A_PRECISION),
             lFutureAToSet * uint64(StableMath.A_PRECISION),
             lCurrentTimestamp,
             lFutureATimestamp
@@ -969,8 +997,8 @@ contract StablePairTest is BaseTest {
 
         // assert
         (uint64 lInitialA, uint64 lFutureA, uint64 lInitialATime, uint64 lFutureATime) = _stablePair.ampData();
-        assertEq(lInitialA, DEFAULT_AMP_COEFF * uint64(StableMath.A_PRECISION));
-        assertEq(_stablePair.getCurrentA(), DEFAULT_AMP_COEFF);
+        assertEq(lInitialA, ConstantsLib.DEFAULT_AMP_COEFF * uint64(StableMath.A_PRECISION));
+        assertEq(_stablePair.getCurrentA(), ConstantsLib.DEFAULT_AMP_COEFF);
         assertEq(lFutureA, lFutureAToSet * uint64(StableMath.A_PRECISION));
         assertEq(lInitialATime, block.timestamp);
         assertEq(lFutureATime, lFutureATimestamp);
@@ -1162,11 +1190,11 @@ contract StablePairTest is BaseTest {
         );
 
         // assert
-        assertEq(_stablePair.getCurrentA(), DEFAULT_AMP_COEFF);
+        assertEq(_stablePair.getCurrentA(), ConstantsLib.DEFAULT_AMP_COEFF);
 
         // warp to the midpoint between the initialATime and futureATime
         vm.warp((lFutureATimestamp + block.timestamp) / 2);
-        assertEq(_stablePair.getCurrentA(), (DEFAULT_AMP_COEFF + lFutureAToSet) / 2);
+        assertEq(_stablePair.getCurrentA(), (ConstantsLib.DEFAULT_AMP_COEFF + lFutureAToSet) / 2);
 
         // warp to the end
         vm.warp(lFutureATimestamp);
@@ -1315,8 +1343,8 @@ contract StablePairTest is BaseTest {
         assertLt(_tokenA.balanceOf(address(this)), lSwapAmt);
         // the pool was not worse off
         (lReserve0, lReserve1,,) = _stablePair.getReserves();
-        assertGt(lReserve0, INITIAL_MINT_AMOUNT);
-        assertEq(lReserve1, INITIAL_MINT_AMOUNT);
+        assertGt(lReserve0, ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(lReserve1, ConstantsLib.INITIAL_MINT_AMOUNT);
     }
 
     // this is to simulate a sudden large A change, without trades having taken place in between
@@ -1359,7 +1387,7 @@ contract StablePairTest is BaseTest {
         // the pool is worse off by 0.13%
         (lReserve0, lReserve1,,) = _stablePair.getReserves();
         assertEq(lReserve0, 99_871_702_539_906_228_887);
-        assertEq(lReserve1, INITIAL_MINT_AMOUNT);
+        assertEq(lReserve1, ConstantsLib.INITIAL_MINT_AMOUNT);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -1614,8 +1642,8 @@ contract StablePairTest is BaseTest {
         Observation memory lObs0 = _oracleCaller.observation(_stablePair, lIndex);
         uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
         // we check that it is within 0.01% of accuracy
-        // sqrt(INITIAL_MINT_AMOUNT * INITIAL_MINT_AMOUNT) == INITIAL_MINT_AMOUNT
-        assertApproxEqRel(lAverageLiq, INITIAL_MINT_AMOUNT, 0.0001e18);
+        // sqrt(ConstantsLib.INITIAL_MINT_AMOUNT * ConstantsLib.INITIAL_MINT_AMOUNT) == ConstantsLib.INITIAL_MINT_AMOUNT
+        assertApproxEqRel(lAverageLiq, ConstantsLib.INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
         _stepTime(5);
@@ -1625,12 +1653,12 @@ contract StablePairTest is BaseTest {
         (,,, lIndex) = _stablePair.getReserves();
         Observation memory lObs1 = _oracleCaller.observation(_stablePair, lIndex);
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
-        assertApproxEqRel(lAverageLiq2, INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
+        assertApproxEqRel(lAverageLiq2, ConstantsLib.INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
     }
 
     function testOracle_LiquidityAtMaximum() external {
         // arrange
-        uint256 lLiquidityToAdd = type(uint104).max - INITIAL_MINT_AMOUNT;
+        uint256 lLiquidityToAdd = type(uint104).max - ConstantsLib.INITIAL_MINT_AMOUNT;
         _stepTime(5);
         _tokenA.mint(address(_stablePair), lLiquidityToAdd);
         _tokenB.mint(address(_stablePair), lLiquidityToAdd);

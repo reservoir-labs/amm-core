@@ -7,6 +7,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
+import { ConstantsLib } from "src/libraries/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 import { ReservoirDeployer } from "src/ReservoirDeployer.sol";
@@ -18,13 +19,6 @@ import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
-
-    uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
-    uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
-    uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%
-    uint256 public constant DEFAULT_PLATFORM_FEE = 250_000; // 25%
-    uint256 public constant DEFAULT_AMP_COEFF = 1000;
-    uint256 public constant DEFAULT_MAX_CHANGE_RATE = 0.0005e18;
 
     ReservoirDeployer internal _deployer = _ensureDeployerExists();
     GenericFactory internal _factory;
@@ -49,16 +43,10 @@ abstract contract BaseTest is Test {
     constructor() {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
-                vm.writeJson(
-                    _deployerMetadata(),
-                    "scripts/unoptimized-deployer-meta"
-                );
+                vm.writeJson(_deployerMetadata(), "scripts/unoptimized-deployer-meta");
             }
         } catch {
-            vm.writeJson(
-                _deployerMetadata(),
-                "scripts/optimized-deployer-meta"
-            );
+            vm.writeJson(_deployerMetadata(), "scripts/optimized-deployer-meta");
         }
 
         // Execute standard & deterministic Reservoir deployment.
@@ -67,9 +55,7 @@ abstract contract BaseTest is Test {
         _deployer.deployStable(type(StablePair).creationCode);
         _oracleCaller = _deployer.deployOracleCaller(type(OracleCaller).creationCode);
 
-
         // Claim ownership of all contracts for our test contract.
-        vm.prank(address(123));
         _deployer.proposeOwner(address(this));
         _deployer.claimOwnership();
         _deployer.claimFactory();
@@ -80,14 +66,14 @@ abstract contract BaseTest is Test {
 
         // Setup default ConstantProductPair.
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
-        _tokenA.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_constantProductPair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_constantProductPair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_constantProductPair), ConstantsLib.INITIAL_MINT_AMOUNT);
         _constantProductPair.mint(_alice);
 
         // Setup default StablePair.
         _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
-        _tokenA.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_stablePair), INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
     }
 
@@ -97,16 +83,18 @@ abstract contract BaseTest is Test {
         vm.serializeBytes32(lObjectKey, "factory_hash", keccak256(type(GenericFactory).creationCode));
         vm.serializeBytes32(lObjectKey, "constant_product_hash", keccak256(type(ConstantProductPair).creationCode));
         vm.serializeBytes32(lObjectKey, "stable_hash", keccak256(type(StablePair).creationCode));
-        rDeployerMetadata = vm.serializeBytes32(lObjectKey, "oracle_caller_hash", keccak256(type(OracleCaller).creationCode));
+        rDeployerMetadata =
+            vm.serializeBytes32(lObjectKey, "oracle_caller_hash", keccak256(type(OracleCaller).creationCode));
     }
 
     function _ensureDeployerExists() internal returns (ReservoirDeployer rDeployer) {
         bytes memory lInitCode = abi.encodePacked(type(ReservoirDeployer).creationCode);
-
+        lInitCode = abi.encodePacked(lInitCode, abi.encode(address(this), address(this), address(this)));
         address lDeployer = Create2Lib.computeAddress(address(this), lInitCode, bytes32(0));
-        if (lDeployer.code.length == 0) {
-            rDeployer = new ReservoirDeployer{salt: bytes32(0)}();
 
+        if (lDeployer.code.length == 0) {
+            rDeployer = new ReservoirDeployer{salt: bytes32(0)}(address(this), address(this), address(this));
+            require(address(rDeployer) == lDeployer, "CREATE2 ADDRESS MISMATCH");
             require(address(rDeployer) != address(0), "DEPLOY FACTORY FAILED");
         } else {
             rDeployer = ReservoirDeployer(lDeployer);

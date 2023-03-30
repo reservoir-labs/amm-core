@@ -39,22 +39,22 @@ contract PairTest is BaseTest {
     function testEmitEventOnCreation() public {
         // act & assert
         vm.expectEmit(true, true, false, false);
-        emit SwapFeeChanged(0, DEFAULT_SWAP_FEE_CP);
+        emit SwapFeeChanged(0, ConstantsLib.DEFAULT_SWAP_FEE_CP);
         vm.expectEmit(true, true, false, false);
-        emit PlatformFeeChanged(0, DEFAULT_PLATFORM_FEE);
+        emit PlatformFeeChanged(0, ConstantsLib.DEFAULT_PLATFORM_FEE);
         _createPair(address(_tokenC), address(_tokenD), 0);
 
         vm.expectEmit(true, true, false, false);
-        emit SwapFeeChanged(0, DEFAULT_SWAP_FEE_SP);
+        emit SwapFeeChanged(0, ConstantsLib.DEFAULT_SWAP_FEE_SP);
         vm.expectEmit(true, true, false, false);
-        emit PlatformFeeChanged(0, DEFAULT_PLATFORM_FEE);
+        emit PlatformFeeChanged(0, ConstantsLib.DEFAULT_PLATFORM_FEE);
         _createPair(address(_tokenC), address(_tokenD), 1);
     }
 
     function testSwapFee_UseDefault() public {
         // assert
-        assertEq(_constantProductPair.swapFee(), DEFAULT_SWAP_FEE_CP);
-        assertEq(_stablePair.swapFee(), DEFAULT_SWAP_FEE_SP);
+        assertEq(_constantProductPair.swapFee(), ConstantsLib.DEFAULT_SWAP_FEE_CP);
+        assertEq(_stablePair.swapFee(), ConstantsLib.DEFAULT_SWAP_FEE_SP);
     }
 
     function testCustomSwapFee_OffByDefault() public allPairs {
@@ -81,9 +81,9 @@ contract PairTest is BaseTest {
         // assert
         assertEq(_pair.customSwapFee(), type(uint256).max);
         if (_pair == _constantProductPair) {
-            assertEq(_pair.swapFee(), DEFAULT_SWAP_FEE_CP);
+            assertEq(_pair.swapFee(), ConstantsLib.DEFAULT_SWAP_FEE_CP);
         } else if (_pair == _stablePair) {
-            assertEq(_pair.swapFee(), DEFAULT_SWAP_FEE_SP);
+            assertEq(_pair.swapFee(), ConstantsLib.DEFAULT_SWAP_FEE_SP);
         }
     }
 
@@ -99,7 +99,7 @@ contract PairTest is BaseTest {
     function testCustomPlatformFee_OffByDefault() public allPairs {
         // assert
         assertEq(_pair.customPlatformFee(), type(uint256).max);
-        assertEq(_pair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_pair.platformFee(), ConstantsLib.DEFAULT_PLATFORM_FEE);
     }
 
     function testSetPlatformFeeForPair() public allPairs {
@@ -120,7 +120,7 @@ contract PairTest is BaseTest {
 
         // assert
         assertEq(_pair.customPlatformFee(), type(uint256).max);
-        assertEq(_pair.platformFee(), DEFAULT_PLATFORM_FEE);
+        assertEq(_pair.platformFee(), ConstantsLib.DEFAULT_PLATFORM_FEE);
     }
 
     function testSetPlatformFeeForPair_BreachMaximum(uint256 aPlatformFee) public allPairs {
@@ -143,12 +143,13 @@ contract PairTest is BaseTest {
         // act
         vm.expectEmit(true, true, false, false);
         emit SwapFeeChanged(
-            _pair == _constantProductPair ? DEFAULT_SWAP_FEE_CP : DEFAULT_SWAP_FEE_SP, lNewDefaultSwapFee
+            _pair == _constantProductPair ? ConstantsLib.DEFAULT_SWAP_FEE_CP : ConstantsLib.DEFAULT_SWAP_FEE_SP,
+            lNewDefaultSwapFee
         );
         _pair.updateSwapFee();
 
         vm.expectEmit(true, true, false, false);
-        emit PlatformFeeChanged(DEFAULT_PLATFORM_FEE, lNewDefaultPlatformFee);
+        emit PlatformFeeChanged(ConstantsLib.DEFAULT_PLATFORM_FEE, lNewDefaultPlatformFee);
         _pair.updatePlatformFee();
 
         // assert
