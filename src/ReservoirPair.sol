@@ -84,7 +84,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint256 public customPlatformFee = type(uint256).max;
 
     modifier onlyFactory() {
-        require(msg.sender == address(factory), "P: FORBIDDEN");
+        require(msg.sender == address(factory), "RP: FORBIDDEN");
         _;
     }
 
@@ -254,7 +254,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         uint256 _swapFee = customSwapFee != type(uint256).max ? customSwapFee : factory.get(swapFeeName).toUint256();
         if (_swapFee == swapFee) return;
 
-        require(_swapFee <= MAX_SWAP_FEE, "P: INVALID_SWAP_FEE");
+        require(_swapFee <= MAX_SWAP_FEE, "RP: INVALID_SWAP_FEE");
 
         emit SwapFeeChanged(swapFee, _swapFee);
         swapFee = _swapFee;
@@ -265,14 +265,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             customPlatformFee != type(uint256).max ? customPlatformFee : factory.read(PLATFORM_FEE_NAME).toUint256();
         if (_platformFee == platformFee) return;
 
-        require(_platformFee <= MAX_PLATFORM_FEE, "P: INVALID_PLATFORM_FEE");
+        require(_platformFee <= MAX_PLATFORM_FEE, "RP: INVALID_PLATFORM_FEE");
 
         emit PlatformFeeChanged(platformFee, _platformFee);
         platformFee = _platformFee;
     }
 
     function recoverToken(address aToken) external {
-        require(aToken != address(_token0()) && aToken != address(_token1()), "P: INVALID_TOKEN_TO_RECOVER");
+        require(aToken != address(_token0()) && aToken != address(_token1()), "RP: INVALID_TOKEN_TO_RECOVER");
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
 
@@ -345,7 +345,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     IAssetManager public assetManager;
 
     function setManager(IAssetManager manager) external onlyFactory {
-        require(token0Managed == 0 && token1Managed == 0, "AMP: AM_STILL_ACTIVE");
+        require(token0Managed == 0 && token1Managed == 0, "RP: AM_STILL_ACTIVE");
         assetManager = manager;
     }
 
@@ -413,7 +413,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     function adjustManagement(int256 aToken0Change, int256 aToken1Change) external {
-        require(msg.sender == address(assetManager), "AMP: AUTH_NOT_MANAGER");
+        require(msg.sender == address(assetManager), "RP: AUTH_NOT_MANAGER");
 
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
@@ -487,7 +487,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     address public oracleCaller;
 
     function observation(uint256 aIndex) external view returns (Observation memory rObservation) {
-        require(msg.sender == oracleCaller, "OW: NOT_ORACLE_CALLER");
+        require(msg.sender == oracleCaller, "RP: NOT_ORACLE_CALLER");
         rObservation = _observations[aIndex];
     }
 
@@ -500,7 +500,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     function setMaxChangeRate(uint256 aMaxChangeRate) public onlyFactory {
-        require(0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC, "OW: INVALID_CHANGE_PER_SECOND");
+        require(0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC, "RP: INVALID_CHANGE_PER_SECOND");
         emit MaxChangeRateUpdated(maxChangeRate, aMaxChangeRate);
         maxChangeRate = aMaxChangeRate;
     }

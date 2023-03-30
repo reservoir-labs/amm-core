@@ -12,6 +12,7 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvider.sol";
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
+import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
@@ -39,6 +40,18 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
     IAaveProtocolDataProvider public dataProvider;
 
+    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
+    /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
+    address public rewardSeller;
+
+    /// @dev contract that manages additional rewards on top of interest bearing aave tokens
+    /// also known as the incentives contract
+    IRewardsController public rewardsController;
+
+    /// @dev when set to true by the owner, it will only allow divesting but not investing by the pairs in this mode
+    /// to facilitate replacement of asset managers to newer versions
+    bool public windDownMode;
+
     constructor(address aPoolAddressesProvider) {
         require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
         addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
@@ -56,6 +69,20 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         address lNewDataProvider = addressesProvider.getPoolDataProvider();
         require(lNewDataProvider != address(0), "AM: DATA_PROVIDER_ADDRESS_ZERO");
         dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
+    }
+
+    function setRewardSeller(address aRewardSeller) external onlyOwner {
+        require(aRewardSeller != address(0), "AM: REWARD_SELLER_ADDRESS_ZERO");
+        rewardSeller = aRewardSeller;
+    }
+
+    function setRewardsController(address aRewardsController) external onlyOwner {
+        require(aRewardsController != address(0), "AM: REWARDS_CONTROLLER_ZERO");
+        rewardsController = IRewardsController(aRewardsController);
+    }
+
+    function setWindDownMode(bool aWindDown) external onlyOwner {
+        windDownMode = aWindDown;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -106,6 +133,15 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         }
         if (address(lToken1AToken) == address(0)) {
             aAmount1Change = 0;
+        }
+
+        if (windDownMode) {
+            if (aAmount0Change > 0) {
+                aAmount0Change = 0;
+            }
+            if (aAmount1Change > 0) {
+                aAmount1Change = 0;
+            }
         }
 
         // withdraw from the market
@@ -191,6 +227,21 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
             assert(rAmountChange < 0);
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                ADDITIONAL REWARDS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function claimRewardForMarket(address aMarket, address aReward) external returns (uint256 rClaimed) {
+        require(msg.sender == rewardSeller, "AM: NOT_REWARD_SELLER");
+        require(aReward != address(0), "AM: REWARD_TOKEN_ZERO");
+        require(aMarket != address(0), "AM: MARKET_ZERO");
+
+        address[] memory lMarkets = new address[](1);
+        lMarkets[0] = aMarket;
+
+        rClaimed = rewardsController.claimRewards(lMarkets, type(uint256).max, rewardSeller, aReward);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
