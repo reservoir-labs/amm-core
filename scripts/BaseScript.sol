@@ -12,8 +12,7 @@ contract BaseScript is Script {
     function _ensureDeployerExists(uint256 aPrivateKey) internal {
         bytes memory lInitCode = abi.encodePacked(type(ReservoirDeployer).creationCode);
         lInitCode = abi.encodePacked(lInitCode, abi.encode(msg.sender, msg.sender, msg.sender));
-        address lDeployer = Create2Lib.computeAddress(msg.sender, lInitCode, bytes32(0));
-        console.log("ldeployer", lDeployer);
+        address lDeployer = Create2Lib.computeAddress(CREATE2_FACTORY, lInitCode, bytes32(0));
         if (lDeployer.code.length == 0) {
             vm.broadcast(aPrivateKey);
             _deployer = new ReservoirDeployer{salt: bytes32(0)}(msg.sender, msg.sender, msg.sender);
