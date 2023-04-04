@@ -18,7 +18,6 @@ library StableOracleMath {
         spotPrice = calcSpotPrice(amplificationParameter, reserve0, reserve1);
 
         int256 rawLogSpotPrice = LogCompression.toLowResLog(spotPrice);
-        assert(rawLogSpotPrice >= type(int112).min && rawLogSpotPrice <= type(int112).max);
         logSpotPrice = int112(rawLogSpotPrice);
     }
 

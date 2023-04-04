@@ -38,4 +38,13 @@ contract StdMathTest is Test {
         // assert
         assertEq(lDelta, 999_999_999_999_999_998);
     }
+
+    function testToLowRes() external {
+        int res = LogCompression.toLowResLog(1);
+        int res1 = LogCompression.toLowResLog(1000);
+        int res2 = LogCompression.toLowResLog(type(uint256).max / 2 - 10);
+        console.logInt(res);
+        console.logInt(res1);
+        console.logInt(res2);
+    }
 }

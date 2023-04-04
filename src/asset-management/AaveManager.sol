@@ -214,7 +214,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
         int256 lAmount0Change = -int256(aToken0 ? aAmount : 0);
         int256 lAmount1Change = -int256(aToken0 ? 0 : aAmount);
-        assert(lAmount0Change < 0 || lAmount1Change < 0);
+        require(lAmount0Change < 0 || lAmount1Change < 0, "AM: RETURN_ASSET_BOTH_TOKENS");
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 
