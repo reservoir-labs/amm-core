@@ -61,7 +61,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
-    uint256 public constant MAX_PLATFORM_FEE = 500_000; //  50%
+    uint256 public constant MAX_PLATFORM_FEE = 1_000_000; //  100%
     uint256 public constant MAX_SWAP_FEE = 20_000; //   2%
 
     IGenericFactory public immutable factory;
