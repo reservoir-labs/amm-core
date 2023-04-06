@@ -69,7 +69,7 @@ contract ReservoirTimelockTest is BaseTest {
         _timelock.rampA(_factory, address(_stablePair), 500, 2 days);
 
         // assert
-        (, uint64 futureA, , uint64 futureATime) = _stablePair.ampData();
+        (, uint64 futureA,, uint64 futureATime) = _stablePair.ampData();
         assertEq(futureA, 500 * StableMath.A_PRECISION);
         assertEq(futureATime, 2 days);
     }
