@@ -7,7 +7,7 @@ import { GenericFactory } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 
-contract ReservoirTimelock is CompTimelock(msg.sender, 3 days) {
+contract ReservoirTimelock is CompTimelock(msg.sender, 7 days) {
     function setCustomSwapFee(GenericFactory aFactory, address aPair, uint256 aSwapFee) external {
         require(msg.sender == admin, "RT: ADMIN");
 
