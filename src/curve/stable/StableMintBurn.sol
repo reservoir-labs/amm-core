@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { Bytes32Lib } from "src/libraries/Bytes32.sol";
-import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-import { StableMath } from "src/libraries/StableMath.sol";
-
-import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
-import { StablePair, ERC20 } from "src/curve/stable/StablePair.sol";
+import {
+    ERC20,
+    Bytes32Lib,
+    FactoryStoreLib,
+    StableMath,
+    IGenericFactory,
+    StablePair
+} from "src/curve/stable/StablePair.sol";
 
 contract StableMintBurn is StablePair {
     using FactoryStoreLib for IGenericFactory;

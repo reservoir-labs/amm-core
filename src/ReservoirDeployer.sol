@@ -9,10 +9,6 @@ import { ConstantsLib } from "src/libraries/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-// TODO:
-// - Enable factory ownership transfer.
-// - Enable oracle caller ownership transfer.
-
 contract ReservoirDeployer {
     using FactoryStoreLib for GenericFactory;
 
