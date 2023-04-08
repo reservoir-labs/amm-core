@@ -9,10 +9,6 @@ import { ConstantsLib } from "src/libraries/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-// TODO:
-// - Enable factory ownership transfer.
-// - Enable oracle caller ownership transfer.
-
 contract ReservoirDeployer {
     using FactoryStoreLib for GenericFactory;
 
@@ -21,11 +17,11 @@ contract ReservoirDeployer {
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant factory_hash = bytes32(0x535b9118ebcce882ec96a31c34e8e484eec1d29ab4320d4a0ceb3947eeef7d27);
-    bytes32 public constant constant_product_hash =
+    bytes32 public constant FACTORY_HASH = bytes32(0x535b9118ebcce882ec96a31c34e8e484eec1d29ab4320d4a0ceb3947eeef7d27);
+    bytes32 public constant CONSTANT_PRODUCT_HASH =
         bytes32(0xfd51d3f556dfe1107632606b7addb3613794860eaca5d37844f9fb2ce8ddc9d1);
-    bytes32 public constant stable_hash = bytes32(0x88ab720bfd59992965d48e10ca2792e8913d9cb7336dbf6c94e31e8fdcd23525);
-    bytes32 public constant oracle_caller_hash =
+    bytes32 public constant STABLE_HASH = bytes32(0x88ab720bfd59992965d48e10ca2792e8913d9cb7336dbf6c94e31e8fdcd23525);
+    bytes32 public constant ORACLE_CALLER_HASH =
         bytes32(0x262458524d9c8928fe7fd7661236b93f6d6a9535182f48fd582a75f18bfbf85f);
 
     // Deployment addresses.
@@ -52,7 +48,7 @@ contract ReservoirDeployer {
 
     function deployFactory(bytes memory aFactoryBytecode) external returns (GenericFactory) {
         require(step == 0, "FAC_STEP: OUT_OF_ORDER");
-        require(keccak256(aFactoryBytecode) == factory_hash);
+        require(keccak256(aFactoryBytecode) == FACTORY_HASH, "DEPLOYER: FACTORY_HASH");
 
         // Manual deployment from validated bytecode.
         address lFactoryAddress;
@@ -83,7 +79,7 @@ contract ReservoirDeployer {
 
     function deployConstantProduct(bytes memory aConstantProductBytecode) external {
         require(step == 1, "CP_STEP: OUT_OF_ORDER");
-        require(keccak256(aConstantProductBytecode) == constant_product_hash);
+        require(keccak256(aConstantProductBytecode) == CONSTANT_PRODUCT_HASH, "DEPLOYER: CP_HASH");
 
         // Add curve & curve specific parameters.
         factory.addCurve(aConstantProductBytecode);
@@ -95,7 +91,7 @@ contract ReservoirDeployer {
 
     function deployStable(bytes memory aStableBytecode) external {
         require(step == 2, "SP_STEP: OUT_OF_ORDER");
-        require(keccak256(aStableBytecode) == stable_hash);
+        require(keccak256(aStableBytecode) == STABLE_HASH, "DEPLOYER: STABLE_HASH");
 
         // Add curve & curve specific parameters.
         factory.addCurve(aStableBytecode);
@@ -108,7 +104,7 @@ contract ReservoirDeployer {
 
     function deployOracleCaller(bytes memory aOracleCallerBytecode) external returns (OracleCaller) {
         require(step == 3, "OC_STEP: OUT_OF_ORDER");
-        require(keccak256(aOracleCallerBytecode) == oracle_caller_hash);
+        require(keccak256(aOracleCallerBytecode) == ORACLE_CALLER_HASH, "DEPLOYER: OC_HASH");
 
         // Manual deployment from validated bytecode.
         address lOracleCallerAddress;
@@ -141,7 +137,7 @@ contract ReservoirDeployer {
     address public immutable guardian2;
     address public immutable guardian3;
 
-    mapping(address => mapping(address => uint256)) proposals;
+    mapping(address => mapping(address => uint256)) public proposals;
 
     function proposeOwner(address aOwner) external {
         proposals[msg.sender][aOwner] = 1;
@@ -157,7 +153,7 @@ contract ReservoirDeployer {
         uint256 lGuardian3Support = proposals[guardian3][msg.sender];
 
         uint256 lSupport = lGuardian1Support + lGuardian2Support + lGuardian3Support;
-        require(lSupport >= GUARDIAN_THRESHOLD);
+        require(lSupport >= GUARDIAN_THRESHOLD, "DEPLOYER: THRESHOLD");
 
         owner = msg.sender;
     }
@@ -169,7 +165,7 @@ contract ReservoirDeployer {
     address public owner = address(0);
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "DEPLOYER: NOT_OWNER");
         _;
     }
 
