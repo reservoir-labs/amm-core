@@ -81,9 +81,8 @@ contract StablePair is ReservoirPair {
 
         uint64 lCurrentAPrecise = _getCurrentAPrecise();
 
-        // daily rate = (futureA / currentA) / duration * 1 day
-        // we do multiplication first before division to avoid
-        // losing precision
+        // Daily rate = (futureA / currentA) / duration * 1 day.
+        // We do multiplication first before division to avoid losing precision.
         uint256 dailyRate = lFutureAPrecise > lCurrentAPrecise
             ? Math.ceilDiv(lFutureAPrecise * 1 days, lCurrentAPrecise * duration)
             : Math.ceilDiv(lCurrentAPrecise * 1 days, lFutureAPrecise * duration);
@@ -113,9 +112,8 @@ contract StablePair is ReservoirPair {
         address lTarget = MINT_BURN_LOGIC;
 
         // SAFETY:
-        // The delegated call has the same signature as the calling function
-        // and both the calldata and returndata do not exceed 64 bytes
-        // This is only valid when lTarget == MINT_BURN_LOGIC
+        // The delegated call has the same signature as the calling function and both the calldata
+        // and returndata do not exceed 64 bytes. This is only valid when lTarget == MINT_BURN_LOGIC.
         assembly ("memory-safe") {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)

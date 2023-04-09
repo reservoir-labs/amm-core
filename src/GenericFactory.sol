@@ -20,8 +20,10 @@ contract GenericFactory is IGenericFactory, Owned {
         StableMintBurn lStableMintBurn = new StableMintBurn{salt: bytes32(0)}();
         require(address(lStableMintBurn) != address(0), "FACTORY: STABLE_MINT_BURN_FAILED");
 
+        // REVIEW: Should we just make this a getter on the generic factory?
         set(keccak256(abi.encodePacked("SP::StableMintBurn")), address(lStableMintBurn).toBytes32());
 
+        // REVIEW: We have PairCreated for pair creation, do we need this one off event for StableMintBurn?
         emit Deployed(address(lStableMintBurn));
     }
 
@@ -158,24 +160,18 @@ contract GenericFactory is IGenericFactory, Owned {
         // SAFETY:
         // Does not write to memory
         assembly ("memory-safe") {
-            // create2 the pair, uniqueness guaranteed by args
+            // Create2 the pair, uniqueness guaranteed by args.
             rPair :=
                 create2(
-                    // 0 value is sent at deployment
-                    0,
-                    // skip the first word of lByteCode (which is length)
-                    add(lInitCode, 0x20),
-                    // load the length of lBytecode (which is stored in the first
-                    // word)
-                    mload(lInitCode),
-                    // do not use any salt, our bytecode is unique due to
-                    // (token0,token1) constructor arguments
-                    0
+                    0, // value
+                    add(lInitCode, 0x20), // offset - skip first word, which is just the length
+                    mload(lInitCode), // size
+                    0 // salt
                 )
         }
         require(rPair != address(0), "FACTORY: DEPLOY_FAILED");
 
-        // double-map the newly created pair for reverse lookup
+        // Double-map the newly created pair for reverse lookup.
         getPair[lToken0][lToken1][aCurveId] = rPair;
         getPair[lToken1][lToken0][aCurveId] = rPair;
         _allPairs.push(rPair);

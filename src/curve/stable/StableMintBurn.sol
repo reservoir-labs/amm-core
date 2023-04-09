@@ -81,10 +81,10 @@ contract StableMintBurn is StablePair {
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
 
-        // casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens with 0 decimal
-        // places)
-        // which results in 112 + 60 + 1 = 173 bits
-        // which fits into uint192
+        // Casting is safe as the max invariant would be 2 * uint104 * uint60 (in the case of tokens
+        // with 0 decimal places).
+        // Which results in 112 + 60 + 1 = 173 bits.
+        // Which fits into uint192.
         lastInvariant = uint192(lNewLiq);
         lastInvariantAmp = _getCurrentAPrecise();
 

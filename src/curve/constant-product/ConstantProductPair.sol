@@ -40,7 +40,7 @@ contract ConstantProductPair is ReservoirPair {
      * Uniswap whitepaper; see https://uniswap.org/whitepaper.pdf for further details.
      *
      * The specific difference between the Uniswap V2 implementation and this fee calculation is the fee variable,
-     * which remains a variable with range 0-50% here, but is fixed at (1/6)% in Uniswap V2.
+     * which remains a variable with range 0-100% here, but is fixed at (1/6)% in Uniswap V2.
      *
      * The mathematical equation:
      * If 'Fee' is the platform fee, and the previous and new values of the square-root of the invariant k, are
