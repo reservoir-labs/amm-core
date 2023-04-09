@@ -59,6 +59,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         updateDataProviderAddress();
     }
 
+    /*//////////////////////////////////////////////////////////////////////////
+                                    ADMIN ACTIONS
+    //////////////////////////////////////////////////////////////////////////*/
+
     function updatePoolAddress() public onlyOwner {
         address lNewPool = addressesProvider.getPool();
         require(lNewPool != address(0), "AM: POOL_ADDRESS_ZERO");
@@ -85,8 +89,58 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         windDownMode = aWindDown;
     }
 
+    function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
+        require(aUpperThreshold <= 100 && aUpperThreshold > lowerThreshold, "AM: INVALID_THRESHOLD");
+        upperThreshold = aUpperThreshold;
+    }
+
+    function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
+        require(aLowerThreshold <= 100 && aLowerThreshold < upperThreshold, "AM: INVALID_THRESHOLD");
+        lowerThreshold = aLowerThreshold;
+    }
+
     /*//////////////////////////////////////////////////////////////////////////
-                                    GET BALANCE
+                                HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    /// @dev Expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18.
+    function _getExchangeRate(ERC20 aAaveToken) private view returns (uint256 rExchangeRate) {
+        uint256 lTotalShares = totalShares[aAaveToken];
+        if (lTotalShares == 0) {
+            return 1e18;
+        }
+
+        rExchangeRate = aAaveToken.balanceOf(address(this)).divWad(lTotalShares);
+    }
+
+    function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
+        private
+        returns (uint256 rShares)
+    {
+        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        shares[aPair][aToken] += rShares;
+        totalShares[aAaveToken] += rShares;
+    }
+
+    function _decreaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
+        private
+        returns (uint256 rShares)
+    {
+        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        shares[aPair][aToken] -= rShares;
+        totalShares[aAaveToken] -= rShares;
+    }
+
+    /// @notice returns the address of the AAVE token.
+    /// If an AAVE token doesn't exist for the asset, returns address 0
+    function _getATokenAddress(ERC20 aToken) private view returns (ERC20) {
+        (address lATokenAddress,,) = dataProvider.getReserveTokensAddresses(address(aToken));
+
+        return ERC20(lATokenAddress);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                GET BALANCE
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
@@ -100,6 +154,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         if (lTotalShares == 0) {
             return 0;
         }
+
         rTokenBalance = shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / lTotalShares;
     }
 
@@ -180,16 +235,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         emit FundsInvested(aPair, aToken, lShares);
     }
 
-    function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
-        require(aUpperThreshold <= 100 && aUpperThreshold > lowerThreshold, "AM: INVALID_THRESHOLD");
-        upperThreshold = aUpperThreshold;
-    }
-
-    function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
-        require(aLowerThreshold <= 100 && aLowerThreshold < upperThreshold, "AM: INVALID_THRESHOLD");
-        lowerThreshold = aLowerThreshold;
-    }
-
     /*//////////////////////////////////////////////////////////////////////////
                                 CALLBACKS FROM PAIR
     //////////////////////////////////////////////////////////////////////////*/
@@ -241,43 +286,5 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         lMarkets[0] = aMarket;
 
         rClaimed = rewardsController.claimRewards(lMarkets, type(uint256).max, rewardSeller, aReward);
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
-                                HELPER FUNCTIONS
-    //////////////////////////////////////////////////////////////////////////*/
-
-    /// @dev expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18
-    function _getExchangeRate(ERC20 aAaveToken) private view returns (uint256 rExchangeRate) {
-        uint256 lTotalShares = totalShares[aAaveToken];
-        if (lTotalShares == 0) {
-            return 1e18;
-        }
-        rExchangeRate = aAaveToken.balanceOf(address(this)).divWad(lTotalShares);
-    }
-
-    function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
-        private
-        returns (uint256 rShares)
-    {
-        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
-        shares[aPair][aToken] += rShares;
-        totalShares[aAaveToken] += rShares;
-    }
-
-    function _decreaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
-        private
-        returns (uint256 rShares)
-    {
-        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
-        shares[aPair][aToken] -= rShares;
-        totalShares[aAaveToken] -= rShares;
-    }
-
-    /// @notice returns the address of the AAVE token.
-    /// If an AAVE token doesn't exist for the asset, returns address 0
-    function _getATokenAddress(ERC20 aToken) private view returns (ERC20) {
-        (address lATokenAddress,,) = dataProvider.getReserveTokensAddresses(address(aToken));
-        return ERC20(lATokenAddress);
     }
 }
