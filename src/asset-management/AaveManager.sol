@@ -110,7 +110,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             return 1e18;
         }
 
-        rExchangeRate = aAaveToken.balanceOf(address(this)).divWad(lTotalShares);
+        uint256 lAaveUnderlying = aAaveToken.balanceOf(address(this));
+        require(lAaveUnderlying != 0, "AM: INVALID_AAVE_BALANCE");
+
+        rExchangeRate = lAaveUnderlying.divWad(lTotalShares);
     }
 
     function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
