@@ -42,8 +42,8 @@ contract AssetManagedPairTest is BaseTest {
 
     function testSetManager_CannotMigrateWithManaged(uint256 aAmount0, uint256 aAmount1) external allPairs {
         // assume
-        int256 lAmount0 = int256(bound(aAmount0, 1, ConstantsLib.INITIAL_MINT_AMOUNT));
-        int256 lAmount1 = int256(bound(aAmount1, 1, ConstantsLib.INITIAL_MINT_AMOUNT));
+        int256 lAmount0 = int256(bound(aAmount0, 1, Constants.INITIAL_MINT_AMOUNT));
+        int256 lAmount1 = int256(bound(aAmount1, 1, Constants.INITIAL_MINT_AMOUNT));
 
         // arrange
         vm.prank(address(_factory));
@@ -59,8 +59,8 @@ contract AssetManagedPairTest is BaseTest {
 
     function testAdjustManagement(uint256 aAmount0, uint256 aAmount1) external allPairs {
         // assume
-        int256 lAmount0 = int256(bound(aAmount0, 1, ConstantsLib.INITIAL_MINT_AMOUNT));
-        int256 lAmount1 = int256(bound(aAmount1, 1, ConstantsLib.INITIAL_MINT_AMOUNT));
+        int256 lAmount0 = int256(bound(aAmount0, 1, Constants.INITIAL_MINT_AMOUNT));
+        int256 lAmount1 = int256(bound(aAmount1, 1, Constants.INITIAL_MINT_AMOUNT));
 
         // arrange
         vm.prank(address(_factory));
@@ -255,8 +255,8 @@ contract AssetManagedPairTest is BaseTest {
         _pair.burn(address(this));
 
         // assert - the burner gets less than in the case where the loss didn't happen
-        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * ConstantsLib.INITIAL_MINT_AMOUNT / lTotalSupply);
-        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * ConstantsLib.INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * Constants.INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * Constants.INITIAL_MINT_AMOUNT / lTotalSupply);
     }
 
     function testSwap_AfterLoss(uint256 aNewManagedBalance0) external allPairs {
@@ -362,12 +362,12 @@ contract AssetManagedPairTest is BaseTest {
         (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
         assertTrue(
             MathUtils.within1(
-                lReserve0, (ConstantsLib.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18
+                lReserve0, (Constants.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance0 + 10e18) * 210e18 / 220e18
             )
         );
         assertTrue(
             MathUtils.within1(
-                lReserve1, (ConstantsLib.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18
+                lReserve1, (Constants.INITIAL_MINT_AMOUNT - 20e18 + lNewManagedBalance1 + 10e18) * 210e18 / 220e18
             )
         );
         assertLt(_tokenA.balanceOf(address(this)), 10e18);
@@ -376,8 +376,8 @@ contract AssetManagedPairTest is BaseTest {
 
     function testSync(uint256 aAmount0, uint256 aAmount1, uint256 aNewAmount0, uint256 aNewAmount1) external allPairs {
         // assume
-        int256 lAmount0Managed = int256(bound(aAmount0, 1, ConstantsLib.INITIAL_MINT_AMOUNT));
-        int256 lAmount1Managed = int256(bound(aAmount1, 1, ConstantsLib.INITIAL_MINT_AMOUNT));
+        int256 lAmount0Managed = int256(bound(aAmount0, 1, Constants.INITIAL_MINT_AMOUNT));
+        int256 lAmount1Managed = int256(bound(aAmount1, 1, Constants.INITIAL_MINT_AMOUNT));
         uint104 lAmount0NewBalance = uint104(bound(aNewAmount0, 1, type(uint104).max / 2));
         uint104 lAmount1NewBalance = uint104(bound(aNewAmount1, 1, type(uint104).max / 2));
 
@@ -395,8 +395,8 @@ contract AssetManagedPairTest is BaseTest {
         (uint104 lReserve0, uint104 lReserve1,,) = _pair.getReserves();
         assertEq(_pair.token0Managed(), lAmount0NewBalance);
         assertEq(_pair.token1Managed(), lAmount1NewBalance);
-        assertEq(lReserve0, ConstantsLib.INITIAL_MINT_AMOUNT - uint256(lAmount0Managed) + lAmount0NewBalance);
-        assertEq(lReserve1, ConstantsLib.INITIAL_MINT_AMOUNT - uint256(lAmount1Managed) + lAmount1NewBalance);
+        assertEq(lReserve0, Constants.INITIAL_MINT_AMOUNT - uint256(lAmount0Managed) + lAmount0NewBalance);
+        assertEq(lReserve1, Constants.INITIAL_MINT_AMOUNT - uint256(lAmount1Managed) + lAmount1NewBalance);
     }
 
     function testBurn_AfterAlmostTotalLoss() external allPairs {
@@ -420,8 +420,8 @@ contract AssetManagedPairTest is BaseTest {
         _pair.burn(address(this));
 
         // assert - the burner gets less than in the case where the loss didn't happen
-        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * ConstantsLib.INITIAL_MINT_AMOUNT / lTotalSupply);
-        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * ConstantsLib.INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenA.balanceOf(address(this)), lLpTokenBal * Constants.INITIAL_MINT_AMOUNT / lTotalSupply);
+        assertLt(_tokenB.balanceOf(address(this)), lLpTokenBal * Constants.INITIAL_MINT_AMOUNT / lTotalSupply);
     }
 
     function testSkimExcessManaged() external allPairs {
@@ -430,7 +430,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         // act - make new managed balance exceed uint104.max
-        _manager.adjustManagement(_pair, int256(ConstantsLib.INITIAL_MINT_AMOUNT), 0);
+        _manager.adjustManagement(_pair, int256(Constants.INITIAL_MINT_AMOUNT), 0);
         _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max) + 5);
         _pair.skimExcessManaged(_pair.token0());
 
@@ -445,7 +445,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         // act
-        _manager.adjustManagement(_pair, int256(ConstantsLib.INITIAL_MINT_AMOUNT), 0);
+        _manager.adjustManagement(_pair, int256(Constants.INITIAL_MINT_AMOUNT), 0);
         _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max));
         _pair.skimExcessManaged(_pair.token0());
 

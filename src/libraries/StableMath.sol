@@ -81,7 +81,7 @@ library StableMath {
             }
 
             // Add the swap fee.
-            dx = dx * (ONE_HUNDRED_PERCENT + swapFee) / MAX_FEE;
+            dx = dx * (ONE_HUNDRED_PERCENT + swapFee) / ONE_HUNDRED_PERCENT;
         }
     }
 

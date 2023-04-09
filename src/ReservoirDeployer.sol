@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
+import { Constants } from "src/Constants.sol";
 
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -66,10 +66,10 @@ contract ReservoirDeployer {
         factory = GenericFactory(lFactoryAddress);
 
         // Set global parameters.
-        factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
+        factory.write("Shared::platformFee", Constants.DEFAULT_PLATFORM_FEE);
         factory.write("Shared::platformFeeTo", address(this));
         factory.write("Shared::recoverer", address(this));
-        factory.write("Shared::maxChangeRate", ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
+        factory.write("Shared::maxChangeRate", Constants.DEFAULT_MAX_CHANGE_RATE);
 
         // Step complete.
         step += 1;
@@ -83,7 +83,7 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aConstantProductBytecode);
-        factory.write("CP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_CP);
+        factory.write("CP::swapFee", Constants.DEFAULT_SWAP_FEE_CP);
 
         // Step complete.
         step += 1;
@@ -95,8 +95,8 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aStableBytecode);
-        factory.write("SP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_SP);
-        factory.write("SP::amplificationCoefficient", ConstantsLib.DEFAULT_AMP_COEFF);
+        factory.write("SP::swapFee", Constants.DEFAULT_SWAP_FEE_SP);
+        factory.write("SP::amplificationCoefficient", Constants.DEFAULT_AMP_COEFF);
 
         // Step complete.
         step += 1;

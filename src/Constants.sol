@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-library ConstantsLib {
+library Constants {
     uint256 public constant INITIAL_MINT_AMOUNT = 100e18;
     uint256 public constant DEFAULT_SWAP_FEE_CP = 3000; // 0.3%
     uint256 public constant DEFAULT_SWAP_FEE_SP = 100; // 0.01%

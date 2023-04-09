@@ -7,7 +7,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Create2Lib } from "src/libraries/Create2Lib.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
+import { Constants } from "src/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 import { ReservoirDeployer } from "src/ReservoirDeployer.sol";
@@ -66,14 +66,14 @@ abstract contract BaseTest is Test {
 
         // Setup default ConstantProductPair.
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenB), 0));
-        _tokenA.mint(address(_constantProductPair), ConstantsLib.INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_constantProductPair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_constantProductPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_constantProductPair), Constants.INITIAL_MINT_AMOUNT);
         _constantProductPair.mint(_alice);
 
         // Setup default StablePair.
         _stablePair = StablePair(_createPair(address(_tokenA), address(_tokenB), 1));
-        _tokenA.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
-        _tokenB.mint(address(_stablePair), ConstantsLib.INITIAL_MINT_AMOUNT);
+        _tokenA.mint(address(_stablePair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenB.mint(address(_stablePair), Constants.INITIAL_MINT_AMOUNT);
         _stablePair.mint(_alice);
     }
 
