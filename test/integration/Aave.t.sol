@@ -20,7 +20,6 @@ import { GenericFactory } from "src/GenericFactory.sol";
 struct Network {
     string rpcUrl;
     address USDC;
-    uint256 blockNum;
 }
 
 struct Fork {
@@ -80,7 +79,7 @@ contract AaveIntegrationTest is BaseTest {
         Fork memory lFork = _forks[aNetwork.rpcUrl];
 
         if (lFork.created == false) {
-            uint256 lForkId = vm.createFork(aNetwork.rpcUrl, aNetwork.blockNum);
+            uint256 lForkId = vm.createFork(aNetwork.rpcUrl);
 
             lFork = Fork(true, lForkId);
             _forks[aNetwork.rpcUrl] = lFork;
@@ -123,17 +122,13 @@ contract AaveIntegrationTest is BaseTest {
         _networks.push(
             Network(
                 getChain("avalanche").rpcUrl,
-                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,
-                // this block number is before AAVE froze the USDC market
-                27_221_985
+                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E
             )
         );
         _networks.push(
             Network(
                 getChain("polygon").rpcUrl,
-                0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174,
-                // this block number is before AAVE froze the USDC market
-                40_139_386
+                0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
             )
         );
 

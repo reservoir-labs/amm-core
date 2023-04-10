@@ -129,7 +129,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWadUp(_getExchangeRate(aAaveToken));
         shares[aPair][aToken] -= rShares;
         totalShares[aAaveToken] -= rShares;
     }
