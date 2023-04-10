@@ -889,7 +889,7 @@ contract AaveIntegrationTest is BaseTest {
     function testSetUpperThreshold_BreachMaximum() public allNetworks {
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setUpperThreshold(101);
+        _manager.setUpperThreshold(1e18 + 1);
     }
 
     function testSetUpperThreshold_LessThanEqualLowerThreshold(uint256 aThreshold) public allNetworks {
