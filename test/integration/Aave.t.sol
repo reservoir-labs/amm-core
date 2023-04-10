@@ -1055,6 +1055,10 @@ contract AaveIntegrationTest is BaseTest {
 
         // act
         _stepTime(lFastForwardTime);
+        _pair.sync();
+        lOtherPair.sync();
+        lThirdPair.sync();
+
         // divest everything
         _manager.adjustManagement(
             lOtherPair,
@@ -1072,6 +1076,12 @@ contract AaveIntegrationTest is BaseTest {
             _pair.token1() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0)
         );
 
+        console.log(_manager.getBalance(_pair, USDC));
+        console.log(_pair.token0Managed());
+        console.log(_pair.token1Managed());
+        console.log(_manager.getBalance(lOtherPair, USDC));
+        console.log(_manager.getBalance(lThirdPair, USDC));
+
         // assert
         vm.startPrank(address(_factory));
         _pair.setManager(IAssetManager(address(0)));
@@ -1081,5 +1091,7 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(_pair.assetManager()), address(0));
         assertEq(address(lOtherPair.assetManager()), address(0));
         assertEq(address(lThirdPair.assetManager()), address(0));
+
+        // check if there's any leftover shares in the aave manager after everybody redeems
     }
 }

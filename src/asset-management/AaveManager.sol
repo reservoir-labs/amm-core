@@ -131,7 +131,9 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
+        // note about error of `1e-decimals`
         rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        // might want to do: if rShares are greater than the shares we have, just zero it
         shares[aPair][aToken] -= rShares;
         totalShares[aAaveToken] -= rShares;
     }
