@@ -14,7 +14,7 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { AaveManager } from "src/asset-management/AaveManager.sol";
+import { AaveManager, IAssetManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 struct Network {
@@ -917,6 +917,28 @@ contract AaveIntegrationTest is BaseTest {
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
         _manager.setLowerThreshold(lThreshold);
+    }
+
+    function testThresholdToZero_Migrate(uint256 aAmtToManage, uint256 aFastForwardTime) external allNetworks allPairs {
+        // assume
+        uint256 lAmtToManage = bound(aAmtToManage, 1, MINT_AMOUNT);
+        uint256 lFastForwardTime = bound(aFastForwardTime, 5 minutes, 60 days);
+
+        // arrange
+        _increaseManagementOneToken(int256(lAmtToManage));
+
+        // act
+        _manager.setLowerThreshold(0);
+        _manager.setUpperThreshold(0);
+        // step some time to accumulate some profits
+        _stepTime(lFastForwardTime);
+
+        // assert
+        _pair.burn(address(this));
+        // attempts to migrate after this should succeed
+        vm.prank(address(_factory));
+        _pair.setManager(IAssetManager(address(0)));
+        assertEq(address(_pair.assetManager()), address(0));
     }
 
     function testClaimReward() external allNetworks allPairs {
