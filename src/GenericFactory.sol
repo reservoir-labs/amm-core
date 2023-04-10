@@ -16,18 +16,11 @@ uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 contract GenericFactory is IGenericFactory, Owned {
     using Bytes32Lib for address;
 
+    address public stableMintBurn;
+
     constructor() Owned(msg.sender) {
-        StableMintBurn lStableMintBurn = new StableMintBurn{salt: bytes32(0)}();
-        require(address(lStableMintBurn) != address(0), "FACTORY: STABLE_MINT_BURN_FAILED");
-
-        // REVIEW: Should we just make this a getter on the generic factory?
-        set(keccak256(abi.encodePacked("SP::StableMintBurn")), address(lStableMintBurn).toBytes32());
-
-        // REVIEW: We have PairCreated for pair creation, do we need this one off event for StableMintBurn?
-        emit Deployed(address(lStableMintBurn));
+        stableMintBurn = address(new StableMintBurn{salt: bytes32(0)}());
     }
-
-    event Deployed(address _address);
 
     /*//////////////////////////////////////////////////////////////////////////
                                     CONFIG

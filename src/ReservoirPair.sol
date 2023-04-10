@@ -48,6 +48,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
 
+    IGenericFactory public immutable factory;
+
     modifier onlyFactory() {
         require(msg.sender == address(factory), "RP: FORBIDDEN");
         _;
@@ -79,7 +81,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    IGenericFactory public immutable factory;
     ERC20 public immutable token0;
     ERC20 public immutable token1;
 
@@ -434,7 +435,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
             address(_token0()).safeTransfer(msg.sender, lDelta);
         } else if (aToken0Change < 0) {
-            // REVIEW: What happens if aToken0Change is int256.min?
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
             // solhint-disable-next-line reentrancy
@@ -451,7 +451,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
             address(_token1()).safeTransfer(msg.sender, lDelta);
         } else if (aToken1Change < 0) {
-            // REVIEW: What happens if aToken1Change is int256.min?
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
             // solhint-disable-next-line reentrancy
@@ -465,7 +464,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         require(aToken == _token0() || aToken == _token1(), "RP: INVALID_SKIM_TOKEN");
         uint256 lTokenAmtManaged = assetManager.getBalance(this, aToken);
 
-        // REVIEW: Should this be `amountManaged` or `amountManaged + amountInPair`?
         if (lTokenAmtManaged > type(uint104).max) {
             address lRecoverer = factory.read(RECOVERER_NAME).toAddress();
 
