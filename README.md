@@ -44,6 +44,7 @@ npm run test:integration
 ```
 
 To run differential fuzz tests:
+
 ```bash
 npm run test:differential
 ```
