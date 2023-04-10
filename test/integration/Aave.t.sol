@@ -119,21 +119,12 @@ contract AaveIntegrationTest is BaseTest {
     }
 
     function setUp() external {
-        _networks.push(
-            Network(
-                getChain("avalanche").rpcUrl,
-                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E
-            )
-        );
-        _networks.push(
-            Network(
-                getChain("polygon").rpcUrl,
-                0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
-            )
-        );
+        _networks.push(Network(getChain("avalanche").rpcUrl, 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E));
+        _networks.push(Network(getChain("polygon").rpcUrl, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174));
 
         vm.makePersistent(address(_tokenA));
         vm.makePersistent(address(_tokenB));
+        vm.makePersistent(address(_tokenC));
     }
 
     function _createOtherPair() private returns (ConstantProductPair rOtherPair) {
@@ -919,7 +910,11 @@ contract AaveIntegrationTest is BaseTest {
         _manager.setLowerThreshold(lThreshold);
     }
 
-    function testThresholdToZero_Migrate(uint256 aAmtToManage, uint256 aFastForwardTime) external allNetworks allPairs {
+    function testThresholdToZero_Migrate(uint256 aAmtToManage, uint256 aFastForwardTime)
+        external
+        allNetworks
+        allPairs
+    {
         // assume
         uint256 lAmtToManage = bound(aAmtToManage, 1, MINT_AMOUNT);
         uint256 lFastForwardTime = bound(aFastForwardTime, 5 minutes, 60 days);
@@ -1012,5 +1007,68 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lPercentageIncreaseOther = lBalAfterCompoundingOther.divWad(lBalAfterTimeOther);
         // percentage diff is no greater than 0.000001%
         assertApproxEqRel(lPercentageIncreasePair, lPercentageIncreaseOther, 0.00000001e18);
+    }
+
+    function testFullRedeem_MultiplePairs(
+        uint256 aAmtToManage0,
+        uint256 aAmtToManage1,
+        uint256 aAmtToManage2,
+        uint256 aFastForwardTime
+    ) external allNetworks allPairs {
+        // assume
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 1, MINT_AMOUNT);
+        uint256 lFastForwardTime = bound(aFastForwardTime, 1, 60 days);
+
+        // arrange
+        ConstantProductPair lOtherPair = _createOtherPair();
+        StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
+        deal(address(USDC), address(this), MINT_AMOUNT, true);
+        USDC.transfer(address(lThirdPair), MINT_AMOUNT);
+        _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
+        lThirdPair.mint(_alice);
+        vm.prank(address(_factory));
+        lThirdPair.setManager(_manager);
+        _increaseManagementOneToken(int256(lAmtToManage0));
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? int256(lAmtToManage1) : int256(0),
+            lOtherPair.token1() == USDC ? int256(lAmtToManage1) : int256(0)
+        );
+        _manager.adjustManagement(
+            lThirdPair,
+            lThirdPair.token0() == USDC ? int256(lAmtToManage2) : int256(0),
+            lThirdPair.token1() == USDC ? int256(lAmtToManage2) : int256(0)
+        );
+
+        // act
+        _stepTime(lFastForwardTime);
+        // divest everything
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0),
+            lOtherPair.token1() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0)
+        );
+        _manager.adjustManagement(
+            lThirdPair,
+            lThirdPair.token0() == USDC ? -int256(_manager.getBalance(lThirdPair, USDC)) : int256(0),
+            lThirdPair.token1() == USDC ? -int256(_manager.getBalance(lThirdPair, USDC)) : int256(0)
+        );
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0),
+            _pair.token1() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0)
+        );
+
+        // assert
+        vm.startPrank(address(_factory));
+        _pair.setManager(IAssetManager(address(0)));
+        lOtherPair.setManager(IAssetManager(address(0)));
+        lThirdPair.setManager(IAssetManager(address(0)));
+        vm.stopPrank();
+        assertEq(address(_pair.assetManager()), address(0));
+        assertEq(address(lOtherPair.assetManager()), address(0));
+        assertEq(address(lThirdPair.assetManager()), address(0));
     }
 }
