@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface IGenericFactory {
+    function stableMintBurn() external view returns (address);
+
     function get(bytes32 key) external view returns (bytes32 value);
     function set(bytes32 key, bytes32 value) external;
 

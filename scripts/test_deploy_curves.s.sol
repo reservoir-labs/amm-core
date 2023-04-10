@@ -6,7 +6,6 @@ import "scripts/BaseScript.sol";
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
 
 import { GenericFactory } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";

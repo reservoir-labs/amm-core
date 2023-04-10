@@ -19,7 +19,7 @@ For alternative installation options & more details [see the foundry repo](https
 ```bash
 git submodule update --init --recursive
 nvm use
-npm install
+npm ci
 npm run install 
 ```
 
@@ -41,6 +41,12 @@ To run integration tests:
 
 ```bash
 npm run test:integration
+```
+
+To run differential fuzz tests:
+
+```bash
+npm run test:differential
 ```
 
 To run legacy tests:

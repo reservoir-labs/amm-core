@@ -1,7 +1,7 @@
 {
-  "name": "v3-core",
+  "name": "amm-core",
   "version": "0.1.0",
-  "description": "Core smart contracts for Vexchange V3",
+  "description": "Core AMM contracts for Reservoir Finance",
   "eslintConfig": {
     "parserOptions": {
       "project": [
@@ -37,7 +37,7 @@
     "gas:snapshot": "forge snapshot",
     "gas:check": "forge snapshot --check",
     "generate": "typechain --target ethers-v5 --out-dir typings 'out/**/*.json'",
-    "install": "npm run install:uniswap",
+    "install": "npm run install:uniswap && npm run install:balancer",
     "install:uniswap": "cd reference/uniswap-v2-core && npm ci",
     "install:balancer": "cd reference/balancer-v2-monorepo && yarn",
     "lint": "npm run lint:check",
@@ -65,10 +65,11 @@
     "submodule:reset": "git submodule update --recursive",
     "test": "npm run test:unit",
     "test:all": "./scripts/coverage_patch_deployer.sh && npm run test:unit && npm run test:integration",
+    "test:balancer": "export FOUNDRY_PROFILE=differential && ./scripts/coverage_patch_deployer.sh && forge test",
+    "test:differential": "export FOUNDRY_PROFILE=differential && forge test",
     "test:e2e": "./test/e2e/deployment.sh",
     "test:integration": "export FOUNDRY_PROFILE=integration && ./scripts/coverage_patch_deployer.sh && forge test ",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
-    "test:balancer": "export FOUNDRY_PROFILE=differential && ./scripts/coverage_patch_deployer.sh && forge test",
     "test:unit": "./scripts/coverage_patch_deployer.sh && forge test"
   },
   "devDependencies": {

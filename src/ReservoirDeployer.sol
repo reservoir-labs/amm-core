@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
-import { ConstantsLib } from "src/libraries/Constants.sol";
+import { Constants } from "src/Constants.sol";
 
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
@@ -17,10 +17,10 @@ contract ReservoirDeployer {
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant FACTORY_HASH = bytes32(0x535b9118ebcce882ec96a31c34e8e484eec1d29ab4320d4a0ceb3947eeef7d27);
+    bytes32 public constant FACTORY_HASH = bytes32(0x3f441604b9a0eabef1badea44eef6b79229fe90ab1ae2beb4e5f6c07c0019bb7);
     bytes32 public constant CONSTANT_PRODUCT_HASH =
-        bytes32(0xfd51d3f556dfe1107632606b7addb3613794860eaca5d37844f9fb2ce8ddc9d1);
-    bytes32 public constant STABLE_HASH = bytes32(0x88ab720bfd59992965d48e10ca2792e8913d9cb7336dbf6c94e31e8fdcd23525);
+        bytes32(0x351f894d95e0830ef2837dc673222dccbd67b46c9ca6f4ff14ea5f9e7a17b513);
+    bytes32 public constant STABLE_HASH = bytes32(0xea384a68f34895e4d68380424cdb5935207ea2369ef81c523a3eb2ee382e661f);
     bytes32 public constant ORACLE_CALLER_HASH =
         bytes32(0x262458524d9c8928fe7fd7661236b93f6d6a9535182f48fd582a75f18bfbf85f);
 
@@ -66,10 +66,10 @@ contract ReservoirDeployer {
         factory = GenericFactory(lFactoryAddress);
 
         // Set global parameters.
-        factory.write("Shared::platformFee", ConstantsLib.DEFAULT_PLATFORM_FEE);
+        factory.write("Shared::platformFee", Constants.DEFAULT_PLATFORM_FEE);
         factory.write("Shared::platformFeeTo", address(this));
         factory.write("Shared::recoverer", address(this));
-        factory.write("Shared::maxChangeRate", ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
+        factory.write("Shared::maxChangeRate", Constants.DEFAULT_MAX_CHANGE_RATE);
 
         // Step complete.
         step += 1;
@@ -83,7 +83,7 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aConstantProductBytecode);
-        factory.write("CP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_CP);
+        factory.write("CP::swapFee", Constants.DEFAULT_SWAP_FEE_CP);
 
         // Step complete.
         step += 1;
@@ -95,8 +95,8 @@ contract ReservoirDeployer {
 
         // Add curve & curve specific parameters.
         factory.addCurve(aStableBytecode);
-        factory.write("SP::swapFee", ConstantsLib.DEFAULT_SWAP_FEE_SP);
-        factory.write("SP::amplificationCoefficient", ConstantsLib.DEFAULT_AMP_COEFF);
+        factory.write("SP::swapFee", Constants.DEFAULT_SWAP_FEE_SP);
+        factory.write("SP::amplificationCoefficient", Constants.DEFAULT_AMP_COEFF);
 
         // Step complete.
         step += 1;

@@ -45,59 +45,26 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using SafeCast for uint256;
     using SafeTransferLib for address;
 
-    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
-    event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
-    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
-    event CustomPlatformFeeChanged(uint256 oldCustomPlatformFee, uint256 newCustomPlatformFee);
-    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
-    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
-    event Swap(address indexed sender, bool zeroForOne, uint256 amountIn, uint256 amountOut, address indexed to);
-    event Sync(uint104 reserve0, uint104 reserve1);
-
-    string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
-    string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
-    string private constant RECOVERER_NAME = "Shared::recoverer";
-    bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
-
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
-    uint256 public constant MAX_PLATFORM_FEE = 1_000_000; //  100%
-    uint256 public constant MAX_SWAP_FEE = 20_000; //   2%
 
     IGenericFactory public immutable factory;
-    ERC20 public immutable token0;
-    ERC20 public immutable token1;
-
-    /// @dev Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS.
-    /// For example, TBTC has 18 decimals, so the multiplier should be 1. WBTC
-    /// has 8, so the multiplier should be 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint128 public immutable token0PrecisionMultiplier;
-    uint128 public immutable token1PrecisionMultiplier;
-
-    Slot0 internal _slot0 = Slot0({ reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max });
-
-    uint256 public swapFee;
-    uint256 public customSwapFee = type(uint256).max;
-    bytes32 internal immutable swapFeeName;
-
-    uint256 public platformFee;
-    uint256 public customPlatformFee = type(uint256).max;
 
     modifier onlyFactory() {
         require(msg.sender == address(factory), "RP: FORBIDDEN");
         _;
     }
 
-    constructor(ERC20 aToken0, ERC20 aToken1, string memory aSwapFeeName, bool aNormalPair) {
+    constructor(ERC20 aToken0, ERC20 aToken1, string memory aSwapFeeName, bool aNotStableMintBurn) {
         factory = IGenericFactory(msg.sender);
         token0 = aToken0;
         token1 = aToken1;
 
-        token0PrecisionMultiplier = aNormalPair ? uint128(10) ** (18 - aToken0.decimals()) : 0;
-        token1PrecisionMultiplier = aNormalPair ? uint128(10) ** (18 - aToken1.decimals()) : 0;
+        token0PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken0.decimals()) : 0;
+        token1PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken1.decimals()) : 0;
         swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
 
-        if (aNormalPair) {
+        if (aNotStableMintBurn) {
             updateSwapFee();
             updatePlatformFee();
             updateOracleCaller();
@@ -107,12 +74,21 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /*//////////////////////////////////////////////////////////////////////////
 
-                            IMMUTABLE GETTERS
+                                IMMUTABLE GETTERS
 
-    Allows StableMintBurn override the immutables to instead make a call to
+    Allows StableMintBurn to override the immutables to instead make a call to
     address(this) so the action is delegatecall safe.
 
     //////////////////////////////////////////////////////////////////////////*/
+
+    ERC20 public immutable token0;
+    ERC20 public immutable token1;
+
+    // Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS. For example,
+    // TBTC has 18 decimals, so the multiplier should be 1. WBTC has 8, so the multiplier should be
+    // 10 ** 18 / 10 ** 8 => 10 ** 10.
+    uint128 public immutable token0PrecisionMultiplier;
+    uint128 public immutable token1PrecisionMultiplier;
 
     function _token0() internal view virtual returns (ERC20) {
         return token0;
@@ -132,9 +108,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /*//////////////////////////////////////////////////////////////////////////
 
-                            SLOT0 & RESERVES
+                                SLOT0 & RESERVES
 
     //////////////////////////////////////////////////////////////////////////*/
+
+    Slot0 internal _slot0 = Slot0({ reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max });
 
     function _currentTime() internal view returns (uint32) {
         return uint32(block.timestamp % 2 ** 31);
@@ -231,12 +209,36 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /*//////////////////////////////////////////////////////////////////////////
 
-                            ADMIN ACTIONS
+                                ADMIN ACTIONS
 
     //////////////////////////////////////////////////////////////////////////*/
 
+    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
+    event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
+    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
+    event CustomPlatformFeeChanged(uint256 oldCustomPlatformFee, uint256 newCustomPlatformFee);
+
+    string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
+    string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
+    string private constant RECOVERER_NAME = "Shared::recoverer";
+    bytes4 private constant TRANSFER = bytes4(keccak256("transfer(address,uint256)"));
+    bytes32 internal immutable swapFeeName;
+
+    /// @notice Maximum allowed swap fee, which is 2%.
+    uint256 public constant MAX_SWAP_FEE = 20_000;
+    /// @notice Current swap fee.
+    uint256 public swapFee;
+    /// @notice Custom swap fee override for the pair, max uint256 indicates no override.
+    uint256 public customSwapFee = type(uint256).max;
+
+    /// @notice Maximum allowed platform fee, which is 100%.
+    uint256 public constant MAX_PLATFORM_FEE = 1_000_000;
+    /// @notice Current platformFee.
+    uint256 public platformFee;
+    /// @notice Custom platformFee override for the pair, max uint256 indicates no override.
+    uint256 public customPlatformFee = type(uint256).max;
+
     function setCustomSwapFee(uint256 aCustomSwapFee) external onlyFactory {
-        // we assume the factory won't spam events, so no early check & return
         emit CustomSwapFeeChanged(customSwapFee, aCustomSwapFee);
         customSwapFee = aCustomSwapFee;
 
@@ -281,7 +283,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /*//////////////////////////////////////////////////////////////////////////
 
-                            TRANSFER HELPERS
+                                TRANSFER HELPERS
 
     //////////////////////////////////////////////////////////////////////////*/
 
@@ -310,11 +312,21 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    /// @dev Mints LP tokens - should be called via the router after transferring tokens.
-    /// The router must ensure that sufficient LP tokens are minted by using the return value.
+    /*//////////////////////////////////////////////////////////////////////////
+
+                                CORE AMM FUNCTIONS
+
+    //////////////////////////////////////////////////////////////////////////*/
+
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1);
+    event Swap(address indexed sender, bool zeroForOne, uint256 amountIn, uint256 amountOut, address indexed to);
+    event Sync(uint104 reserve0, uint104 reserve1);
+
+    /// @dev Mints LP tokens using tokens sent to this contract.
     function mint(address aTo) external virtual returns (uint256 liquidity);
 
-    /// @dev Burns LP tokens sent to this contract. The router must ensure that the user gets sufficient output tokens.
+    /// @dev Burns LP tokens sent to this contract.
     function burn(address aTo) external virtual returns (uint256 amount0, uint256 amount1);
 
     /// @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much
@@ -329,7 +341,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         returns (uint256 rAmountOut);
 
     /*//////////////////////////////////////////////////////////////////////////
-                            ASSET MANAGEMENT
+                                ASSET MANAGEMENT
 
     Asset management is supported via a two-way interface. The pool is able to
     ask the current asset manager for the latest view of the balances. In turn
@@ -409,6 +421,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         if (address(assetManager) == address(0)) {
             return;
         }
+
         assetManager.afterLiquidityEvent();
     }
 
@@ -417,7 +430,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         if (aToken0Change > 0) {
             uint104 lDelta = uint256(aToken0Change).toUint104();
+
             token0Managed += lDelta;
+
             address(_token0()).safeTransfer(msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();

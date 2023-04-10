@@ -17,7 +17,7 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
-    struct Network {
+struct Network {
     string rpcUrl;
     address USDC;
     uint256 blockNum;
@@ -31,6 +31,7 @@ struct Fork {
 contract AaveIntegrationTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
     using FixedPointMathLib for uint256;
+
     event RewardsClaimed(
         address indexed user, address indexed reward, address indexed to, address claimer, uint256 amount
     );
@@ -405,9 +406,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // act
         _manager.adjustManagement(
-            _pair,
-            _pair.token0() == USDC ? lIncreaseAmt : int256(0),
-            _pair.token1() == USDC ? lIncreaseAmt : int256(0)
+            _pair, _pair.token0() == USDC ? lIncreaseAmt : int256(0), _pair.token1() == USDC ? lIncreaseAmt : int256(0)
         );
 
         // assert
@@ -765,7 +764,7 @@ contract AaveIntegrationTest is BaseTest {
         // act - request more than what is available in the pair
         int256 lOutputAmt = _pair.token0() == USDC ? int256(MINT_AMOUNT / 2 + 10) : -int256(MINT_AMOUNT / 2 + 10);
         (int256 lExpectedToken0Calldata, int256 lExpectedToken1Calldata) =
-        _pair.token0() == USDC ? (int256(-10), int256(0)) : (int256(0), int256(-10));
+            _pair.token0() == USDC ? (int256(-10), int256(0)) : (int256(0), int256(-10));
         _tokenA.mint(address(_pair), lReserveTokenA * 2);
         vm.expectCall(address(_manager), abi.encodeCall(_manager.returnAsset, (_pair.token0() == USDC, 10)));
         vm.expectCall(
@@ -979,7 +978,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lBalAfterTimeOther = _manager.getBalance(lOtherPair, USDC);
         uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
         assertGt(lClaimed, 0);
-        uint256 lAmtUSDC = 9019238;
+        uint256 lAmtUSDC = 9_019_238;
         deal(address(USDC), address(this), lAmtUSDC, true);
         // supply the USDC for aaveUSDC
         IPool lPool = _manager.pool();

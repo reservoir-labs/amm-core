@@ -43,7 +43,7 @@ contract OracleWriterTest is BaseTest {
         // arrange
         uint256 lJumpAhead = 10;
         (uint104 lReserve0,,,) = _pair.getReserves();
-        assertEq(lReserve0, ConstantsLib.INITIAL_MINT_AMOUNT);
+        assertEq(lReserve0, Constants.INITIAL_MINT_AMOUNT);
         _tokenA.mint(address(_pair), 10e18);
 
         // act - call sync to trigger a write to the oracle
@@ -57,7 +57,7 @@ contract OracleWriterTest is BaseTest {
         assertEq(lNewReserve0, 110e18);
         assertApproxEqRel(
             LogCompression.fromLowResLog(lObs.logAccLiquidity / int56(int256(lJumpAhead))),
-            ConstantsLib.INITIAL_MINT_AMOUNT,
+            Constants.INITIAL_MINT_AMOUNT,
             0.0001e18
         );
     }
@@ -89,7 +89,7 @@ contract OracleWriterTest is BaseTest {
 
     function testMaxChangeRate_Default() external allPairs {
         // assert
-        assertEq(_pair.maxChangeRate(), ConstantsLib.DEFAULT_MAX_CHANGE_RATE);
+        assertEq(_pair.maxChangeRate(), Constants.DEFAULT_MAX_CHANGE_RATE);
     }
 
     function testSetMaxChangeRate_OnlyFactory() external allPairs {
