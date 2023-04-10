@@ -910,17 +910,24 @@ contract AaveIntegrationTest is BaseTest {
         _manager.setLowerThreshold(lThreshold);
     }
 
-    function testThresholdToZero_Migrate(uint256 aAmtToManage, uint256 aFastForwardTime)
+    function testThresholdToZero_Migrate(uint256 aAmtToManage0, uint256 aAmtToManage1, uint256 aFastForwardTime)
         external
         allNetworks
         allPairs
     {
         // assume
-        uint256 lAmtToManage = bound(aAmtToManage, 1, MINT_AMOUNT);
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
         uint256 lFastForwardTime = bound(aFastForwardTime, 5 minutes, 60 days);
+        ConstantProductPair lOtherPair = _createOtherPair();
 
         // arrange
-        _increaseManagementOneToken(int256(lAmtToManage));
+        _increaseManagementOneToken(int256(lAmtToManage0));
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? int256(lAmtToManage1) : int256(0),
+            lOtherPair.token1() == USDC ? int256(lAmtToManage1) : int256(0)
+        );
 
         // act
         _manager.setLowerThreshold(0);
@@ -930,10 +937,14 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         _pair.burn(address(this));
+        lOtherPair.burn(address(this));
         // attempts to migrate after this should succeed
-        vm.prank(address(_factory));
+        vm.startPrank(address(_factory));
         _pair.setManager(IAssetManager(address(0)));
+        lOtherPair.setManager(IAssetManager(address(0)));
+        vm.stopPrank();
         assertEq(address(_pair.assetManager()), address(0));
+        assertEq(address(lOtherPair.assetManager()), address(0));
     }
 
     function testClaimReward() external allNetworks allPairs {
