@@ -574,7 +574,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lNewAmount = _manager.getBalance(_pair, USDC);
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        assertEq(lNewAmount, lReserveUSDC.divWad(_manager.lowerThreshold().avg(_manager.upperThreshold())));
+        assertEq(lNewAmount, lReserveUSDC.mulWad(_manager.lowerThreshold().avg(_manager.upperThreshold())));
     }
 
     function testAfterLiquidityEvent_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs {
@@ -582,7 +582,7 @@ contract AaveIntegrationTest is BaseTest {
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         uint256 lInitialAmount =
-            bound(aInitialAmount, lReserveUSDC.divWad(_manager.upperThreshold() + 0.02e18), lReserveUSDC);
+            bound(aInitialAmount, lReserveUSDC.mulWad(_manager.upperThreshold() + 0.02e18), lReserveUSDC);
 
         // arrange
         _manager.adjustManagement(_pair, 0, int256(lInitialAmount));
