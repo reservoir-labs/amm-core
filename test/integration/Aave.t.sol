@@ -574,7 +574,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lNewAmount = _manager.getBalance(_pair, USDC);
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        assertEq(lNewAmount, lReserveUSDC * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100);
+        assertEq(lNewAmount, lReserveUSDC.divWad(_manager.lowerThreshold().avg(_manager.upperThreshold())));
     }
 
     function testAfterLiquidityEvent_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs {
@@ -582,7 +582,7 @@ contract AaveIntegrationTest is BaseTest {
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         uint256 lInitialAmount =
-            bound(aInitialAmount, lReserveUSDC * (_manager.upperThreshold() + 2) / 100, lReserveUSDC);
+            bound(aInitialAmount, lReserveUSDC.divWad(_manager.upperThreshold() + 0.02e18), lReserveUSDC);
 
         // arrange
         _manager.adjustManagement(_pair, 0, int256(lInitialAmount));
@@ -894,7 +894,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testSetUpperThreshold_LessThanEqualLowerThreshold(uint256 aThreshold) public allNetworks {
         // assume
-        uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold());
+        uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold() - 1);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
@@ -903,7 +903,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testSetLowerThreshold_MoreThanEqualUpperThreshold(uint256 aThreshold) public allNetworks {
         // assume
-        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold(), type(uint256).max);
+        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold() + 1, type(uint256).max);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
