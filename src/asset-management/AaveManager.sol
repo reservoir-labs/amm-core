@@ -164,7 +164,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
-    function getBalance(IAssetManagedPair aOwner, ERC20 aToken) external view returns (uint256 rTokenBalance) {
+    function getBalance(IAssetManagedPair aOwner, ERC20 aToken) external view returns (uint256) {
         return _getBalance(aOwner, aToken);
     }
 
@@ -175,7 +175,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             return 0;
         }
 
-        rTokenBalance = shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / lTotalShares;
+        rTokenBalance = shares[aOwner][aToken].mulWad(_getExchangeRate(lAaveToken));
     }
 
     /*//////////////////////////////////////////////////////////////////////////
