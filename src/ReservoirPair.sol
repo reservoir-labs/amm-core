@@ -14,7 +14,7 @@ import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
 import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
-import "forge-std/console.sol";
+
 struct Slot0 {
     uint104 reserve0;
     uint104 reserve1;
@@ -437,6 +437,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
+            // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
             address(_token0()).safeTransferFrom(msg.sender, address(this), lDelta);
@@ -454,7 +455,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
-
 
             address(_token1()).safeTransferFrom(msg.sender, address(this), lDelta);
         }
