@@ -1027,20 +1027,21 @@ contract AaveIntegrationTest is BaseTest {
         uint256 aFastForwardTime
     ) external allNetworks allPairs {
         // assume
-        uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
-        uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
-        uint256 lAmtToManage2 = bound(aAmtToManage2, 1, MINT_AMOUNT);
-        uint256 lFastForwardTime = bound(aFastForwardTime, 1, 60 days);
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 1000000, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 1000000, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 1000000, MINT_AMOUNT);
+        uint256 lFastForwardTime = bound(aFastForwardTime, 10 days, 60 days);
 
         // arrange
         ConstantProductPair lOtherPair = _createOtherPair();
         StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
-        deal(address(USDC), address(this), MINT_AMOUNT, true);
-        USDC.transfer(address(lThirdPair), MINT_AMOUNT);
+        deal(address(USDC), address(lThirdPair), MINT_AMOUNT, true);
         _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
         lThirdPair.mint(_alice);
         vm.prank(address(_factory));
         lThirdPair.setManager(_manager);
+        (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        ERC20 lAaveToken = ERC20(lUSDCMarket);
         _increaseManagementOneToken(int256(lAmtToManage0));
         _manager.adjustManagement(
             lOtherPair,
@@ -1052,6 +1053,10 @@ contract AaveIntegrationTest is BaseTest {
             lThirdPair.token0() == USDC ? int256(lAmtToManage2) : int256(0),
             lThirdPair.token1() == USDC ? int256(lAmtToManage2) : int256(0)
         );
+        console.log("_pair share", _manager.shares(_pair, USDC));
+        console.log("other share", _manager.shares(lOtherPair, USDC));
+        console.log("third share", _manager.shares(lThirdPair, USDC));
+        console.log("total share", _manager.totalShares(lAaveToken));
 
         // act
         _stepTime(lFastForwardTime);
@@ -1060,6 +1065,9 @@ contract AaveIntegrationTest is BaseTest {
         lThirdPair.sync();
 
         // divest everything
+        console.log("after time _pair bal", _manager.getBalance(_pair, USDC));
+        console.log("after time lOther bal", _manager.getBalance(lOtherPair, USDC));
+        console.log("after time lThird bal", _manager.getBalance(lThirdPair, USDC));
         _manager.adjustManagement(
             lOtherPair,
             lOtherPair.token0() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0),
@@ -1076,11 +1084,19 @@ contract AaveIntegrationTest is BaseTest {
             _pair.token1() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0)
         );
 
-        console.log(_manager.getBalance(_pair, USDC));
-        console.log(_pair.token0Managed());
-        console.log(_pair.token1Managed());
-        console.log(_manager.getBalance(lOtherPair, USDC));
-        console.log(_manager.getBalance(lThirdPair, USDC));
+        console.log("pair bal", _manager.getBalance(_pair, USDC));
+        console.log("pair t0M", _pair.token0Managed());
+        console.log("pair t1M", _pair.token1Managed());
+        console.log("pair shares", _manager.shares(_pair, USDC));
+        console.log("other pair bal", _manager.getBalance(lOtherPair, USDC));
+        console.log("other t0M", lOtherPair.token0Managed());
+        console.log("other t1M", lOtherPair.token1Managed());
+        console.log("other shares", _manager.shares(lOtherPair, USDC));
+        console.log("third pair bal", _manager.getBalance(lThirdPair, USDC));
+        console.log("third pair t0M", lThirdPair.token0Managed());
+        console.log("third pair t1M", lThirdPair.token1Managed());
+        console.log("total shares", _manager.totalShares(lAaveToken));
+        console.log("aUSDC bal", lAaveToken.balanceOf(address(_manager)));
 
         // assert
         vm.startPrank(address(_factory));

@@ -13,7 +13,7 @@ import { IPoolAddressesProvider } from "src/interfaces/aave/IPoolAddressesProvid
 import { IPool } from "src/interfaces/aave/IPool.sol";
 import { IAaveProtocolDataProvider } from "src/interfaces/aave/IAaveProtocolDataProvider.sol";
 import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
-
+import "forge-std/console.sol";
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
 
@@ -116,6 +116,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         require(lAaveUnderlying != 0, "AM: INVALID_AAVE_BALANCE");
 
         rExchangeRate = lAaveUnderlying.divWad(lTotalShares);
+        console.log("exchange rate", rExchangeRate);
     }
 
     function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
@@ -125,17 +126,29 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
         shares[aPair][aToken] += rShares;
         totalShares[aAaveToken] += rShares;
+        console.log("total shares after increase", totalShares[aAaveToken]);
     }
 
     function _decreaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
-        // note about error of `1e-decimals`
         rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
-        // might want to do: if rShares are greater than the shares we have, just zero it
-        shares[aPair][aToken] -= rShares;
-        totalShares[aAaveToken] -= rShares;
+        console.log("rshares", rShares);
+        console.log("totalShares before decrease", totalShares[aAaveToken]);
+        if (shares[aPair][aToken] >= rShares) {
+            shares[aPair][aToken] -= rShares;
+        } else {
+            // clear it out
+            shares[aPair][aToken] = 0;
+        }
+        if (totalShares[aAaveToken] >= rShares) {
+            totalShares[aAaveToken] -= rShares;
+        } else {
+            totalShares[aAaveToken] = 0;
+        }
+        console.log("shares after decrease", shares[aPair][aToken]);
+        console.log("totalShares after decrease", totalShares[aAaveToken]);
     }
 
     /// @notice returns the address of the AAVE token.
