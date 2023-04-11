@@ -357,11 +357,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     IAssetManager public assetManager;
 
     function setManager(IAssetManager manager) external onlyFactory {
-//        require(token0Managed <= 3 && token1Managed <= 3, "RP: AM_STILL_ACTIVE");
         require(token0Managed == 0 && token1Managed == 0, "RP: AM_STILL_ACTIVE");
         assetManager = manager;
-//        token0Managed = 0;
-//        token1Managed = 0;
     }
 
     uint104 public token0Managed;
@@ -440,12 +437,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
-//            if (lDelta > token0Managed) {
-//                token0Managed = 0;
-//            } else {
-                // solhint-disable-next-line reentrancy
-                token0Managed -= lDelta;
-//            }
+            token0Managed -= lDelta;
 
             address(_token0()).safeTransferFrom(msg.sender, address(this), lDelta);
         }
@@ -460,12 +452,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
-//            if (lDelta > token1Managed) {
-//                token1Managed = 0;
-//            } else {
-                // solhint-disable-next-line reentrancy
-                token1Managed -= lDelta;
-//            }
+            // solhint-disable-next-line reentrancy
+            token1Managed -= lDelta;
+
 
             address(_token1()).safeTransferFrom(msg.sender, address(this), lDelta);
         }

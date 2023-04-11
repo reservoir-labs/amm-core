@@ -1084,9 +1084,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // act
         _stepTime(lFastForwardTime);
-        _pair.sync();
         lOtherPair.sync();
-        lThirdPair.sync();
 
         // divest everything
         console.log("after time _pair bal", _manager.getBalance(_pair, USDC));
@@ -1097,11 +1095,13 @@ contract AaveIntegrationTest is BaseTest {
             lOtherPair.token0() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0),
             lOtherPair.token1() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0)
         );
+        lThirdPair.sync();
         _manager.adjustManagement(
             lThirdPair,
             lThirdPair.token0() == USDC ? -int256(_manager.getBalance(lThirdPair, USDC)) : int256(0),
             lThirdPair.token1() == USDC ? -int256(_manager.getBalance(lThirdPair, USDC)) : int256(0)
         );
+        _pair.sync();
         _manager.adjustManagement(
             _pair,
             _pair.token0() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0),
@@ -1123,6 +1123,14 @@ contract AaveIntegrationTest is BaseTest {
         console.log("aUSDC bal", lAaveToken.balanceOf(address(_manager)));
 
         // assert
+        // actually these checks for managed amounts zero are kind of redundant
+        // cuz it's checked in setManager anyway
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(lOtherPair.token0Managed(), 0);
+        assertEq(lOtherPair.token1Managed(), 0);
+        assertEq(lThirdPair.token0Managed(), 0);
+        assertEq(lThirdPair.token1Managed(), 0);
         vm.startPrank(address(_factory));
         _pair.setManager(IAssetManager(address(0)));
         lOtherPair.setManager(IAssetManager(address(0)));
@@ -1131,7 +1139,9 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(_pair.assetManager()), address(0));
         assertEq(address(lOtherPair.assetManager()), address(0));
         assertEq(address(lThirdPair.assetManager()), address(0));
-
-        // check if there's any leftover shares in the aave manager after everybody redeems
+        assertEq(_manager.totalShares(lAaveToken), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(_manager.shares(lOtherPair, USDC), 0);
+        assertEq(_manager.shares(lThirdPair, USDC), 0);
     }
 }
