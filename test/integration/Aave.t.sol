@@ -1080,9 +1080,9 @@ contract AaveIntegrationTest is BaseTest {
 
         // act
         _stepTime(lFastForwardTime);
-        lOtherPair.sync();
 
         // divest everything
+        lOtherPair.sync();
         _manager.adjustManagement(
             lOtherPair,
             lOtherPair.token0() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0),
