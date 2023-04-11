@@ -910,7 +910,7 @@ contract AaveIntegrationTest is BaseTest {
         _manager.setLowerThreshold(lThreshold);
     }
 
-    function testThresholdToZero_Migrate(uint256 aAmtToManage0, uint256 aAmtToManage1, uint256 aFastForwardTime)
+    function testThresholdToZero_Migrate(uint256 aAmtToManage0, uint256 aAmtToManage1, uint256 aAmtToManage2, uint256 aFastForwardTime)
         external
         allNetworks
         allPairs
@@ -918,15 +918,27 @@ contract AaveIntegrationTest is BaseTest {
         // assume
         uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
         uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 1, MINT_AMOUNT);
         uint256 lFastForwardTime = bound(aFastForwardTime, 5 minutes, 60 days);
-        ConstantProductPair lOtherPair = _createOtherPair();
 
         // arrange
+        ConstantProductPair lOtherPair = _createOtherPair();
+        StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
+        deal(address(USDC), address(lThirdPair), MINT_AMOUNT, true);
+        _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
+        lThirdPair.mint(_alice);
+        vm.prank(address(_factory));
+        lThirdPair.setManager(_manager);
         _increaseManagementOneToken(int256(lAmtToManage0));
         _manager.adjustManagement(
             lOtherPair,
             lOtherPair.token0() == USDC ? int256(lAmtToManage1) : int256(0),
             lOtherPair.token1() == USDC ? int256(lAmtToManage1) : int256(0)
+        );
+        _manager.adjustManagement(
+            lThirdPair,
+            lThirdPair.token0() == USDC ? int256(lAmtToManage2) : int256(0),
+            lThirdPair.token1() == USDC ? int256(lAmtToManage2) : int256(0)
         );
 
         // act
@@ -938,13 +950,25 @@ contract AaveIntegrationTest is BaseTest {
         // assert
         _pair.burn(address(this));
         lOtherPair.burn(address(this));
+        lThirdPair.burn(address(this));
         // attempts to migrate after this should succeed
         vm.startPrank(address(_factory));
         _pair.setManager(IAssetManager(address(0)));
         lOtherPair.setManager(IAssetManager(address(0)));
+        lThirdPair.setManager(IAssetManager(address(0)));
         vm.stopPrank();
         assertEq(address(_pair.assetManager()), address(0));
         assertEq(address(lOtherPair.assetManager()), address(0));
+        assertEq(address(lThirdPair.assetManager()), address(0));
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(lOtherPair.token0Managed(), 0);
+        assertEq(lOtherPair.token1Managed(), 0);
+        assertEq(lThirdPair.token0Managed(), 0);
+        assertEq(lThirdPair.token1Managed(), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(_manager.shares(lOtherPair, USDC), 0);
+        assertEq(_manager.shares(lThirdPair, USDC), 0);
     }
 
     function testClaimReward() external allNetworks allPairs {

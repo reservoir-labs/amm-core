@@ -133,7 +133,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWadUp(_getExchangeRate(aAaveToken));
         console.log("rshares", rShares);
         console.log("totalShares before decrease", totalShares[aAaveToken]);
         if (shares[aPair][aToken] >= rShares) {
