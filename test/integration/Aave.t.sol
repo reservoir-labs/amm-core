@@ -910,11 +910,12 @@ contract AaveIntegrationTest is BaseTest {
         _manager.setLowerThreshold(uint128(lThreshold));
     }
 
-    function testThresholdToZero_Migrate(uint256 aAmtToManage0, uint256 aAmtToManage1, uint256 aAmtToManage2, uint256 aFastForwardTime)
-        external
-        allNetworks
-        allPairs
-    {
+    function testThresholdToZero_Migrate(
+        uint256 aAmtToManage0,
+        uint256 aAmtToManage1,
+        uint256 aAmtToManage2,
+        uint256 aFastForwardTime
+    ) external allNetworks allPairs {
         // assume
         uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
         uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
