@@ -574,7 +574,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lNewAmount = _manager.getBalance(_pair, USDC);
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        assertEq(lNewAmount, lReserveUSDC.mulWad(_manager.lowerThreshold().avg(_manager.upperThreshold())));
+        assertEq(lNewAmount, lReserveUSDC.mulWad(uint256(_manager.lowerThreshold()).avg(_manager.upperThreshold())));
     }
 
     function testAfterLiquidityEvent_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs {
@@ -898,16 +898,16 @@ contract AaveIntegrationTest is BaseTest {
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setUpperThreshold(lThreshold);
+        _manager.setUpperThreshold(uint128(lThreshold));
     }
 
     function testSetLowerThreshold_MoreThanEqualUpperThreshold(uint256 aThreshold) public allNetworks {
         // assume
-        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold() + 1, type(uint256).max);
+        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold() + 1, type(uint128).max);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setLowerThreshold(lThreshold);
+        _manager.setLowerThreshold(uint128(lThreshold));
     }
 
     function testThresholdToZero_Migrate(uint256 aAmtToManage0, uint256 aAmtToManage1, uint256 aAmtToManage2, uint256 aFastForwardTime)
