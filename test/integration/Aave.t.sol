@@ -1051,9 +1051,9 @@ contract AaveIntegrationTest is BaseTest {
         uint256 aFastForwardTime
     ) external allNetworks allPairs {
         // assume
-        uint256 lAmtToManage0 = bound(aAmtToManage0, 1000000, MINT_AMOUNT);
-        uint256 lAmtToManage1 = bound(aAmtToManage1, 1000000, MINT_AMOUNT);
-        uint256 lAmtToManage2 = bound(aAmtToManage2, 1000000, MINT_AMOUNT);
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 1, MINT_AMOUNT);
         uint256 lFastForwardTime = bound(aFastForwardTime, 10 days, 60 days);
 
         // arrange
