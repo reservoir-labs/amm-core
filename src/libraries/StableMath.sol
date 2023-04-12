@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { stdMath } from "forge-std/Test.sol";
+import { stdMath } from "src/libraries/stdMath.sol";
 
 library StableMath {
     using MathUtils for uint256;
+    using stdMath for uint256;
 
     /// @dev Extra precision for intermediate calculations.
     uint256 public constant A_PRECISION = 100;
@@ -109,7 +110,7 @@ library StableMath {
         }
         // NB: Sometimes the iteration gets stuck in an oscillating loop so if it is close enough we
         // return it anyway
-        uint256 percentDelta = stdMath.percentDelta(D, prevD);
+        uint256 percentDelta = D.percentDelta(prevD);
         if (percentDelta <= 0.0000000000004e18) {
             return (D + prevD) / 2;
         }
