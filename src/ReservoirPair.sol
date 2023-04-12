@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { stdMath } from "forge-std/Test.sol";
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { stdMath } from "src/libraries/stdMath.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
@@ -44,6 +44,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
     using SafeTransferLib for address;
+    using stdMath for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
@@ -529,7 +530,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
         }
 
-        if (stdMath.percentDelta(aCurrRawPrice, aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
+        if (aCurrRawPrice.percentDelta(aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
             // clamp the price
             if (aCurrRawPrice > aPrevClampedPrice) {
                 rClampedPrice = aPrevClampedPrice * (1e18 + (maxChangeRate * aTimeElapsed)) / 1e18;
