@@ -28,8 +28,9 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     /// @dev percentage of the pool's assets, above and below which
     /// the manager will divest the shortfall and invest the excess
-    uint256 public upperThreshold = 70;
-    uint256 public lowerThreshold = 30;
+    /// 1e18 == 100%
+    uint128 public upperThreshold = 0.7e18; // 70%
+    uint128 public lowerThreshold = 0.3e18; // 30%
 
     /// @dev this contract itself is immutable and is the source of truth for all relevant addresses for aave
     IPoolAddressesProvider public immutable addressesProvider;
@@ -89,13 +90,13 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         windDownMode = aWindDown;
     }
 
-    function setUpperThreshold(uint256 aUpperThreshold) external onlyOwner {
-        require(aUpperThreshold <= 100 && aUpperThreshold > lowerThreshold, "AM: INVALID_THRESHOLD");
+    function setUpperThreshold(uint128 aUpperThreshold) external onlyOwner {
+        require(aUpperThreshold <= 1e18 && aUpperThreshold >= lowerThreshold, "AM: INVALID_THRESHOLD");
         upperThreshold = aUpperThreshold;
     }
 
-    function setLowerThreshold(uint256 aLowerThreshold) external onlyOwner {
-        require(aLowerThreshold <= 100 && aLowerThreshold < upperThreshold, "AM: INVALID_THRESHOLD");
+    function setLowerThreshold(uint128 aLowerThreshold) external onlyOwner {
+        require(aLowerThreshold <= 1e18 && aLowerThreshold <= upperThreshold, "AM: INVALID_THRESHOLD");
         lowerThreshold = aLowerThreshold;
     }
 
@@ -129,7 +130,13 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        rShares = aAmount.divWadUp(_getExchangeRate(aAaveToken));
+
+        // this is to prevent underflow as we divWadUp
+        if (rShares > shares[aPair][aToken]) {
+            rShares = shares[aPair][aToken];
+        }
+
         shares[aPair][aToken] -= rShares;
         totalShares[aAaveToken] -= rShares;
     }
@@ -147,7 +154,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @dev returns the balance of the token managed by various markets in the native precision
-    function getBalance(IAssetManagedPair aOwner, ERC20 aToken) external view returns (uint256 rTokenBalance) {
+    function getBalance(IAssetManagedPair aOwner, ERC20 aToken) external view returns (uint256) {
         return _getBalance(aOwner, aToken);
     }
 
@@ -158,7 +165,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             return 0;
         }
 
-        rTokenBalance = shares[aOwner][aToken] * ERC20(lAaveToken).balanceOf(address(this)) / lTotalShares;
+        rTokenBalance = shares[aOwner][aToken].mulWad(_getExchangeRate(lAaveToken));
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -266,12 +273,12 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     }
 
     function _calculateChangeAmount(uint256 aReserve, uint256 aManaged) internal view returns (int256 rAmountChange) {
-        uint256 lRatio = aManaged * 100 / aReserve;
+        uint256 lRatio = aManaged.divWad(aReserve);
         if (lRatio < lowerThreshold) {
-            rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100 - aManaged);
+            rAmountChange = int256(aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)) - aManaged);
             assert(rAmountChange > 0);
         } else if (lRatio > upperThreshold) {
-            rAmountChange = int256(aReserve * ((lowerThreshold + upperThreshold) / 2) / 100) - int256(aManaged);
+            rAmountChange = int256(aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold))) - int256(aManaged);
             assert(rAmountChange < 0);
         }
     }

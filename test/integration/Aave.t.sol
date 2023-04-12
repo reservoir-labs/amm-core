@@ -14,13 +14,12 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { AaveManager } from "src/asset-management/AaveManager.sol";
+import { AaveManager, IAssetManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 struct Network {
     string rpcUrl;
     address USDC;
-    uint256 blockNum;
 }
 
 struct Fork {
@@ -80,7 +79,7 @@ contract AaveIntegrationTest is BaseTest {
         Fork memory lFork = _forks[aNetwork.rpcUrl];
 
         if (lFork.created == false) {
-            uint256 lForkId = vm.createFork(aNetwork.rpcUrl, aNetwork.blockNum);
+            uint256 lForkId = vm.createFork(aNetwork.rpcUrl);
 
             lFork = Fork(true, lForkId);
             _forks[aNetwork.rpcUrl] = lFork;
@@ -120,25 +119,12 @@ contract AaveIntegrationTest is BaseTest {
     }
 
     function setUp() external {
-        _networks.push(
-            Network(
-                getChain("avalanche").rpcUrl,
-                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,
-                // this block number is before AAVE froze the USDC market
-                27_221_985
-            )
-        );
-        _networks.push(
-            Network(
-                getChain("polygon").rpcUrl,
-                0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174,
-                // this block number is before AAVE froze the USDC market
-                40_139_386
-            )
-        );
+        _networks.push(Network(getChain("avalanche").rpcUrl, 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E));
+        _networks.push(Network(getChain("polygon").rpcUrl, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174));
 
         vm.makePersistent(address(_tokenA));
         vm.makePersistent(address(_tokenB));
+        vm.makePersistent(address(_tokenC));
     }
 
     function _createOtherPair() private returns (ConstantProductPair rOtherPair) {
@@ -588,7 +574,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lNewAmount = _manager.getBalance(_pair, USDC);
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        assertEq(lNewAmount, lReserveUSDC * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100);
+        assertEq(lNewAmount, lReserveUSDC.mulWad(uint256(_manager.lowerThreshold()).avg(_manager.upperThreshold())));
     }
 
     function testAfterLiquidityEvent_DecreaseInvestmentAfterBurn(uint256 aInitialAmount) public allNetworks allPairs {
@@ -596,7 +582,7 @@ contract AaveIntegrationTest is BaseTest {
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         uint256 lInitialAmount =
-            bound(aInitialAmount, lReserveUSDC * (_manager.upperThreshold() + 2) / 100, lReserveUSDC);
+            bound(aInitialAmount, lReserveUSDC.mulWad(_manager.upperThreshold() + 0.02e18), lReserveUSDC);
 
         // arrange
         _manager.adjustManagement(_pair, 0, int256(lInitialAmount));
@@ -903,25 +889,87 @@ contract AaveIntegrationTest is BaseTest {
     function testSetUpperThreshold_BreachMaximum() public allNetworks {
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setUpperThreshold(101);
+        _manager.setUpperThreshold(1e18 + 1);
     }
 
     function testSetUpperThreshold_LessThanEqualLowerThreshold(uint256 aThreshold) public allNetworks {
         // assume
-        uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold());
+        uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold() - 1);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setUpperThreshold(lThreshold);
+        _manager.setUpperThreshold(uint128(lThreshold));
     }
 
     function testSetLowerThreshold_MoreThanEqualUpperThreshold(uint256 aThreshold) public allNetworks {
         // assume
-        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold(), type(uint256).max);
+        uint256 lThreshold = bound(aThreshold, _manager.upperThreshold() + 1, type(uint128).max);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setLowerThreshold(lThreshold);
+        _manager.setLowerThreshold(uint128(lThreshold));
+    }
+
+    function testThresholdToZero_Migrate(
+        uint256 aAmtToManage0,
+        uint256 aAmtToManage1,
+        uint256 aAmtToManage2,
+        uint256 aFastForwardTime
+    ) external allNetworks allPairs {
+        // assume
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 1, MINT_AMOUNT);
+        uint256 lFastForwardTime = bound(aFastForwardTime, 5 minutes, 60 days);
+
+        // arrange
+        ConstantProductPair lOtherPair = _createOtherPair();
+        StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
+        deal(address(USDC), address(lThirdPair), MINT_AMOUNT, true);
+        _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
+        lThirdPair.mint(_alice);
+        vm.prank(address(_factory));
+        lThirdPair.setManager(_manager);
+        _increaseManagementOneToken(int256(lAmtToManage0));
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? int256(lAmtToManage1) : int256(0),
+            lOtherPair.token1() == USDC ? int256(lAmtToManage1) : int256(0)
+        );
+        _manager.adjustManagement(
+            lThirdPair,
+            lThirdPair.token0() == USDC ? int256(lAmtToManage2) : int256(0),
+            lThirdPair.token1() == USDC ? int256(lAmtToManage2) : int256(0)
+        );
+
+        // act
+        _manager.setLowerThreshold(0);
+        _manager.setUpperThreshold(0);
+        // step some time to accumulate some profits
+        _stepTime(lFastForwardTime);
+
+        // assert
+        _pair.burn(address(this));
+        lOtherPair.burn(address(this));
+        lThirdPair.burn(address(this));
+        // attempts to migrate after this should succeed
+        vm.startPrank(address(_factory));
+        _pair.setManager(IAssetManager(address(0)));
+        lOtherPair.setManager(IAssetManager(address(0)));
+        lThirdPair.setManager(IAssetManager(address(0)));
+        vm.stopPrank();
+        assertEq(address(_pair.assetManager()), address(0));
+        assertEq(address(lOtherPair.assetManager()), address(0));
+        assertEq(address(lThirdPair.assetManager()), address(0));
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(lOtherPair.token0Managed(), 0);
+        assertEq(lOtherPair.token1Managed(), 0);
+        assertEq(lThirdPair.token0Managed(), 0);
+        assertEq(lThirdPair.token1Managed(), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(_manager.shares(lOtherPair, USDC), 0);
+        assertEq(_manager.shares(lThirdPair, USDC), 0);
     }
 
     function testClaimReward() external allNetworks allPairs {
@@ -995,5 +1043,85 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lPercentageIncreaseOther = lBalAfterCompoundingOther.divWad(lBalAfterTimeOther);
         // percentage diff is no greater than 0.000001%
         assertApproxEqRel(lPercentageIncreasePair, lPercentageIncreaseOther, 0.00000001e18);
+    }
+
+    function testFullRedeem_MultiplePairs(
+        uint256 aAmtToManage0,
+        uint256 aAmtToManage1,
+        uint256 aAmtToManage2,
+        uint256 aFastForwardTime
+    ) external allNetworks allPairs {
+        // assume
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 1, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 1, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 1, MINT_AMOUNT);
+        uint256 lFastForwardTime = bound(aFastForwardTime, 10 days, 60 days);
+
+        // arrange
+        ConstantProductPair lOtherPair = _createOtherPair();
+        StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
+        deal(address(USDC), address(lThirdPair), MINT_AMOUNT, true);
+        _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
+        lThirdPair.mint(_alice);
+        vm.prank(address(_factory));
+        lThirdPair.setManager(_manager);
+        (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        ERC20 lAaveToken = ERC20(lUSDCMarket);
+        _increaseManagementOneToken(int256(lAmtToManage0));
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? int256(lAmtToManage1) : int256(0),
+            lOtherPair.token1() == USDC ? int256(lAmtToManage1) : int256(0)
+        );
+        _manager.adjustManagement(
+            lThirdPair,
+            lThirdPair.token0() == USDC ? int256(lAmtToManage2) : int256(0),
+            lThirdPair.token1() == USDC ? int256(lAmtToManage2) : int256(0)
+        );
+
+        // act
+        _stepTime(lFastForwardTime);
+
+        // divest everything
+        lOtherPair.sync();
+        _manager.adjustManagement(
+            lOtherPair,
+            lOtherPair.token0() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0),
+            lOtherPair.token1() == USDC ? -int256(_manager.getBalance(lOtherPair, USDC)) : int256(0)
+        );
+        lThirdPair.sync();
+        _manager.adjustManagement(
+            lThirdPair,
+            lThirdPair.token0() == USDC ? -int256(_manager.getBalance(lThirdPair, USDC)) : int256(0),
+            lThirdPair.token1() == USDC ? -int256(_manager.getBalance(lThirdPair, USDC)) : int256(0)
+        );
+        _pair.sync();
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0),
+            _pair.token1() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0)
+        );
+
+        // assert
+        // actually these checks for managed amounts zero are kind of redundant
+        // cuz it's checked in setManager anyway
+        assertEq(_pair.token0Managed(), 0);
+        assertEq(_pair.token1Managed(), 0);
+        assertEq(lOtherPair.token0Managed(), 0);
+        assertEq(lOtherPair.token1Managed(), 0);
+        assertEq(lThirdPair.token0Managed(), 0);
+        assertEq(lThirdPair.token1Managed(), 0);
+        vm.startPrank(address(_factory));
+        _pair.setManager(IAssetManager(address(0)));
+        lOtherPair.setManager(IAssetManager(address(0)));
+        lThirdPair.setManager(IAssetManager(address(0)));
+        vm.stopPrank();
+        assertEq(address(_pair.assetManager()), address(0));
+        assertEq(address(lOtherPair.assetManager()), address(0));
+        assertEq(address(lThirdPair.assetManager()), address(0));
+        assertEq(_manager.totalShares(lAaveToken), 0);
+        assertEq(_manager.shares(_pair, USDC), 0);
+        assertEq(_manager.shares(lOtherPair, USDC), 0);
+        assertEq(_manager.shares(lThirdPair, USDC), 0);
     }
 }
