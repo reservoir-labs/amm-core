@@ -43,10 +43,10 @@ abstract contract BaseTest is Test {
     constructor() {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
-                vm.writeJson(_deployerMetadata(), "scripts/unoptimized-deployer-meta");
+                vm.writeJson(_deployerMetadata(), "script/unoptimized-deployer-meta");
             }
         } catch {
-            vm.writeJson(_deployerMetadata(), "scripts/optimized-deployer-meta");
+            vm.writeJson(_deployerMetadata(), "script/optimized-deployer-meta");
         }
 
         // Execute standard & deterministic Reservoir deployment.
