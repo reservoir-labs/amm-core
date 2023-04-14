@@ -30,7 +30,7 @@
     "build:balancer": "cd reference/balancer-v2-monorepo/pkg/solidity-utils && yarn build",
     "ci": "forge build --force && npm run lint:check && npm run test:unit && npm run gas:check && npm run slither:check",
     "clean": "forge clean",
-    "coverage": "export FOUNDRY_PROFILE=coverage && ./scripts/coverage_patch_deployer.sh && forge coverage --report lcov",
+    "coverage": "export FOUNDRY_PROFILE=coverage && script/coverage_patch_deployer.sh && forge coverage --report lcov",
     "eslint": "npm run eslint:check",
     "eslint:check": "eslint scripts",
     "eslint:fix": "eslint scripts --fix",
@@ -64,13 +64,13 @@
     "submodule:check": "cd lib && find . -mindepth 1 -maxdepth 1 -type d -exec bash -c 'cd \"{}\" && pwd && ../../scripts/git-master-diff.sh && echo' \\;",
     "submodule:reset": "git submodule update --recursive",
     "test": "npm run test:unit",
-    "test:all": "./scripts/coverage_patch_deployer.sh && npm run test:unit && npm run test:integration",
-    "test:balancer": "export FOUNDRY_PROFILE=differential && ./scripts/coverage_patch_deployer.sh && forge test",
+    "test:all": "script/coverage_patch_deployer.sh && npm run test:unit && npm run test:integration",
+    "test:balancer": "export FOUNDRY_PROFILE=differential && script/coverage_patch_deployer.sh && forge test",
     "test:differential": "export FOUNDRY_PROFILE=differential && forge test",
     "test:e2e": "./test/e2e/deployment.sh",
-    "test:integration": "export FOUNDRY_PROFILE=integration && ./scripts/coverage_patch_deployer.sh && forge test ",
+    "test:integration": "export FOUNDRY_PROFILE=integration && script/coverage_patch_deployer.sh && forge test ",
     "test:uniswap": "cd reference/uniswap-v2-core && npm run test",
-    "test:unit": "./scripts/coverage_patch_deployer.sh && forge test"
+    "test:unit": "script/coverage_patch_deployer.sh && forge test"
   },
   "devDependencies": {
     "@proxima-oss/eslint-config": "6.0.1",
