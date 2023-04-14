@@ -1,14 +1,14 @@
-OPTIMIZED_STABLE_HASH=$(cat scripts/optimized-deployer-meta | jq -r '.stable_hash')
-UNOPTIMIZED_STABLE_HASH=$(cat scripts/unoptimized-deployer-meta | jq -r '.stable_hash')
+OPTIMIZED_STABLE_HASH=$(cat script/optimized-deployer-meta | jq -r '.stable_hash')
+UNOPTIMIZED_STABLE_HASH=$(cat script/unoptimized-deployer-meta | jq -r '.stable_hash')
 
-OPTIMIZED_CONSTANT_PRODUCT_HASH=$(cat scripts/optimized-deployer-meta | jq -r '.constant_product_hash')
-UNOPTIMIZED_CONSTANT_PRODUCT_HASH=$(cat scripts/unoptimized-deployer-meta | jq -r '.constant_product_hash')
+OPTIMIZED_CONSTANT_PRODUCT_HASH=$(cat script/optimized-deployer-meta | jq -r '.constant_product_hash')
+UNOPTIMIZED_CONSTANT_PRODUCT_HASH=$(cat script/unoptimized-deployer-meta | jq -r '.constant_product_hash')
 
-OPTIMIZED_ORACLE_CALLER_HASH=$(cat scripts/optimized-deployer-meta | jq -r '.oracle_caller_hash')
-UNOPTIMIZED_ORACLE_CALLER_HASH=$(cat scripts/unoptimized-deployer-meta | jq -r '.oracle_caller_hash')
+OPTIMIZED_ORACLE_CALLER_HASH=$(cat script/optimized-deployer-meta | jq -r '.oracle_caller_hash')
+UNOPTIMIZED_ORACLE_CALLER_HASH=$(cat script/unoptimized-deployer-meta | jq -r '.oracle_caller_hash')
 
-OPTIMIZED_FACTORY_HASH=$(cat scripts/optimized-deployer-meta | jq -r '.factory_hash')
-UNOPTIMIZED_FACTORY_HASH=$(cat scripts/unoptimized-deployer-meta | jq -r '.factory_hash')
+OPTIMIZED_FACTORY_HASH=$(cat script/optimized-deployer-meta | jq -r '.factory_hash')
+UNOPTIMIZED_FACTORY_HASH=$(cat script/unoptimized-deployer-meta | jq -r '.factory_hash')
 
 if [ "$FOUNDRY_PROFILE" == "coverage" ]
 then

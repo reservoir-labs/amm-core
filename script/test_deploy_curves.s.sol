@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "scripts/BaseScript.sol";
+import "script/BaseScript.sol";
 
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 

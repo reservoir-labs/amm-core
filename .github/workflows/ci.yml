@@ -126,7 +126,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-      - run: ./scripts/coverage_patch_deployer.sh && forge coverage --report lcov
+      - run: ./script/coverage_patch_deployer.sh && forge coverage --report lcov
         env:
           FOUNDRY_PROFILE: coverage
       - run: sudo apt install -y lcov
