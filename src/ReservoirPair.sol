@@ -215,10 +215,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
-    event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
-    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
-    event CustomPlatformFeeChanged(uint256 oldCustomPlatformFee, uint256 newCustomPlatformFee);
+    event SwapFee(uint256 newSwapFee);
+    event CustomSwapFee(uint256 newCustomSwapFee);
+    event PlatformFee(uint256 newPlatformFee);
+    event CustomPlatformFee(uint256 newCustomPlatformFee);
 
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
@@ -241,14 +241,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint256 public customPlatformFee = type(uint256).max;
 
     function setCustomSwapFee(uint256 aCustomSwapFee) external onlyFactory {
-        emit CustomSwapFeeChanged(customSwapFee, aCustomSwapFee);
+        emit CustomSwapFee(aCustomSwapFee);
         customSwapFee = aCustomSwapFee;
 
         updateSwapFee();
     }
 
     function setCustomPlatformFee(uint256 aCustomPlatformFee) external onlyFactory {
-        emit CustomPlatformFeeChanged(customPlatformFee, aCustomPlatformFee);
+        emit CustomPlatformFee(aCustomPlatformFee);
         customPlatformFee = aCustomPlatformFee;
 
         updatePlatformFee();
@@ -260,7 +260,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         require(_swapFee <= MAX_SWAP_FEE, "RP: INVALID_SWAP_FEE");
 
-        emit SwapFeeChanged(swapFee, _swapFee);
+        emit SwapFee(_swapFee);
         swapFee = _swapFee;
     }
 
@@ -271,7 +271,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         require(_platformFee <= MAX_PLATFORM_FEE, "RP: INVALID_PLATFORM_FEE");
 
-        emit PlatformFeeChanged(platformFee, _platformFee);
+        emit PlatformFee(_platformFee);
         platformFee = _platformFee;
     }
 
@@ -353,8 +353,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    event ProfitReported(ERC20 token, uint256 amount);
-    event LossReported(ERC20 token, uint256 amount);
+    event Profit(ERC20 token, uint256 amount);
+    event Loss(ERC20 token, uint256 amount);
 
     IAssetManager public assetManager;
 
@@ -383,14 +383,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // report profit
             uint256 lProfit = aNewBalance - aPrevBalance;
 
-            emit ProfitReported(aToken, lProfit);
+            emit Profit(aToken, lProfit);
 
             rUpdatedReserve = aReserve + lProfit;
         } else if (aNewBalance < aPrevBalance) {
             // report loss
             uint256 lLoss = aPrevBalance - aNewBalance;
 
-            emit LossReported(aToken, lLoss);
+            emit Loss(aToken, lLoss);
 
             rUpdatedReserve = aReserve - lLoss;
         } else {
