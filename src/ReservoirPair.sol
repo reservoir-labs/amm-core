@@ -116,7 +116,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     Slot0 internal _slot0 = Slot0({ reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max });
 
     function _currentTime() internal view returns (uint32) {
-        return uint32(block.timestamp % 2 ** 31);
+        return uint32(block.timestamp & 0x7FFFFFFF);
     }
 
     function _splitSlot0Timestamp(uint32 aRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
