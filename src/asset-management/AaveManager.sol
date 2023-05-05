@@ -53,9 +53,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// to facilitate replacement of asset managers to newer versions
     bool public windDownMode;
 
-    constructor(address aPoolAddressesProvider) {
-        require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
-        addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
+    constructor(IPoolAddressesProvider aPoolAddressesProvider) {
+        addressesProvider = aPoolAddressesProvider;
         updatePoolAddress();
         updateDataProviderAddress();
     }
