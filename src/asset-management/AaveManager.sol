@@ -17,8 +17,8 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
 
-    event FundsInvested(IAssetManagedPair pair, ERC20 token, uint256 shares);
-    event FundsDivested(IAssetManagedPair pair, ERC20 token, uint256 shares);
+    event Investment(IAssetManagedPair pair, ERC20 token, uint256 shares);
+    event Divestment(IAssetManagedPair pair, ERC20 token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public shares;
@@ -232,7 +232,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function _doDivest(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         uint256 lShares = _decreaseShares(aPair, aToken, aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, aToken, lShares);
+        emit Divestment(aPair, aToken, lShares);
         SafeTransferLib.safeApprove(address(aToken), address(aPair), aAmount);
     }
 
@@ -242,7 +242,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         SafeTransferLib.safeApprove(address(aToken), address(pool), aAmount);
 
         pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, aToken, lShares);
+        emit Investment(aPair, aToken, lShares);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
