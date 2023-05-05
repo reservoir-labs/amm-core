@@ -163,7 +163,7 @@ contract PairTest is BaseTest {
         _tokenC.mint(address(_pair), 1e18);
 
         // act
-        _pair.recoverToken(address(_tokenC));
+        _pair.recoverToken(_tokenC);
 
         // assert
         assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);

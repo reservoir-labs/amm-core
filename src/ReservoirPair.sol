@@ -275,10 +275,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         platformFee = _platformFee;
     }
 
-    function recoverToken(address aToken) external {
-        require(aToken != address(_token0()) && aToken != address(_token1()), "RP: INVALID_TOKEN_TO_RECOVER");
+    function recoverToken(ERC20 aToken) external {
+        require(aToken != _token0() && aToken != _token1(), "RP: INVALID_TOKEN_TO_RECOVER");
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
-        uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
+        uint256 _amountToRecover = aToken.balanceOf(address(this));
 
         address(aToken).safeTransfer(_recoverer, _amountToRecover);
     }
