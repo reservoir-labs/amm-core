@@ -128,7 +128,7 @@ contract GenericFactory is IGenericFactory, Owned {
                                     PAIRS
     //////////////////////////////////////////////////////////////////////////*/
 
-    event PairCreated(address indexed token0, address indexed token1, uint256 curveId, address pair);
+    event Pair(address indexed token0, address indexed token1, uint256 curveId, address pair);
 
     mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
     address[] private _allPairs;
@@ -169,7 +169,7 @@ contract GenericFactory is IGenericFactory, Owned {
         getPair[lToken1][lToken0][aCurveId] = rPair;
         _allPairs.push(rPair);
 
-        emit PairCreated(lToken0, lToken1, aCurveId, rPair);
+        emit Pair(lToken0, lToken1, aCurveId, rPair);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
