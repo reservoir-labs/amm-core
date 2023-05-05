@@ -6,6 +6,8 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 
 interface IAssetManagedPair {
+    event AssetManager(IAssetManager manager);
+
     function token0Managed() external view returns (uint104);
     function token1Managed() external view returns (uint104);
 

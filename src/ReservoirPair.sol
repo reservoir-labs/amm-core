@@ -361,6 +361,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     function setManager(IAssetManager manager) external onlyFactory {
         require(token0Managed == 0 && token1Managed == 0, "RP: AM_STILL_ACTIVE");
         assetManager = manager;
+        emit AssetManager(manager);
     }
 
     uint104 public token0Managed;
