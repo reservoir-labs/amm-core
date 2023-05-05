@@ -80,8 +80,10 @@ contract ConstantProductPair is ReservoirPair {
                 if (lSqrtNewK > lSqrtOldK) {
                     uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
 
-                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
-                    if (lSharesToIssue > 0) _mint(platformFeeTo, lSharesToIssue);
+                    if (lSharesToIssue > 0) {
+                        address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
+                        _mint(platformFeeTo, lSharesToIssue);
+                    }
                 }
             }
         } else if (kLast != 0) {
