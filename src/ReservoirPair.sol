@@ -227,14 +227,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     bytes32 internal immutable swapFeeName;
 
     /// @notice Maximum allowed swap fee, which is 2%.
-    uint256 public constant MAX_SWAP_FEE = 20_000;
+    uint256 public constant MAX_SWAP_FEE = 0.02e6;
     /// @notice Current swap fee.
     uint256 public swapFee;
     /// @notice Custom swap fee override for the pair, max uint256 indicates no override.
     uint256 public customSwapFee = type(uint256).max;
 
     /// @notice Maximum allowed platform fee, which is 100%.
-    uint256 public constant MAX_PLATFORM_FEE = 1_000_000;
+    uint256 public constant MAX_PLATFORM_FEE = 1e6;
     /// @notice Current platformFee.
     uint256 public platformFee;
     /// @notice Custom platformFee override for the pair, max uint256 indicates no override.
