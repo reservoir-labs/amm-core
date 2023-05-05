@@ -91,7 +91,7 @@ contract AaveIntegrationTest is BaseTest {
         _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
         _deployer.deployStable(type(StablePair).creationCode);
 
-        _manager = new AaveManager(AAVE_POOL_ADDRESS_PROVIDER);
+        _manager = new AaveManager(IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER));
         USDC = ERC20(aNetwork.USDC);
         _poolAddressesProvider = IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER);
         _aaveAdmin = _poolAddressesProvider.getACLAdmin();

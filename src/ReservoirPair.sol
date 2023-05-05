@@ -63,7 +63,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         token0PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken0.decimals()) : 0;
         token1PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken1.decimals()) : 0;
-        swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
+        swapFeeName = keccak256(bytes(aSwapFeeName));
 
         if (aNotStableMintBurn) {
             updateSwapFee();
