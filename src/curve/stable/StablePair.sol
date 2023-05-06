@@ -51,7 +51,7 @@ contract StablePair is ReservoirPair {
     {
         bool lIsStableMintBurn = _isStableMintBurn(aToken0, aToken1);
 
-        MINT_BURN_LOGIC = lIsStableMintBurn ? address(0) : factory.stableMintBurn();
+        MINT_BURN_LOGIC = lIsStableMintBurn ? address(0) : address(factory.stableMintBurn());
 
         if (!lIsStableMintBurn) {
             require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
