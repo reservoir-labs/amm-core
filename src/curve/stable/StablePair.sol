@@ -49,9 +49,11 @@ contract StablePair is ReservoirPair {
     constructor(ERC20 aToken0, ERC20 aToken1)
         ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, _isStableMintBurn(aToken0, aToken1) ? false : true)
     {
-        MINT_BURN_LOGIC = _isStableMintBurn(aToken0, aToken1) ? address(0) : factory.stableMintBurn();
+        bool lIsStableMintBurn = _isStableMintBurn(aToken0, aToken1);
 
-        if (!_isStableMintBurn(aToken0, aToken1)) {
+        MINT_BURN_LOGIC = lIsStableMintBurn ? address(0) : factory.stableMintBurn();
+
+        if (!lIsStableMintBurn) {
             require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
             ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
             ampData.futureA = ampData.initialA;
