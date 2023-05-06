@@ -29,7 +29,9 @@ contract ConstantProductPair is ReservoirPair {
     uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
-    constructor(ERC20 aToken0, ERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) { }
+    constructor(ERC20 aToken0, ERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) {
+        // no additional initialization is required as all constructor logic is in ReservoirPair
+    }
 
     /**
      * _calcFee calculates the appropriate platform fee in terms of tokens that will be minted, based on the growth
