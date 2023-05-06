@@ -13,31 +13,9 @@ import { IAssetManager } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
+import { Observation } from "src/structs/Observation.sol";
+import { Slot0 } from "src/structs/Slot0.sol";
 import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
-
-struct Slot0 {
-    uint104 reserve0;
-    uint104 reserve1;
-    uint32 packedTimestamp;
-    uint16 index;
-}
-
-struct Observation {
-    // natural log (ln) of the raw accumulated price (token1/token0)
-    int112 logAccRawPrice;
-    // natural log (ln) of the clamped accumulated price (token1/token0)
-    // in the case of maximum price supported by the oracle (~2.87e56 == e ** 130.0000)
-    // (1300000) 21 bits multiplied by 32 bits of the timestamp gives 53 bits
-    // which fits into int56
-    int56 logAccClampedPrice;
-    // natural log (ln) of the accumulated liquidity (sqrt(x * y))
-    // in the case of maximum liq (sqrt(uint104 * uint104) == 5.192e33 == e ** 77.5325)
-    // (775325) 20 bits multiplied by 32 bits of the timestamp gives 52 bits
-    // which fits into int56
-    int56 logAccLiquidity;
-    // overflows every 136 years, in the year 2106
-    uint32 timestamp;
-}
 
 abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using FactoryStoreLib for IGenericFactory;
