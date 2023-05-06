@@ -149,8 +149,6 @@ contract StableMintBurn is StablePair {
                     }
                 }
             }
-        } else if (lastInvariant != 0) {
-            lastInvariant = 0;
         }
     }
 }

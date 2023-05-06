@@ -86,8 +86,6 @@ contract ConstantProductPair is ReservoirPair {
                     }
                 }
             }
-        } else if (kLast != 0) {
-            kLast = 0;
         }
     }
 
