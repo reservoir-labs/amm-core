@@ -231,7 +231,9 @@ contract ConstantProductPair is ReservoirPair {
         int112 lCurrLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = lCurrClampedPrice;
 
-        // overflow is okay
+        // overflow is desired here as the consumer of the oracle will be reading the difference in those
+        // accumulated log values
+        // when the index overflows it will overwrite the oldest observation and then forms a loop
         unchecked {
             int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =
