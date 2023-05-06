@@ -15,16 +15,7 @@ import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 
-struct AmplificationData {
-    /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
-    uint64 initialA;
-    /// @dev futureA is stored with A_PRECISION (i.e. multiplied by 100)
-    uint64 futureA;
-    /// @dev initialATime is a unix timestamp and will only overflow every 584 billion years
-    uint64 initialATime;
-    /// @dev futureATime is a unix timestamp and will only overflow every 584 billion years
-    uint64 futureATime;
-}
+import { AmplificationData } from "src/structs/AmplificationData.sol";
 
 contract StablePair is ReservoirPair {
     using FactoryStoreLib for IGenericFactory;
