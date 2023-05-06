@@ -145,9 +145,11 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     {
         rShares = aAmount.divWadUp(_getExchangeRate(aAaveToken));
 
+        uint256 lCurrentShares = shares[aPair][aToken];
+
         // this is to prevent underflow as we divWadUp
-        if (rShares > shares[aPair][aToken]) {
-            rShares = shares[aPair][aToken];
+        if (rShares > lCurrentShares) {
+            rShares = lCurrentShares;
         }
 
         shares[aPair][aToken] -= rShares;
