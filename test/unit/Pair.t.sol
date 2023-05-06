@@ -7,8 +7,8 @@ import { ReservoirPair } from "src/ReservoirPair.sol";
 contract PairTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
-    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
-    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
+    event SwapFee(uint256 newSwapFee);
+    event PlatformFee(uint256 newPlatformFee);
 
     ReservoirPair[] internal _pairs;
     ReservoirPair internal _pair;
@@ -39,15 +39,15 @@ contract PairTest is BaseTest {
     function testEmitEventOnCreation() public {
         // act & assert
         vm.expectEmit(true, true, false, false);
-        emit SwapFeeChanged(0, Constants.DEFAULT_SWAP_FEE_CP);
+        emit SwapFee(Constants.DEFAULT_SWAP_FEE_CP);
         vm.expectEmit(true, true, false, false);
-        emit PlatformFeeChanged(0, Constants.DEFAULT_PLATFORM_FEE);
+        emit PlatformFee(Constants.DEFAULT_PLATFORM_FEE);
         _createPair(address(_tokenC), address(_tokenD), 0);
 
         vm.expectEmit(true, true, false, false);
-        emit SwapFeeChanged(0, Constants.DEFAULT_SWAP_FEE_SP);
+        emit SwapFee(Constants.DEFAULT_SWAP_FEE_SP);
         vm.expectEmit(true, true, false, false);
-        emit PlatformFeeChanged(0, Constants.DEFAULT_PLATFORM_FEE);
+        emit PlatformFee(Constants.DEFAULT_PLATFORM_FEE);
         _createPair(address(_tokenC), address(_tokenD), 1);
     }
 
@@ -141,15 +141,12 @@ contract PairTest is BaseTest {
         _factory.write("Shared::platformFee", lNewDefaultPlatformFee);
 
         // act
-        vm.expectEmit(true, true, false, false);
-        emit SwapFeeChanged(
-            _pair == _constantProductPair ? Constants.DEFAULT_SWAP_FEE_CP : Constants.DEFAULT_SWAP_FEE_SP,
-            lNewDefaultSwapFee
-        );
+        vm.expectEmit(true, false, false, false);
+        emit SwapFee(lNewDefaultSwapFee);
         _pair.updateSwapFee();
 
-        vm.expectEmit(true, true, false, false);
-        emit PlatformFeeChanged(Constants.DEFAULT_PLATFORM_FEE, lNewDefaultPlatformFee);
+        vm.expectEmit(true, false, false, false);
+        emit PlatformFee(lNewDefaultPlatformFee);
         _pair.updatePlatformFee();
 
         // assert
@@ -163,7 +160,7 @@ contract PairTest is BaseTest {
         _tokenC.mint(address(_pair), 1e18);
 
         // act
-        _pair.recoverToken(address(_tokenC));
+        _pair.recoverToken(_tokenC);
 
         // assert
         assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);

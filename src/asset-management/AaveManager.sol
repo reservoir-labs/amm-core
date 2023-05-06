@@ -17,8 +17,15 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
 
-    event FundsInvested(IAssetManagedPair pair, ERC20 token, uint256 shares);
-    event FundsDivested(IAssetManagedPair pair, ERC20 token, uint256 shares);
+    event Pool(IPool newPool);
+    event DataProvider(IAaveProtocolDataProvider newDataProvider);
+    event RewardSeller(address newRewardSeller);
+    event RewardsController(IRewardsController newRewardsController);
+    event WindDownMode(bool windDown);
+    event UpperThreshold(uint128 newUpperThreshold);
+    event LowerThreshold(uint128 newLowerThreshold);
+    event Investment(IAssetManagedPair pair, ERC20 token, uint256 shares);
+    event Divestment(IAssetManagedPair pair, ERC20 token, uint256 shares);
 
     /// @dev tracks how many aToken each pair+token owns
     mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public shares;
@@ -53,9 +60,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// to facilitate replacement of asset managers to newer versions
     bool public windDownMode;
 
-    constructor(address aPoolAddressesProvider) {
-        require(aPoolAddressesProvider != address(0), "AM: PROVIDER_ADDRESS_ZERO");
-        addressesProvider = IPoolAddressesProvider(aPoolAddressesProvider);
+    constructor(IPoolAddressesProvider aPoolAddressesProvider) {
+        addressesProvider = aPoolAddressesProvider;
         updatePoolAddress();
         updateDataProviderAddress();
     }
@@ -68,36 +74,43 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         address lNewPool = addressesProvider.getPool();
         require(lNewPool != address(0), "AM: POOL_ADDRESS_ZERO");
         pool = IPool(lNewPool);
+        emit Pool(IPool(lNewPool));
     }
 
     function updateDataProviderAddress() public onlyOwner {
         address lNewDataProvider = addressesProvider.getPoolDataProvider();
         require(lNewDataProvider != address(0), "AM: DATA_PROVIDER_ADDRESS_ZERO");
         dataProvider = IAaveProtocolDataProvider(lNewDataProvider);
+        emit DataProvider(IAaveProtocolDataProvider(lNewDataProvider));
     }
 
     function setRewardSeller(address aRewardSeller) external onlyOwner {
         require(aRewardSeller != address(0), "AM: REWARD_SELLER_ADDRESS_ZERO");
         rewardSeller = aRewardSeller;
+        emit RewardSeller(aRewardSeller);
     }
 
     function setRewardsController(address aRewardsController) external onlyOwner {
         require(aRewardsController != address(0), "AM: REWARDS_CONTROLLER_ZERO");
         rewardsController = IRewardsController(aRewardsController);
+        emit RewardsController(IRewardsController(aRewardsController));
     }
 
     function setWindDownMode(bool aWindDown) external onlyOwner {
         windDownMode = aWindDown;
+        emit WindDownMode(aWindDown);
     }
 
     function setUpperThreshold(uint128 aUpperThreshold) external onlyOwner {
         require(aUpperThreshold <= 1e18 && aUpperThreshold >= lowerThreshold, "AM: INVALID_THRESHOLD");
         upperThreshold = aUpperThreshold;
+        emit UpperThreshold(aUpperThreshold);
     }
 
     function setLowerThreshold(uint128 aLowerThreshold) external onlyOwner {
         require(aLowerThreshold <= 1e18 && aLowerThreshold <= upperThreshold, "AM: INVALID_THRESHOLD");
         lowerThreshold = aLowerThreshold;
+        emit LowerThreshold(aLowerThreshold);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -232,7 +245,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function _doDivest(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount) private {
         uint256 lShares = _decreaseShares(aPair, aToken, aAaveToken, aAmount);
         pool.withdraw(address(aToken), aAmount, address(this));
-        emit FundsDivested(aPair, aToken, lShares);
+        emit Divestment(aPair, aToken, lShares);
         SafeTransferLib.safeApprove(address(aToken), address(aPair), aAmount);
     }
 
@@ -242,7 +255,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         SafeTransferLib.safeApprove(address(aToken), address(pool), aAmount);
 
         pool.supply(address(aToken), aAmount, address(this), 0);
-        emit FundsInvested(aPair, aToken, lShares);
+        emit Investment(aPair, aToken, lShares);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

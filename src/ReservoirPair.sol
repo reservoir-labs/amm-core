@@ -46,7 +46,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using SafeTransferLib for address;
     using stdMath for uint256;
 
-    uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
+    uint256 public constant MINIMUM_LIQUIDITY = 1e3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
 
     IGenericFactory public immutable factory;
@@ -63,7 +63,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         token0PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken0.decimals()) : 0;
         token1PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken1.decimals()) : 0;
-        swapFeeName = keccak256(abi.encodePacked(aSwapFeeName));
+        swapFeeName = keccak256(bytes(aSwapFeeName));
 
         if (aNotStableMintBurn) {
             updateSwapFee();
@@ -116,7 +116,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     Slot0 internal _slot0 = Slot0({ reserve0: 0, reserve1: 0, packedTimestamp: 0, index: type(uint16).max });
 
     function _currentTime() internal view returns (uint32) {
-        return uint32(block.timestamp % 2 ** 31);
+        return uint32(block.timestamp & 0x7FFFFFFF);
     }
 
     function _splitSlot0Timestamp(uint32 aRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
@@ -171,6 +171,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
         }
 
+        // update reserves
         _slot0.reserve0 = uint104(aBalance0);
         _slot0.reserve1 = uint104(aBalance1);
         _writeSlot0Timestamp(lBlockTimestamp, false);
@@ -214,10 +215,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    event SwapFeeChanged(uint256 oldSwapFee, uint256 newSwapFee);
-    event CustomSwapFeeChanged(uint256 oldCustomSwapFee, uint256 newCustomSwapFee);
-    event PlatformFeeChanged(uint256 oldPlatformFee, uint256 newPlatformFee);
-    event CustomPlatformFeeChanged(uint256 oldCustomPlatformFee, uint256 newCustomPlatformFee);
+    event SwapFee(uint256 newSwapFee);
+    event CustomSwapFee(uint256 newCustomSwapFee);
+    event PlatformFee(uint256 newPlatformFee);
+    event CustomPlatformFee(uint256 newCustomPlatformFee);
 
     string internal constant PLATFORM_FEE_TO_NAME = "Shared::platformFeeTo";
     string private constant PLATFORM_FEE_NAME = "Shared::platformFee";
@@ -226,28 +227,28 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     bytes32 internal immutable swapFeeName;
 
     /// @notice Maximum allowed swap fee, which is 2%.
-    uint256 public constant MAX_SWAP_FEE = 20_000;
+    uint256 public constant MAX_SWAP_FEE = 0.02e6;
     /// @notice Current swap fee.
     uint256 public swapFee;
     /// @notice Custom swap fee override for the pair, max uint256 indicates no override.
     uint256 public customSwapFee = type(uint256).max;
 
     /// @notice Maximum allowed platform fee, which is 100%.
-    uint256 public constant MAX_PLATFORM_FEE = 1_000_000;
+    uint256 public constant MAX_PLATFORM_FEE = 1e6;
     /// @notice Current platformFee.
     uint256 public platformFee;
     /// @notice Custom platformFee override for the pair, max uint256 indicates no override.
     uint256 public customPlatformFee = type(uint256).max;
 
     function setCustomSwapFee(uint256 aCustomSwapFee) external onlyFactory {
-        emit CustomSwapFeeChanged(customSwapFee, aCustomSwapFee);
+        emit CustomSwapFee(aCustomSwapFee);
         customSwapFee = aCustomSwapFee;
 
         updateSwapFee();
     }
 
     function setCustomPlatformFee(uint256 aCustomPlatformFee) external onlyFactory {
-        emit CustomPlatformFeeChanged(customPlatformFee, aCustomPlatformFee);
+        emit CustomPlatformFee(aCustomPlatformFee);
         customPlatformFee = aCustomPlatformFee;
 
         updatePlatformFee();
@@ -259,7 +260,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         require(_swapFee <= MAX_SWAP_FEE, "RP: INVALID_SWAP_FEE");
 
-        emit SwapFeeChanged(swapFee, _swapFee);
+        emit SwapFee(_swapFee);
         swapFee = _swapFee;
     }
 
@@ -270,14 +271,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
         require(_platformFee <= MAX_PLATFORM_FEE, "RP: INVALID_PLATFORM_FEE");
 
-        emit PlatformFeeChanged(platformFee, _platformFee);
+        emit PlatformFee(_platformFee);
         platformFee = _platformFee;
     }
 
-    function recoverToken(address aToken) external {
-        require(aToken != address(_token0()) && aToken != address(_token1()), "RP: INVALID_TOKEN_TO_RECOVER");
+    function recoverToken(ERC20 aToken) external {
+        require(aToken != _token0() && aToken != _token1(), "RP: INVALID_TOKEN_TO_RECOVER");
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
-        uint256 _amountToRecover = ERC20(aToken).balanceOf(address(this));
+        uint256 _amountToRecover = aToken.balanceOf(address(this));
 
         address(aToken).safeTransfer(_recoverer, _amountToRecover);
     }
@@ -352,14 +353,15 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    event ProfitReported(ERC20 token, uint256 amount);
-    event LossReported(ERC20 token, uint256 amount);
+    event Profit(ERC20 token, uint256 amount);
+    event Loss(ERC20 token, uint256 amount);
 
     IAssetManager public assetManager;
 
     function setManager(IAssetManager manager) external onlyFactory {
         require(token0Managed == 0 && token1Managed == 0, "RP: AM_STILL_ACTIVE");
         assetManager = manager;
+        emit AssetManager(manager);
     }
 
     uint104 public token0Managed;
@@ -381,14 +383,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // report profit
             uint256 lProfit = aNewBalance - aPrevBalance;
 
-            emit ProfitReported(aToken, lProfit);
+            emit Profit(aToken, lProfit);
 
             rUpdatedReserve = aReserve + lProfit;
         } else if (aNewBalance < aPrevBalance) {
             // report loss
             uint256 lLoss = aPrevBalance - aNewBalance;
 
-            emit LossReported(aToken, lLoss);
+            emit Loss(aToken, lLoss);
 
             rUpdatedReserve = aReserve - lLoss;
         } else {

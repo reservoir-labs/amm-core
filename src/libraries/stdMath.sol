@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 // Our gas-optimized implementation of forge-std's stdMath library
 // We should inherit and override the relevant functions in the future when they make them virtual
 library stdMath {
+    uint256 private constant WAD = 1e18; // The scalar of ETH and most ERC20s.
+
     function delta(uint256 a, uint256 b) internal pure returns (uint256) {
         // SAFETY: The subtraction can never underflow as we explicitly sub the
         // smaller value from the larger.
@@ -14,7 +16,6 @@ library stdMath {
 
     function percentDelta(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 absDelta = delta(a, b);
-
-        return absDelta * 1e18 / b;
+        return absDelta * WAD / b;
     }
 }
