@@ -101,16 +101,12 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         emit WindDownMode(aWindDown);
     }
 
-    function setUpperThreshold(uint128 aUpperThreshold) external onlyOwner {
-        require(aUpperThreshold <= 1e18 && aUpperThreshold >= lowerThreshold, "AM: INVALID_THRESHOLD");
-        upperThreshold = aUpperThreshold;
-        emit UpperThreshold(aUpperThreshold);
-    }
-
-    function setLowerThreshold(uint128 aLowerThreshold) external onlyOwner {
-        require(aLowerThreshold <= 1e18 && aLowerThreshold <= upperThreshold, "AM: INVALID_THRESHOLD");
+    function setThresholds(uint128 aLowerThreshold, uint128 aUpperThreshold) external onlyOwner {
+        require(aUpperThreshold <= 1e18 && aUpperThreshold >= aLowerThreshold, "AM: INVALID_THRESHOLDS");
         lowerThreshold = aLowerThreshold;
+        upperThreshold = aUpperThreshold;
         emit LowerThreshold(aLowerThreshold);
+        emit UpperThreshold(aUpperThreshold);
     }
 
     /*//////////////////////////////////////////////////////////////////////////

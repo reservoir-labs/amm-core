@@ -886,28 +886,28 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.totalShares(lAaveToken), lReserveUSDC / 2);
     }
 
-    function testSetUpperThreshold_BreachMaximum() public allNetworks {
+    function testSetThresholds_BreachMaximum() public allNetworks {
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setUpperThreshold(1e18 + 1);
+        _manager.setThresholds(0, 1e18 + 1);
     }
 
-    function testSetUpperThreshold_LessThanEqualLowerThreshold(uint256 aThreshold) public allNetworks {
+    function testSetThresholdw_UpperLessThanLowerThreshold(uint256 aThreshold) public allNetworks {
         // assume
         uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold() - 1);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setUpperThreshold(uint128(lThreshold));
+        _manager.setThresholds(_manager.lowerThreshold(), uint128(lThreshold));
     }
 
-    function testSetLowerThreshold_MoreThanEqualUpperThreshold(uint256 aThreshold) public allNetworks {
+    function testSetThresholds_LowerMoreThanUpperThreshold(uint256 aThreshold) public allNetworks {
         // assume
         uint256 lThreshold = bound(aThreshold, _manager.upperThreshold() + 1, type(uint128).max);
 
         // act & assert
         vm.expectRevert("AM: INVALID_THRESHOLD");
-        _manager.setLowerThreshold(uint128(lThreshold));
+        _manager.setThresholds(uint128(lThreshold), _manager.upperThreshold());
     }
 
     function testThresholdToZero_Migrate(
@@ -943,8 +943,7 @@ contract AaveIntegrationTest is BaseTest {
         );
 
         // act
-        _manager.setLowerThreshold(0);
-        _manager.setUpperThreshold(0);
+        _manager.setThresholds(0, 0);
         // step some time to accumulate some profits
         _stepTime(lFastForwardTime);
 
