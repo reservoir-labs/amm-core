@@ -117,24 +117,16 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
                                 HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
 
-    /// @dev Expresses the exchange rate in terms of how many aTokens per share, scaled by 1e18.
-    function _getExchangeRate(ERC20 aAaveToken) private view returns (uint256 rExchangeRate) {
-        uint256 lTotalShares = totalShares[aAaveToken];
-        if (lTotalShares == 0) {
-            return 1e18;
-        }
-
-        uint256 lAaveUnderlying = aAaveToken.balanceOf(address(this));
-        require(lAaveUnderlying != 0, "AM: INVALID_AAVE_BALANCE");
-
-        rExchangeRate = lAaveUnderlying.divWad(lTotalShares);
-    }
-
     function _increaseShares(IAssetManagedPair aPair, ERC20 aToken, ERC20 aAaveToken, uint256 aAmount)
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWad(_getExchangeRate(aAaveToken));
+        uint256 lTotalShares = totalShares[aAaveToken];
+        if (totalShares[aAaveToken] == 0) {
+            rShares = aAmount;
+        } else {
+            rShares = aAmount * lTotalShares / aAaveToken.balanceOf(address(this));
+        }
         shares[aPair][aToken] += rShares;
         totalShares[aAaveToken] += rShares;
     }
@@ -143,9 +135,9 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         returns (uint256 rShares)
     {
-        rShares = aAmount.divWadUp(_getExchangeRate(aAaveToken));
+        rShares = aAmount.mulDivUp(totalShares[aAaveToken], aAaveToken.balanceOf(address(this)));
 
-        // this is to prevent underflow as we divWadUp
+        // this is to prevent underflow as we round up in the previous division operation
         if (rShares > shares[aPair][aToken]) {
             rShares = shares[aPair][aToken];
         }
@@ -178,7 +170,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             return 0;
         }
 
-        rTokenBalance = shares[aOwner][aToken].mulWad(_getExchangeRate(lAaveToken));
+        rTokenBalance = shares[aOwner][aToken] * lAaveToken.balanceOf(address(this)) / lTotalShares;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
