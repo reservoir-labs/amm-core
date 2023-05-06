@@ -226,8 +226,6 @@ contract ConstantProductPair is ReservoirPair {
         (uint256 lCurrRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
             aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
         );
-        // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
-        // to figure out the previous clamped price
         (uint256 lCurrClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(lCurrRawPrice, prevClampedPrice, aTimeElapsed);
         int112 lCurrLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
