@@ -130,6 +130,7 @@ contract GenericFactory is IGenericFactory, Owned {
 
     event Pair(address indexed token0, address indexed token1, uint256 curveId, address pair);
 
+    // maps from tokenA, tokenB => pair address, where the order of tokenA and tokenB does not matter
     mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
     address[] private _allPairs;
 
