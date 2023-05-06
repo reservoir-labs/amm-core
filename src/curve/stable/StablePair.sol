@@ -110,12 +110,11 @@ contract StablePair is ReservoirPair {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
+            returndatacopy(0, 0, returndatasize())
+
             if success {
-                returndatacopy(0, 0, returndatasize())
                 return(0, returndatasize())
             }
-
-            returndatacopy(0, 0, returndatasize())
             revert(0, returndatasize())
         }
     }
