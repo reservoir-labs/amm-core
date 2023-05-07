@@ -81,11 +81,12 @@ contract StablePair is ReservoirPair {
         uint64 lCurrentAPrecise = _getCurrentAPrecise();
 
         // Daily rate = (futureA / currentA) / duration * 1 day.
-        // We do multiplication first before division to avoid losing precision.
-        uint256 dailyRate = lFutureAPrecise > lCurrentAPrecise
-            ? Math.ceilDiv(lFutureAPrecise * 1 days, lCurrentAPrecise * duration)
-            : Math.ceilDiv(lCurrentAPrecise * 1 days, lFutureAPrecise * duration);
-        require(dailyRate <= StableMath.MAX_AMP_UPDATE_DAILY_RATE, "SP: AMP_RATE_TOO_HIGH");
+        require(
+            lFutureAPrecise > lCurrentAPrecise
+                ? lFutureAPrecise * 1 days <= lCurrentAPrecise * duration * StableMath.MAX_AMP_UPDATE_DAILY_RATE
+                : lCurrentAPrecise * 1 days <= lFutureAPrecise * duration * StableMath.MAX_AMP_UPDATE_DAILY_RATE,
+            "SP: AMP_RATE_TOO_HIGH"
+        );
 
         ampData.initialA = lCurrentAPrecise;
         ampData.futureA = lFutureAPrecise;
