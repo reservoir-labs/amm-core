@@ -143,7 +143,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         uint32 lBlockTimestamp = uint32(_currentTime());
         uint32 lTimeElapsed;
         unchecked {
-            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast; // overflow is desired
+            // overflow is desired
+            // however in the case where no swaps happen in ~68 years (2 ** 31 seconds) the timeElapsed would overflow twice
+            lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
             _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
