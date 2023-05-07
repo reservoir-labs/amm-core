@@ -287,8 +287,6 @@ contract StablePair is ReservoirPair {
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(), aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
         );
-        // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
-        // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
         int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
