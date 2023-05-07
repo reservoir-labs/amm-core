@@ -22,8 +22,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     event RewardSeller(address newRewardSeller);
     event RewardsController(IRewardsController newRewardsController);
     event WindDownMode(bool windDown);
-    event UpperThreshold(uint128 newUpperThreshold);
-    event LowerThreshold(uint128 newLowerThreshold);
+    event Thresholds(uint128 newLowerThreshold, uint128 newUpperThreshold);
     event Investment(IAssetManagedPair pair, ERC20 token, uint256 shares);
     event Divestment(IAssetManagedPair pair, ERC20 token, uint256 shares);
 
@@ -103,10 +102,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     function setThresholds(uint128 aLowerThreshold, uint128 aUpperThreshold) external onlyOwner {
         require(aUpperThreshold <= 1e18 && aUpperThreshold >= aLowerThreshold, "AM: INVALID_THRESHOLDS");
-        lowerThreshold = aLowerThreshold;
-        upperThreshold = aUpperThreshold;
-        emit LowerThreshold(aLowerThreshold);
-        emit UpperThreshold(aUpperThreshold);
+        (lowerThreshold, upperThreshold) = (aLowerThreshold, aUpperThreshold);
+        emit Thresholds(aLowerThreshold, aUpperThreshold);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
