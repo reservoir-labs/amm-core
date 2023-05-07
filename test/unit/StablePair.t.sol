@@ -1068,11 +1068,27 @@ contract StablePairTest is BaseTest {
         );
     }
 
-    function testRampA_MaxSpeed() public {
+    function testRampA_MaxSpeed_Double() public {
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
         uint64 lFutureAToSet = _stablePair.getCurrentA() * 2;
+
+        // act
+        _factory.rawCall(
+            address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
+        );
+
+        // assert
+        (, uint64 lFutureA,,) = _stablePair.ampData();
+        assertEq(lFutureA, lFutureAToSet * StableMath.A_PRECISION);
+    }
+
+    function testRampA_MaxSpeed_Halve() public {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
+        uint64 lFutureAToSet = _stablePair.getCurrentA() / 2;
 
         // act
         _factory.rawCall(
@@ -1089,6 +1105,19 @@ contract StablePairTest is BaseTest {
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 2 days - 1;
         uint64 lFutureAToSet = _stablePair.getCurrentA() * 4;
+
+        // act & assert
+        vm.expectRevert("SP: AMP_RATE_TOO_HIGH");
+        _factory.rawCall(
+            address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
+        );
+    }
+
+    function testRampA_BreachMaxSpeed_Halve() public {
+        // arrange
+        uint64 lCurrentTimestamp = uint64(block.timestamp);
+        uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
+        uint64 lFutureAToSet = _stablePair.getCurrentA() / 2 - 1;
 
         // act & assert
         vm.expectRevert("SP: AMP_RATE_TOO_HIGH");
