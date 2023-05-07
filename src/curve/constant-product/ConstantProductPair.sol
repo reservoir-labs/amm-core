@@ -68,10 +68,10 @@ contract ConstantProductPair is ReservoirPair {
         }
     }
 
-    function _mintFee(uint256 aReserve0, uint256 aReserve1) private returns (bool rFeeOn) {
-        rFeeOn = platformFee > 0;
+    function _mintFee(uint256 aReserve0, uint256 aReserve1) private {
+        bool lFeeOn = platformFee > 0;
 
-        if (rFeeOn) {
+        if (lFeeOn) {
             uint256 lSqrtOldK = FixedPointMathLib.sqrt(kLast); // gas savings
 
             if (lSqrtOldK != 0) {
