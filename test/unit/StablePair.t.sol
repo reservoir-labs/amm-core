@@ -1088,7 +1088,6 @@ contract StablePairTest is BaseTest {
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
-        uint64 currentA = _stablePair.getCurrentAPrecise();
         uint64 lFutureAToSet = _stablePair.getCurrentA() / 2;
 
         // act
@@ -1118,7 +1117,6 @@ contract StablePairTest is BaseTest {
         // arrange
         uint64 lCurrentTimestamp = uint64(block.timestamp);
         uint64 lFutureATimestamp = lCurrentTimestamp + 1 days;
-        uint64 currentA = _stablePair.getCurrentAPrecise();
         uint64 lFutureAToSet = _stablePair.getCurrentA() / 2 - 1;
 
         // act & assert
