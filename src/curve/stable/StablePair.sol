@@ -15,16 +15,7 @@ import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 
-struct AmplificationData {
-    /// @dev initialA is stored with A_PRECISION (i.e. multiplied by 100)
-    uint64 initialA;
-    /// @dev futureA is stored with A_PRECISION (i.e. multiplied by 100)
-    uint64 futureA;
-    /// @dev initialATime is a unix timestamp and will only overflow every 584 billion years
-    uint64 initialATime;
-    /// @dev futureATime is a unix timestamp and will only overflow every 584 billion years
-    uint64 futureATime;
-}
+import { AmplificationData } from "src/structs/AmplificationData.sol";
 
 contract StablePair is ReservoirPair {
     using FactoryStoreLib for IGenericFactory;
@@ -49,9 +40,11 @@ contract StablePair is ReservoirPair {
     constructor(ERC20 aToken0, ERC20 aToken1)
         ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, _isStableMintBurn(aToken0, aToken1) ? false : true)
     {
-        MINT_BURN_LOGIC = _isStableMintBurn(aToken0, aToken1) ? address(0) : factory.stableMintBurn();
+        bool lIsStableMintBurn = _isStableMintBurn(aToken0, aToken1);
 
-        if (!_isStableMintBurn(aToken0, aToken1)) {
+        MINT_BURN_LOGIC = lIsStableMintBurn ? address(0) : address(factory.stableMintBurn());
+
+        if (!lIsStableMintBurn) {
             require(MINT_BURN_LOGIC.code.length > 0, "SP: MINT_BURN_NOT_DEPLOYED");
             ampData.initialA = factory.read(AMPLIFICATION_COEFFICIENT_NAME).toUint64() * uint64(StableMath.A_PRECISION);
             ampData.futureA = ampData.initialA;
@@ -118,12 +111,11 @@ contract StablePair is ReservoirPair {
             calldatacopy(0, 0, calldatasize())
             let success := delegatecall(gas(), lTarget, 0, calldatasize(), 0, 0)
 
+            returndatacopy(0, 0, returndatasize())
+
             if success {
-                returndatacopy(0, 0, returndatasize())
                 return(0, returndatasize())
             }
-
-            returndatacopy(0, 0, returndatasize())
             revert(0, returndatasize())
         }
     }
@@ -296,13 +288,14 @@ contract StablePair is ReservoirPair {
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(), aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
         );
-        // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
-        // to figure out the previous clamped price
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
         int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
+        // overflow is desired here as the consumer of the oracle will be reading the difference in those
+        // accumulated log values
+        // when the index overflows it will overwrite the oldest observation and then forms a loop
         unchecked {
             int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =
