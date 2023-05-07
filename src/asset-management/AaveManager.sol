@@ -22,8 +22,7 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     event RewardSeller(address newRewardSeller);
     event RewardsController(IRewardsController newRewardsController);
     event WindDownMode(bool windDown);
-    event UpperThreshold(uint128 newUpperThreshold);
-    event LowerThreshold(uint128 newLowerThreshold);
+    event Thresholds(uint128 newLowerThreshold, uint128 newUpperThreshold);
     event Investment(IAssetManagedPair pair, ERC20 token, uint256 shares);
     event Divestment(IAssetManagedPair pair, ERC20 token, uint256 shares);
 
@@ -101,16 +100,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         emit WindDownMode(aWindDown);
     }
 
-    function setUpperThreshold(uint128 aUpperThreshold) external onlyOwner {
-        require(aUpperThreshold <= 1e18 && aUpperThreshold >= lowerThreshold, "AM: INVALID_THRESHOLD");
-        upperThreshold = aUpperThreshold;
-        emit UpperThreshold(aUpperThreshold);
-    }
-
-    function setLowerThreshold(uint128 aLowerThreshold) external onlyOwner {
-        require(aLowerThreshold <= 1e18 && aLowerThreshold <= upperThreshold, "AM: INVALID_THRESHOLD");
-        lowerThreshold = aLowerThreshold;
-        emit LowerThreshold(aLowerThreshold);
+    function setThresholds(uint128 aLowerThreshold, uint128 aUpperThreshold) external onlyOwner {
+        require(aUpperThreshold <= 1e18 && aUpperThreshold >= aLowerThreshold, "AM: INVALID_THRESHOLDS");
+        (lowerThreshold, upperThreshold) = (aLowerThreshold, aUpperThreshold);
+        emit Thresholds(aLowerThreshold, aUpperThreshold);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -145,9 +138,11 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     {
         rShares = aAmount.divWadUp(_getExchangeRate(aAaveToken));
 
+        uint256 lCurrentShares = shares[aPair][aToken];
+
         // this is to prevent underflow as we divWadUp
-        if (rShares > shares[aPair][aToken]) {
-            rShares = shares[aPair][aToken];
+        if (rShares > lCurrentShares) {
+            rShares = lCurrentShares;
         }
 
         shares[aPair][aToken] -= rShares;

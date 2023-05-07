@@ -29,7 +29,9 @@ contract ConstantProductPair is ReservoirPair {
     uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
-    constructor(ERC20 aToken0, ERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) { }
+    constructor(ERC20 aToken0, ERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) {
+        // no additional initialization is required as all constructor logic is in ReservoirPair
+    }
 
     /**
      * _calcFee calculates the appropriate platform fee in terms of tokens that will be minted, based on the growth
@@ -224,14 +226,14 @@ contract ConstantProductPair is ReservoirPair {
         (uint256 lCurrRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
             aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
         );
-        // perf: see if we can avoid using prevClampedPrice and read the two previous oracle observations
-        // to figure out the previous clamped price
         (uint256 lCurrClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(lCurrRawPrice, prevClampedPrice, aTimeElapsed);
         int112 lCurrLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = lCurrClampedPrice;
 
-        // overflow is okay
+        // overflow is desired here as the consumer of the oracle will be reading the difference in those
+        // accumulated log values
+        // when the index overflows it will overwrite the oldest observation and then forms a loop
         unchecked {
             int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =

@@ -16,10 +16,10 @@ uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
 contract GenericFactory is IGenericFactory, Owned {
     using Bytes32Lib for address;
 
-    address public immutable stableMintBurn;
+    StableMintBurn public immutable stableMintBurn;
 
     constructor() Owned(msg.sender) {
-        stableMintBurn = address(new StableMintBurn{salt: bytes32(0)}());
+        stableMintBurn = new StableMintBurn{salt: bytes32(0)}();
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -130,6 +130,7 @@ contract GenericFactory is IGenericFactory, Owned {
 
     event Pair(address indexed token0, address indexed token1, uint256 curveId, address pair);
 
+    /// @notice maps tokenA, tokenB addresses to pair address, where the order of tokenA and tokenB does not matter
     mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
     address[] private _allPairs;
 
