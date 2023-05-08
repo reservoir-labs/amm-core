@@ -3,13 +3,11 @@ pragma solidity ^0.8.0;
 
 import "script/BaseScript.sol";
 
-import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
-
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
+import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
