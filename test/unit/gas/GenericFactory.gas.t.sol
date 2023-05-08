@@ -9,10 +9,10 @@ contract GenericFactoryGasTest is BaseTest {
     }
 
     function testCreateConstantProductPair() external {
-        _factory.createPair(address(_tokenC), address(_tokenD), 0);
+        _factory.createPair(IERC20(address(_tokenC)), IERC20(address(_tokenD)), 0);
     }
 
     function testCreateStablePair() external {
-        _factory.createPair(address(_tokenC), address(_tokenD), 1);
+        _factory.createPair(IERC20(address(_tokenC)), IERC20(address(_tokenD)), 1);
     }
 }

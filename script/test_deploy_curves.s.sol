@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "script/BaseScript.sol";
 
+import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
+
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -64,8 +66,8 @@ contract VaultScript is BaseScript {
         // Whitelist our test contract to call the oracle.
         _oracleCaller.whitelistAddress(address(this), true);
 
-        _factory.createPair(address(_usdt), address(_usdc), 0);
-        _factory.createPair(address(_usdt), address(_usdc), 1);
+        _factory.createPair(IERC20(address(_usdt)), IERC20(address(_usdc)), 0);
+        _factory.createPair(IERC20(address(_usdt)), IERC20(address(_usdc)), 1);
         vm.stopBroadcast();
     }
 }

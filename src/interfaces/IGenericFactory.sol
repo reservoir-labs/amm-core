@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import { IERC20 } from "@openzeppelin/token/ERC20/IERC20.sol";
+
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 interface IGenericFactory {
@@ -12,6 +14,6 @@ interface IGenericFactory {
     function addCurve(bytes calldata initCode) external returns (uint256 curveId, bytes32 codeKey);
 
     function allPairs() external view returns (address[] memory);
-    function getPair(address tokenA, address tokenB, uint256 curveId) external view returns (address);
-    function createPair(address tokenA, address tokenB, uint256 curveId) external returns (address);
+    function getPair(IERC20 tokenA, IERC20 tokenB, uint256 curveId) external view returns (address);
+    function createPair(IERC20 tokenA, IERC20 tokenB, uint256 curveId) external returns (address);
 }
