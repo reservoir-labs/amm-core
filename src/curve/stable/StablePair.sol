@@ -113,9 +113,7 @@ contract StablePair is ReservoirPair {
 
             returndatacopy(0, 0, returndatasize())
 
-            if success {
-                return(0, returndatasize())
-            }
+            if success { return(0, returndatasize()) }
             revert(0, returndatasize())
         }
     }
