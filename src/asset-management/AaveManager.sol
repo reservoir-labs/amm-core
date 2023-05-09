@@ -283,10 +283,10 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function _calculateChangeAmount(uint256 aReserve, uint256 aManaged) internal view returns (int256 rAmountChange) {
         uint256 lRatio = aManaged.divWad(aReserve);
         if (lRatio < lowerThreshold) {
-            rAmountChange = int256(aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)) - aManaged);
+            rAmountChange = (aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)) - aManaged).toInt256();
             assert(rAmountChange > 0);
         } else if (lRatio > upperThreshold) {
-            rAmountChange = int256(aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold))) - int256(aManaged);
+            rAmountChange = aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)).toInt256() - aManaged.toInt256();
             assert(rAmountChange < 0);
         }
     }
