@@ -184,8 +184,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         nonReentrant
     {
-        require(aAmount0Change != type(int256).min && aAmount1Change != type(int256).min, "AM: CAST_WOULD_OVERFLOW");
-
         ERC20 lToken0 = aPair.token0();
         ERC20 lToken1 = aPair.token1();
 
@@ -211,10 +209,18 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
         // withdraw from the market
         if (aAmount0Change < 0) {
-            _doDivest(aPair, lToken0, lToken0AToken, uint256(-aAmount0Change));
+            uint256 lAmount0Change;
+            unchecked {
+                lAmount0Change = uint256(-aAmount0Change);
+            }
+            _doDivest(aPair, lToken0, lToken0AToken, lAmount0Change);
         }
         if (aAmount1Change < 0) {
-            _doDivest(aPair, lToken1, lToken1AToken, uint256(-aAmount1Change));
+            uint256 lAmount1Change;
+            unchecked {
+                lAmount1Change = uint256(-aAmount1Change);
+            }
+            _doDivest(aPair, lToken1, lToken1AToken, lAmount1Change);
         }
 
         // transfer tokens to/from the pair
