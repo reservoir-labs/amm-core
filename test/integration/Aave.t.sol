@@ -888,7 +888,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testSetThresholds_BreachMaximum() public allNetworks {
         // act & assert
-        vm.expectRevert("AM: INVALID_THRESHOLD");
+        vm.expectRevert("AM: INVALID_THRESHOLDS");
         _manager.setThresholds(0, 1e18 + 1);
     }
 
@@ -897,7 +897,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lThreshold = bound(aThreshold, 0, _manager.lowerThreshold() - 1);
 
         // act & assert
-        vm.expectRevert("AM: INVALID_THRESHOLD");
+        vm.expectRevert("AM: INVALID_THRESHOLDS");
         _manager.setThresholds(_manager.lowerThreshold(), uint128(lThreshold));
     }
 
@@ -906,7 +906,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lThreshold = bound(aThreshold, _manager.upperThreshold() + 1, type(uint128).max);
 
         // act & assert
-        vm.expectRevert("AM: INVALID_THRESHOLD");
+        vm.expectRevert("AM: INVALID_THRESHOLDS");
         _manager.setThresholds(uint128(lThreshold), _manager.upperThreshold());
     }
 
