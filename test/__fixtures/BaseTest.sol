@@ -11,7 +11,7 @@ import { Constants } from "src/Constants.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 import { ReservoirDeployer } from "src/ReservoirDeployer.sol";
-import { GenericFactory } from "src/GenericFactory.sol";
+import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
@@ -109,7 +109,7 @@ abstract contract BaseTest is Test {
     }
 
     function _createPair(address aTokenA, address aTokenB, uint256 aCurveId) internal returns (address rPair) {
-        rPair = _factory.createPair(aTokenA, aTokenB, aCurveId);
+        rPair = _factory.createPair(IERC20(aTokenA), IERC20(aTokenB), aCurveId);
     }
 
     function _stepTime(uint256 aTime) internal {

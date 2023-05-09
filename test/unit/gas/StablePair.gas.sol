@@ -14,10 +14,10 @@ contract StablePairGas is BaseTest {
         _tokenD.mint(address(this), 100e18);
 
         // This pair measures initial mint cost.
-        _freshPair = StablePair(_factory.createPair(address(_tokenA), address(_tokenD), 1));
+        _freshPair = StablePair(_factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenD)), 1));
 
         // This pair measures oracle writing cost.
-        _oraclePair = StablePair(_factory.createPair(address(_tokenA), address(_tokenC), 1));
+        _oraclePair = StablePair(_factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), 1));
         _tokenA.mint(address(_oraclePair), 100e18);
         _tokenC.mint(address(_oraclePair), 100e18);
         _oraclePair.mint(_bob);

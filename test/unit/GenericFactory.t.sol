@@ -14,10 +14,10 @@ contract GenericFactoryTest is BaseTest {
         uint256 lCurveId = bound(aCurveId, 0, 1);
 
         // act
-        address lPair = _factory.createPair(address(_tokenA), address(_tokenC), lCurveId);
+        address lPair = _factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), lCurveId);
 
         // assert
-        assertEq(_factory.getPair(address(_tokenA), address(_tokenC), lCurveId), address(lPair));
+        assertEq(_factory.getPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), lCurveId), address(lPair));
     }
 
     function testCreatePair_MoreThan18Decimals(uint256 aCurveId) public {
@@ -67,8 +67,8 @@ contract GenericFactoryTest is BaseTest {
 
     function testAllPairs() public {
         // arrange
-        address lPair3 = _factory.createPair(address(_tokenA), address(_tokenC), 0);
-        address lPair4 = _factory.createPair(address(_tokenA), address(_tokenC), 1);
+        address lPair3 = _factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), 0);
+        address lPair4 = _factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), 1);
 
         // act
         address[] memory lAllPairs = _factory.allPairs();
@@ -104,7 +104,7 @@ contract GenericFactoryTest is BaseTest {
 
     function testGetPair() public {
         // assert - ensure double mapped
-        assertEq(_factory.getPair(address(_tokenA), address(_tokenB), 0), address(_constantProductPair));
-        assertEq(_factory.getPair(address(_tokenB), address(_tokenA), 0), address(_constantProductPair));
+        assertEq(_factory.getPair(IERC20(address(_tokenA)), IERC20(address(_tokenB)), 0), address(_constantProductPair));
+        assertEq(_factory.getPair(IERC20(address(_tokenB)), IERC20(address(_tokenA)), 0), address(_constantProductPair));
     }
 }

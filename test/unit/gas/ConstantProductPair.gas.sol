@@ -15,10 +15,10 @@ contract ConstantProductPairGas is BaseTest {
         _tokenD.mint(address(this), 100e18);
 
         // This pair is used to test initial mint cost.
-        _freshPair = ConstantProductPair(_factory.createPair(address(_tokenA), address(_tokenD), 0));
+        _freshPair = ConstantProductPair(_factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenD)), 0));
 
         // Isolated pair to measure oracle cost.
-        _oraclePair = ConstantProductPair(_factory.createPair(address(_tokenB), address(_tokenC), 0));
+        _oraclePair = ConstantProductPair(_factory.createPair(IERC20(address(_tokenB)), IERC20(address(_tokenC)), 0));
         _tokenB.mint(address(_oraclePair), 100e18);
         _tokenC.mint(address(_oraclePair), 100e18);
         _oraclePair.mint(_bob);
@@ -37,7 +37,7 @@ contract ConstantProductPairGas is BaseTest {
         _oraclePair.burn(address(this));
 
         // This pair will let a user swap without writing the oracle.
-        _simplePair = ConstantProductPair(_factory.createPair(address(_tokenA), address(_tokenC), 0));
+        _simplePair = ConstantProductPair(_factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), 0));
         _tokenA.mint(address(_simplePair), 100e18);
         _tokenC.mint(address(_simplePair), 100e18);
         _simplePair.mint(_bob);

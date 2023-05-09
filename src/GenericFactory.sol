@@ -8,7 +8,7 @@ import { Owned } from "solmate/auth/Owned.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 
-import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
+import { IGenericFactory, IERC20 } from "src/interfaces/IGenericFactory.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
 uint256 constant MAX_SSTORE_SIZE = 0x6000 - 1;
@@ -55,7 +55,7 @@ contract GenericFactory is IGenericFactory, Owned {
         }
     }
 
-    function getBytecode(bytes32 aCodeKey, address aToken0, address aToken1) public view returns (bytes memory) {
+    function getBytecode(bytes32 aCodeKey, IERC20 aToken0, IERC20 aToken1) public view returns (bytes memory) {
         address[] storage lByteCode = _getByteCode[aCodeKey];
 
         bytes memory lInitCode;
@@ -118,7 +118,7 @@ contract GenericFactory is IGenericFactory, Owned {
         _writeBytecode(rCodeKey, aInitCode);
     }
 
-    function _loadCurve(uint256 aCurveId, address aToken0, address aToken1) private view returns (bytes memory) {
+    function _loadCurve(uint256 aCurveId, IERC20 aToken0, IERC20 aToken1) private view returns (bytes memory) {
         bytes32 lCodeKey = _curves[aCurveId];
 
         return getBytecode(lCodeKey, aToken0, aToken1);
@@ -128,26 +128,26 @@ contract GenericFactory is IGenericFactory, Owned {
                                     PAIRS
     //////////////////////////////////////////////////////////////////////////*/
 
-    event Pair(address indexed token0, address indexed token1, uint256 curveId, address pair);
+    event Pair(IERC20 indexed token0, IERC20 indexed token1, uint256 curveId, address pair);
 
-    /// @notice maps tokenA, tokenB addresses to pair address, where the order of tokenA and tokenB does not matter
-    mapping(address => mapping(address => mapping(uint256 => address))) public getPair;
+    /// @notice maps tokenA, tokenB addresses, and curveId, to pair address, where the order of tokenA and tokenB does not matter
+    mapping(IERC20 => mapping(IERC20 => mapping(uint256 => address))) public getPair;
     address[] private _allPairs;
 
     function allPairs() external view returns (address[] memory) {
         return _allPairs;
     }
 
-    function _sortAddresses(address a, address b) private pure returns (address r0, address r1) {
+    function _sortAddresses(IERC20 a, IERC20 b) private pure returns (IERC20 r0, IERC20 r1) {
         (r0, r1) = a < b ? (a, b) : (b, a);
     }
 
-    function createPair(address aTokenA, address aTokenB, uint256 aCurveId) external returns (address rPair) {
+    function createPair(IERC20 aTokenA, IERC20 aTokenB, uint256 aCurveId) external returns (address rPair) {
         require(aTokenA != aTokenB, "FACTORY: IDENTICAL_ADDRESSES");
-        require(aTokenA != address(0), "FACTORY: ZERO_ADDRESS");
+        require(address(aTokenA) != address(0), "FACTORY: ZERO_ADDRESS");
         require(getPair[aTokenA][aTokenB][aCurveId] == address(0), "FACTORY: PAIR_EXISTS");
 
-        (address lToken0, address lToken1) = _sortAddresses(aTokenA, aTokenB);
+        (IERC20 lToken0, IERC20 lToken1) = _sortAddresses(aTokenA, aTokenB);
 
         bytes memory lInitCode = _loadCurve(aCurveId, lToken0, lToken1);
 

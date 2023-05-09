@@ -7,7 +7,7 @@ import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-import { GenericFactory } from "src/GenericFactory.sol";
+import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
@@ -64,8 +64,8 @@ contract VaultScript is BaseScript {
         // Whitelist our test contract to call the oracle.
         _oracleCaller.whitelistAddress(address(this), true);
 
-        _factory.createPair(address(_usdt), address(_usdc), 0);
-        _factory.createPair(address(_usdt), address(_usdc), 1);
+        _factory.createPair(IERC20(address(_usdt)), IERC20(address(_usdc)), 0);
+        _factory.createPair(IERC20(address(_usdt)), IERC20(address(_usdc)), 1);
         vm.stopBroadcast();
     }
 }
