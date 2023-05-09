@@ -167,7 +167,9 @@ contract ConstantProductPair is ReservoirPair {
             // swap token1 exact in for token0 variable out
             else {
                 lTokenOut = token0;
-                lAmountIn = uint256(-aAmount);
+                unchecked {
+                    lAmountIn = uint256(-aAmount);
+                }
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
             }
         }
@@ -182,7 +184,9 @@ contract ConstantProductPair is ReservoirPair {
             }
             // swap token0 variable in for token1 exact out
             else {
-                rAmountOut = uint256(-aAmount);
+                unchecked {
+                    rAmountOut = uint256(-aAmount);
+                }
                 require(rAmountOut < lReserve1, "CP: NOT_ENOUGH_LIQ");
                 lTokenOut = token1;
                 lAmountIn = ConstantProductMath.getAmountIn(rAmountOut, lReserve0, lReserve1, swapFee);
