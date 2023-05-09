@@ -6,6 +6,7 @@ import { Owned } from "solmate/auth/Owned.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
@@ -16,6 +17,7 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
+    using SafeCast for uint256;
 
     event Pool(IPool newPool);
     event DataProvider(IAaveProtocolDataProvider newDataProvider);
@@ -273,8 +275,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function returnAsset(bool aToken0, uint256 aAmount) external {
         require(aAmount > 0, "AM: ZERO_AMOUNT_REQUESTED");
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
-        int256 lAmount0Change = -int256(aToken0 ? aAmount : 0);
-        int256 lAmount1Change = -int256(aToken0 ? 0 : aAmount);
+        int256 lAmount0Change = -int256(aToken0 ? aAmount.toInt256() : int256(0));
+        int256 lAmount1Change = -int256(aToken0 ? int256(0) : aAmount.toInt256());
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 
