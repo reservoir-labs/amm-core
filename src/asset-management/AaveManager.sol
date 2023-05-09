@@ -286,7 +286,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
             rAmountChange = (aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)) - aManaged).toInt256();
             assert(rAmountChange > 0);
         } else if (lRatio > upperThreshold) {
-            rAmountChange = aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)).toInt256() - aManaged.toInt256();
+            rAmountChange =
+                aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)).toInt256() - aManaged.toInt256();
             assert(rAmountChange < 0);
         }
     }
