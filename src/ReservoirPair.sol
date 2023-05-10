@@ -269,9 +269,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _safeTransfer(address aToken, address aTo, uint256 aValue) internal returns (bool) {
+    function _safeTransfer(ERC20 aToken, address aTo, uint256 aValue) internal returns (bool) {
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory data) = aToken.call(abi.encodeWithSelector(TRANSFER, aTo, aValue));
+        (bool success, bytes memory data) = address(aToken).call(abi.encodeWithSelector(TRANSFER, aTo, aValue));
         return success && (data.length == 0 || abi.decode(data, (bool)));
     }
 
@@ -280,14 +280,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     function _checkedTransfer(ERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
         internal
     {
-        if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
+        if (!_safeTransfer(aToken, aDestination, aAmount)) {
             bool lIsToken0 = aToken == _token0();
             uint256 lTokenOutManaged = lIsToken0 ? token0Managed : token1Managed;
             uint256 lReserveOut = lIsToken0 ? aReserve0 : aReserve1;
 
             if (lReserveOut - lTokenOutManaged < aAmount) {
                 assetManager.returnAsset(lIsToken0, aAmount - (lReserveOut - lTokenOutManaged));
-                require(_safeTransfer(address(aToken), aDestination, aAmount), "RP: TRANSFER_FAILED");
+                require(_safeTransfer(aToken, aDestination, aAmount), "RP: TRANSFER_FAILED");
             } else {
                 revert("RP: TRANSFER_FAILED");
             }

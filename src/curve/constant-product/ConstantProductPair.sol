@@ -58,9 +58,12 @@ contract ConstantProductPair is ReservoirPair {
         pure
         returns (uint256 rSharesToIssue)
     {
-        // ASSERT: newK & oldK        < uint104
-        // ASSERT: aPlatformFee       < FEE_ACCURACY
-        // ASSERT: aCirculatingShares < uint104
+        // INVARIANT: `aSqrtOldK & aSqrtNewK < uint104` as _syncManaged ensures that both reserves fit into uint104.
+        //            The sqrt of the product of the two reserves will fit into uint104 as well
+        // INVARIANT: `aSqrtOldK < aSqrtNewK` as checked in _mintFee
+        // INVARIANT: `aPlatformFee < FEE_ACCURACY` enforced by setter function
+        // INVARIANT: `aCirculatingShares < uint104`  since the circulating shares are the geometric mean of the reserves
+        //            and that both reserves fit into uint104 as explained above, aCirculatingShares will fit into uint104 as well
         unchecked {
             uint256 lScaledGrowth = aSqrtNewK * ACCURACY / aSqrtOldK; // ASSERT: < UINT256
             uint256 lScaledMultiplier = ACCURACY - (SQUARED_ACCURACY / lScaledGrowth); // ASSERT: < UINT128
@@ -167,7 +170,9 @@ contract ConstantProductPair is ReservoirPair {
             // swap token1 exact in for token0 variable out
             else {
                 lTokenOut = token0;
-                lAmountIn = uint256(-aAmount);
+                unchecked {
+                    lAmountIn = uint256(-aAmount);
+                }
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
             }
         }
@@ -182,7 +187,9 @@ contract ConstantProductPair is ReservoirPair {
             }
             // swap token0 variable in for token1 exact out
             else {
-                rAmountOut = uint256(-aAmount);
+                unchecked {
+                    rAmountOut = uint256(-aAmount);
+                }
                 require(rAmountOut < lReserve1, "CP: NOT_ENOUGH_LIQ");
                 lTokenOut = token1;
                 lAmountIn = ConstantProductMath.getAmountIn(rAmountOut, lReserve0, lReserve1, swapFee);

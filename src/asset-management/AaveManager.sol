@@ -6,6 +6,7 @@ import { Owned } from "solmate/auth/Owned.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IAssetManager } from "src/interfaces/IAssetManager.sol";
@@ -16,6 +17,7 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 
 contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     using FixedPointMathLib for uint256;
+    using SafeCast for uint256;
 
     event Pool(IPool newPool);
     event DataProvider(IAaveProtocolDataProvider newDataProvider);
@@ -184,8 +186,6 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         private
         nonReentrant
     {
-        require(aAmount0Change != type(int256).min && aAmount1Change != type(int256).min, "AM: CAST_WOULD_OVERFLOW");
-
         ERC20 lToken0 = aPair.token0();
         ERC20 lToken1 = aPair.token1();
 
@@ -211,10 +211,18 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
         // withdraw from the market
         if (aAmount0Change < 0) {
-            _doDivest(aPair, lToken0, lToken0AToken, uint256(-aAmount0Change));
+            uint256 lAmount0Change;
+            unchecked {
+                lAmount0Change = uint256(-aAmount0Change);
+            }
+            _doDivest(aPair, lToken0, lToken0AToken, lAmount0Change);
         }
         if (aAmount1Change < 0) {
-            _doDivest(aPair, lToken1, lToken1AToken, uint256(-aAmount1Change));
+            uint256 lAmount1Change;
+            unchecked {
+                lAmount1Change = uint256(-aAmount1Change);
+            }
+            _doDivest(aPair, lToken1, lToken1AToken, lAmount1Change);
         }
 
         // transfer tokens to/from the pair
@@ -267,18 +275,19 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     function returnAsset(bool aToken0, uint256 aAmount) external {
         require(aAmount > 0, "AM: ZERO_AMOUNT_REQUESTED");
         IAssetManagedPair lPair = IAssetManagedPair(msg.sender);
-        int256 lAmount0Change = -int256(aToken0 ? aAmount : 0);
-        int256 lAmount1Change = -int256(aToken0 ? 0 : aAmount);
+        int256 lAmount0Change = aToken0 ? -aAmount.toInt256() : int256(0);
+        int256 lAmount1Change = aToken0 ? int256(0) : -aAmount.toInt256();
         _adjustManagement(lPair, lAmount0Change, lAmount1Change);
     }
 
     function _calculateChangeAmount(uint256 aReserve, uint256 aManaged) internal view returns (int256 rAmountChange) {
         uint256 lRatio = aManaged.divWad(aReserve);
         if (lRatio < lowerThreshold) {
-            rAmountChange = int256(aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)) - aManaged);
+            rAmountChange = (aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)) - aManaged).toInt256();
             assert(rAmountChange > 0);
         } else if (lRatio > upperThreshold) {
-            rAmountChange = int256(aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold))) - int256(aManaged);
+            rAmountChange =
+                aReserve.mulWad(uint256(lowerThreshold).avg(upperThreshold)).toInt256() - aManaged.toInt256();
             assert(rAmountChange < 0);
         }
     }
