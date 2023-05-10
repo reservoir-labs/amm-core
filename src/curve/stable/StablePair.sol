@@ -141,13 +141,13 @@ contract StablePair is ReservoirPair {
         if (aInOrOut) {
             // swap token0 exact in for token1 variable out
             if (aAmount > 0) {
-                lTokenOut = token1;
+                lTokenOut = token1();
                 lAmountIn = uint256(aAmount);
                 rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, true);
             }
             // swap token1 exact in for token0 variable out
             else {
-                lTokenOut = token0;
+                lTokenOut = token0();
                 unchecked {
                     lAmountIn = uint256(-aAmount);
                 }
@@ -160,7 +160,7 @@ contract StablePair is ReservoirPair {
             if (aAmount > 0) {
                 rAmountOut = uint256(aAmount);
                 require(rAmountOut < lReserve0, "SP: NOT_ENOUGH_LIQ");
-                lTokenOut = token0;
+                lTokenOut = token0();
                 lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, true);
             }
             // swap token0 variable in for token1 exact out
@@ -169,7 +169,7 @@ contract StablePair is ReservoirPair {
                     rAmountOut = uint256(-aAmount);
                 }
                 require(rAmountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
-                lTokenOut = token1;
+                lTokenOut = token1();
                 lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, false);
             }
         }
@@ -179,8 +179,8 @@ contract StablePair is ReservoirPair {
         if (aData.length > 0) {
             IReservoirCallee(aTo).reservoirCall(
                 msg.sender,
-                lTokenOut == token0 ? int256(rAmountOut) : -int256(lAmountIn),
-                lTokenOut == token1 ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token0() ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token1() ? int256(rAmountOut) : -int256(lAmountIn),
                 aData
             );
         }
@@ -188,11 +188,11 @@ contract StablePair is ReservoirPair {
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        uint256 lReceived = lTokenOut == token0() ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lReceived >= lAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
         _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
-        emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
+        emit Swap(msg.sender, lTokenOut == token1(), lReceived, rAmountOut, aTo);
     }
 
     function _getAmountOut(uint256 aAmountIn, uint256 aReserve0, uint256 aReserve1, bool aToken0In)
@@ -204,8 +204,8 @@ contract StablePair is ReservoirPair {
             aAmountIn,
             aReserve0,
             aReserve1,
-            _token0PrecisionMultiplier(),
-            _token1PrecisionMultiplier(),
+            token0PrecisionMultiplier(),
+            token1PrecisionMultiplier(),
             aToken0In,
             swapFee,
             _getNA()
@@ -221,8 +221,8 @@ contract StablePair is ReservoirPair {
             aAmountOut,
             aReserve0,
             aReserve1,
-            _token0PrecisionMultiplier(),
-            _token1PrecisionMultiplier(),
+            token0PrecisionMultiplier(),
+            token1PrecisionMultiplier(),
             aToken0Out,
             swapFee,
             _getNA()
@@ -236,8 +236,8 @@ contract StablePair is ReservoirPair {
     /// @return rLiquidity The invariant, at the precision of the pool.
     function _computeLiquidity(uint256 aReserve0, uint256 aReserve1) internal view returns (uint256 rLiquidity) {
         unchecked {
-            uint256 adjustedReserve0 = aReserve0 * _token0PrecisionMultiplier();
-            uint256 adjustedReserve1 = aReserve1 * _token1PrecisionMultiplier();
+            uint256 adjustedReserve0 = aReserve0 * token0PrecisionMultiplier();
+            uint256 adjustedReserve1 = aReserve1 * token1PrecisionMultiplier();
             rLiquidity = StableMath._computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, _getNA());
         }
     }
@@ -288,7 +288,7 @@ contract StablePair is ReservoirPair {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
-            _getCurrentAPrecise(), aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
+            _getCurrentAPrecise(), aReserve0 * token0PrecisionMultiplier(), aReserve1 * token1PrecisionMultiplier()
         );
         (uint256 currClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);

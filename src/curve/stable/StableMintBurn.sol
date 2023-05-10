@@ -21,19 +21,19 @@ contract StableMintBurn is StablePair {
         // no additional initialization logic is required as all constructor logic is in StablePair
     }
 
-    function _token0() internal view override returns (ERC20) {
+    function token0() public view override returns (ERC20) {
         return this.token0();
     }
 
-    function _token1() internal view override returns (ERC20) {
+    function token1() public view override returns (ERC20) {
         return this.token1();
     }
 
-    function _token0PrecisionMultiplier() internal view override returns (uint128) {
+    function token0PrecisionMultiplier() public view override returns (uint128) {
         return this.token0PrecisionMultiplier();
     }
 
-    function _token1PrecisionMultiplier() internal view override returns (uint128) {
+    function token1PrecisionMultiplier() public view override returns (uint128) {
         return this.token1PrecisionMultiplier();
     }
 
@@ -131,7 +131,7 @@ contract StableMintBurn is StablePair {
         bool lFeeOn = platformFee > 0;
         rTotalSupply = totalSupply;
         rD = StableMath._computeLiquidityFromAdjustedBalances(
-            aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier(), 2 * lastInvariantAmp
+            aReserve0 * token0PrecisionMultiplier(), aReserve1 * token1PrecisionMultiplier(), 2 * lastInvariantAmp
         );
         if (lFeeOn) {
             uint256 lDLast = lastInvariant;
