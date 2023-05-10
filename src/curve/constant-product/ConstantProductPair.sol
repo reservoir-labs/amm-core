@@ -132,8 +132,8 @@ contract ConstantProductPair is ReservoirPair {
         rAmount1 = liquidity * _totalToken1() / lTotalSupply; // using balances ensures pro-rata distribution
         _burn(address(this), liquidity);
 
-        _checkedTransfer(token0, aTo, rAmount0, lReserve0, lReserve1);
-        _checkedTransfer(token1, aTo, rAmount1, lReserve0, lReserve1);
+        _checkedTransfer(token0(), aTo, rAmount0, lReserve0, lReserve1);
+        _checkedTransfer(token1(), aTo, rAmount1, lReserve0, lReserve1);
 
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
@@ -160,13 +160,13 @@ contract ConstantProductPair is ReservoirPair {
         if (aInOrOut) {
             // swap token0 exact in for token1 variable out
             if (aAmount > 0) {
-                lTokenOut = token1;
+                lTokenOut = token1();
                 lAmountIn = uint256(aAmount);
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve0, lReserve1, swapFee);
             }
             // swap token1 exact in for token0 variable out
             else {
-                lTokenOut = token0;
+                lTokenOut = token0();
                 lAmountIn = uint256(-aAmount);
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
             }
@@ -177,14 +177,14 @@ contract ConstantProductPair is ReservoirPair {
             if (aAmount > 0) {
                 rAmountOut = uint256(aAmount);
                 require(rAmountOut < lReserve0, "CP: NOT_ENOUGH_LIQ");
-                lTokenOut = token0;
+                lTokenOut = token0();
                 lAmountIn = ConstantProductMath.getAmountIn(rAmountOut, lReserve1, lReserve0, swapFee);
             }
             // swap token0 variable in for token1 exact out
             else {
                 rAmountOut = uint256(-aAmount);
                 require(rAmountOut < lReserve1, "CP: NOT_ENOUGH_LIQ");
-                lTokenOut = token1;
+                lTokenOut = token1();
                 lAmountIn = ConstantProductMath.getAmountIn(rAmountOut, lReserve0, lReserve1, swapFee);
             }
         }
@@ -195,8 +195,8 @@ contract ConstantProductPair is ReservoirPair {
         if (aData.length > 0) {
             IReservoirCallee(aTo).reservoirCall(
                 msg.sender,
-                lTokenOut == token0 ? int256(rAmountOut) : -int256(lAmountIn),
-                lTokenOut == token1 ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token0() ? int256(rAmountOut) : -int256(lAmountIn),
+                lTokenOut == token1() ? int256(rAmountOut) : -int256(lAmountIn),
                 aData
             );
         }
@@ -204,11 +204,11 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lBalance0 = _totalToken0();
         uint256 lBalance1 = _totalToken1();
 
-        uint256 lReceived = lTokenOut == token0 ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
+        uint256 lReceived = lTokenOut == token0() ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lAmountIn <= lReceived, "CP: INSUFFICIENT_AMOUNT_IN");
 
         _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
-        emit Swap(msg.sender, lTokenOut == token1, lReceived, rAmountOut, aTo);
+        emit Swap(msg.sender, lTokenOut == token1(), lReceived, rAmountOut, aTo);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -222,7 +222,7 @@ contract ConstantProductPair is ReservoirPair {
         Observation storage previous = _observations[_slot0.index];
 
         (uint256 lCurrRawPrice, int112 currLogRawPrice) = ConstantProductOracleMath.calcLogPrice(
-            aReserve0 * _token0PrecisionMultiplier(), aReserve1 * _token1PrecisionMultiplier()
+            aReserve0 * token0PrecisionMultiplier(), aReserve1 * token1PrecisionMultiplier()
         );
         (uint256 lCurrClampedPrice, int112 currLogClampedPrice) =
             _calcClampedPrice(lCurrRawPrice, prevClampedPrice, aTimeElapsed);

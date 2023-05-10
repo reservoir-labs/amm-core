@@ -36,11 +36,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     constructor(ERC20 aToken0, ERC20 aToken1, string memory aSwapFeeName, bool aNotStableMintBurn) {
         factory = IGenericFactory(msg.sender);
-        token0 = aToken0;
-        token1 = aToken1;
+        _token0 = aToken0;
+        _token1 = aToken1;
 
-        token0PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken0.decimals()) : 0;
-        token1PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken1.decimals()) : 0;
+        _token0PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken0.decimals()) : 0;
+        _token1PrecisionMultiplier = aNotStableMintBurn ? uint128(10) ** (18 - aToken1.decimals()) : 0;
         swapFeeName = keccak256(bytes(aSwapFeeName));
 
         if (aNotStableMintBurn) {
@@ -60,29 +60,29 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    ERC20 public immutable token0;
-    ERC20 public immutable token1;
+    ERC20 internal immutable _token0;
+    ERC20 internal immutable _token1;
 
     // Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS. For example,
     // TBTC has 18 decimals, so the multiplier should be 1. WBTC has 8, so the multiplier should be
     // 10 ** 18 / 10 ** 8 => 10 ** 10.
-    uint128 public immutable token0PrecisionMultiplier;
-    uint128 public immutable token1PrecisionMultiplier;
+    uint128 internal immutable _token0PrecisionMultiplier;
+    uint128 internal immutable _token1PrecisionMultiplier;
 
-    function _token0() internal view virtual returns (ERC20) {
-        return token0;
+    function token0() public view virtual returns (ERC20) {
+        return _token0;
     }
 
-    function _token1() internal view virtual returns (ERC20) {
-        return token1;
+    function token1() public view virtual returns (ERC20) {
+        return _token1;
     }
 
-    function _token0PrecisionMultiplier() internal view virtual returns (uint128) {
-        return token0PrecisionMultiplier;
+    function token0PrecisionMultiplier() public view virtual returns (uint128) {
+        return _token0PrecisionMultiplier;
     }
 
-    function _token1PrecisionMultiplier() internal view virtual returns (uint128) {
-        return token1PrecisionMultiplier;
+    function token1PrecisionMultiplier() public view virtual returns (uint128) {
+        return _token1PrecisionMultiplier;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -184,8 +184,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     function skim(address aTo) external {
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
 
-        _checkedTransfer(_token0(), aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
-        _checkedTransfer(_token1(), aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
+        _checkedTransfer(token0(), aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
+        _checkedTransfer(token1(), aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
         _unlock(lBlockTimestampLast);
     }
 
@@ -256,7 +256,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     function recoverToken(ERC20 aToken) external {
-        require(aToken != _token0() && aToken != _token1(), "RP: INVALID_TOKEN_TO_RECOVER");
+        require(aToken != token0() && aToken != token1(), "RP: INVALID_TOKEN_TO_RECOVER");
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         uint256 _amountToRecover = aToken.balanceOf(address(this));
 
@@ -281,7 +281,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         internal
     {
         if (!_safeTransfer(address(aToken), aDestination, aAmount)) {
-            bool lIsToken0 = aToken == _token0();
+            bool lIsToken0 = aToken == token0();
             uint256 lTokenOutManaged = lIsToken0 ? token0Managed : token1Managed;
             uint256 lReserveOut = lIsToken0 ? aReserve0 : aReserve1;
 
@@ -348,11 +348,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint104 public token1Managed;
 
     function _totalToken0() internal view returns (uint256) {
-        return _token0().balanceOf(address(this)) + uint256(token0Managed);
+        return token0().balanceOf(address(this)) + uint256(token0Managed);
     }
 
     function _totalToken1() internal view returns (uint256) {
-        return _token1().balanceOf(address(this)) + uint256(token1Managed);
+        return token1().balanceOf(address(this)) + uint256(token1Managed);
     }
 
     function _handleReport(ERC20 aToken, uint256 aReserve, uint256 aPrevBalance, uint256 aNewBalance)
@@ -387,8 +387,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aReserve0, aReserve1);
         }
 
-        ERC20 lToken0 = _token0();
-        ERC20 lToken1 = _token1();
+        ERC20 lToken0 = token0();
+        ERC20 lToken1 = token1();
 
         uint256 lToken0Managed = assetManager.getBalance(this, lToken0);
         uint256 lToken1Managed = assetManager.getBalance(this, lToken1);
@@ -416,14 +416,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
             token0Managed += lDelta;
 
-            address(_token0()).safeTransfer(msg.sender, lDelta);
+            address(token0()).safeTransfer(msg.sender, lDelta);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token0Managed -= lDelta;
 
-            address(_token0()).safeTransferFrom(msg.sender, address(this), lDelta);
+            address(token0()).safeTransferFrom(msg.sender, address(this), lDelta);
         }
 
         if (aToken1Change > 0) {
@@ -432,19 +432,19 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // solhint-disable-next-line reentrancy
             token1Managed += lDelta;
 
-            address(_token1()).safeTransfer(msg.sender, lDelta);
+            address(token1()).safeTransfer(msg.sender, lDelta);
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
             // solhint-disable-next-line reentrancy
             token1Managed -= lDelta;
 
-            address(_token1()).safeTransferFrom(msg.sender, address(this), lDelta);
+            address(token1()).safeTransferFrom(msg.sender, address(this), lDelta);
         }
     }
 
     function skimExcessManaged(ERC20 aToken) external returns (uint256 rAmtSkimmed) {
-        require(aToken == _token0() || aToken == _token1(), "RP: INVALID_SKIM_TOKEN");
+        require(aToken == token0() || aToken == token1(), "RP: INVALID_SKIM_TOKEN");
         uint256 lTokenAmtManaged = assetManager.getBalance(this, aToken);
 
         if (lTokenAmtManaged > type(uint104).max) {
@@ -452,7 +452,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
             rAmtSkimmed = lTokenAmtManaged - type(uint104).max;
 
-            assetManager.returnAsset(aToken == _token0(), rAmtSkimmed);
+            assetManager.returnAsset(aToken == token0(), rAmtSkimmed);
             address(aToken).safeTransfer(lRecoverer, rAmtSkimmed);
         }
     }
