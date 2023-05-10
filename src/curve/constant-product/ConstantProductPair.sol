@@ -58,11 +58,11 @@ contract ConstantProductPair is ReservoirPair {
         pure
         returns (uint256 rSharesToIssue)
     {
-        // INVARIANT: aSqrtOldK & aSqrtNewK < uint104 as _syncManaged ensures that both reserves fit into uint104.
+        // INVARIANT: `aSqrtOldK & aSqrtNewK < uint104` as _syncManaged ensures that both reserves fit into uint104.
         //            The sqrt of the product of the two reserves will fit into uint104 as well
-        // INVARIANT: aSqrtOldK < aSqrtNewK as checked in _mintFee
-        // INVARIANT: aPlatformFee       < FEE_ACCURACY
-        // INVARIANT: aCirculatingShares < uint104  since the circulating shares are the geometric mean of the reserves
+        // INVARIANT: `aSqrtOldK < aSqrtNewK` as checked in _mintFee
+        // INVARIANT: `aPlatformFee < FEE_ACCURACY` enforced by setter function
+        // INVARIANT: `aCirculatingShares < uint104`  since the circulating shares are the geometric mean of the reserves
         //            and that both reserves fit into uint104 as explained above, aCirculatingShares will fit into uint104 as well
         unchecked {
             uint256 lScaledGrowth = aSqrtNewK * ACCURACY / aSqrtOldK; // ASSERT: < UINT256
