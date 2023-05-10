@@ -148,7 +148,9 @@ contract StablePair is ReservoirPair {
             // swap token1 exact in for token0 variable out
             else {
                 lTokenOut = token0();
-                lAmountIn = uint256(-aAmount);
+                unchecked {
+                    lAmountIn = uint256(-aAmount);
+                }
                 rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, false);
             }
         }
@@ -163,7 +165,9 @@ contract StablePair is ReservoirPair {
             }
             // swap token0 variable in for token1 exact out
             else {
-                rAmountOut = uint256(-aAmount);
+                unchecked {
+                    rAmountOut = uint256(-aAmount);
+                }
                 require(rAmountOut < lReserve1, "SP: NOT_ENOUGH_LIQ");
                 lTokenOut = token1();
                 lAmountIn = _getAmountIn(rAmountOut, lReserve0, lReserve1, false);
