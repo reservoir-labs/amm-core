@@ -36,23 +36,21 @@ library StableMath {
         uint256 swapFee,
         uint256 N_A // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 dy) {
-        unchecked {
-            uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
-            uint256 feeDeductedAmountIn = amountIn - (amountIn * swapFee) / ONE_HUNDRED_PERCENT;
-            uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
+        uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
+        uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
+        uint256 feeDeductedAmountIn = amountIn - (amountIn * swapFee) / ONE_HUNDRED_PERCENT;
+        uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
 
-            if (token0In) {
-                uint256 x = adjustedReserve0 + (feeDeductedAmountIn * token0PrecisionMultiplier);
-                uint256 y = _getY(x, d, N_A);
-                dy = adjustedReserve1 - y - 1;
-                dy /= token1PrecisionMultiplier;
-            } else {
-                uint256 x = adjustedReserve1 + (feeDeductedAmountIn * token1PrecisionMultiplier);
-                uint256 y = _getY(x, d, N_A);
-                dy = adjustedReserve0 - y - 1;
-                dy /= token0PrecisionMultiplier;
-            }
+        if (token0In) {
+            uint256 x = adjustedReserve0 + (feeDeductedAmountIn * token0PrecisionMultiplier);
+            uint256 y = _getY(x, d, N_A);
+            dy = adjustedReserve1 - y - 1;
+            dy /= token1PrecisionMultiplier;
+        } else {
+            uint256 x = adjustedReserve1 + (feeDeductedAmountIn * token1PrecisionMultiplier);
+            uint256 y = _getY(x, d, N_A);
+            dy = adjustedReserve0 - y - 1;
+            dy /= token0PrecisionMultiplier;
         }
     }
 
@@ -66,26 +64,24 @@ library StableMath {
         uint256 swapFee,
         uint256 N_A // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 dx) {
-        unchecked {
-            uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
-            uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
-            uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
+        uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
+        uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
+        uint256 d = _computeLiquidityFromAdjustedBalances(adjustedReserve0, adjustedReserve1, N_A);
 
-            if (token0Out) {
-                uint256 y = adjustedReserve0 - amountOut * token0PrecisionMultiplier;
-                uint256 x = _getY(y, d, N_A);
-                dx = x - adjustedReserve1 + 1;
-                dx /= token1PrecisionMultiplier;
-            } else {
-                uint256 y = adjustedReserve1 - amountOut * token1PrecisionMultiplier;
-                uint256 x = _getY(y, d, N_A);
-                dx = x - adjustedReserve0 + 1;
-                dx /= token0PrecisionMultiplier;
-            }
-
-            // Add the swap fee.
-            dx = dx * (ONE_HUNDRED_PERCENT + swapFee) / ONE_HUNDRED_PERCENT;
+        if (token0Out) {
+            uint256 y = adjustedReserve0 - amountOut * token0PrecisionMultiplier;
+            uint256 x = _getY(y, d, N_A);
+            dx = x - adjustedReserve1 + 1;
+            dx /= token1PrecisionMultiplier;
+        } else {
+            uint256 y = adjustedReserve1 - amountOut * token1PrecisionMultiplier;
+            uint256 x = _getY(y, d, N_A);
+            dx = x - adjustedReserve0 + 1;
+            dx /= token0PrecisionMultiplier;
         }
+
+        // Add the swap fee.
+        dx = dx * (ONE_HUNDRED_PERCENT + swapFee) / ONE_HUNDRED_PERCENT;
     }
 
     function _computeLiquidityFromAdjustedBalances(
