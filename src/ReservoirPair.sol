@@ -129,7 +129,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _writeSlot0Timestamp(aBlockTimestampLast, false);
     }
 
-    // update reserves and, on the first call per block, price and liq accumulators
+    // update reserves with new balances
+    // on the first call per block, update price and liq oracle using previous reserves
     function _updateAndUnlock(
         uint256 aBalance0,
         uint256 aBalance1,
@@ -151,7 +152,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             _updateOracle(aReserve0, aReserve1, lTimeElapsed, aBlockTimestampLast);
         }
 
-        // update reserves
+        // update reserves to match latest balances
         _slot0.reserve0 = uint104(aBalance0);
         _slot0.reserve1 = uint104(aBalance1);
         _writeSlot0Timestamp(lBlockTimestamp, false);
