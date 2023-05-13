@@ -185,7 +185,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         int256 lSwapAmt = type(int256).min;
 
         // act & assert
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert();
         _constantProductPair.swap(lSwapAmt, true, address(this), "");
     }
 

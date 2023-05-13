@@ -30,8 +30,8 @@ library ConstantProductMath {
         require(aAmountOut > 0, "CP: INSUFFICIENT_OUTPUT_AMOUNT");
         require(aReserveIn > 0 && aReserveOut > 0, "CP: INSUFFICIENT_LIQUIDITY");
 
-        uint256 lNumerator = aReserveIn * aAmountOut * FEE_ACCURACY;
-        uint256 lDenominator = (aReserveOut - aAmountOut) * (FEE_ACCURACY - aSwapFee);
+        uint256 lNumerator = aReserveIn.mulDiv(aAmountOut, 1).mulDiv(FEE_ACCURACY, 1);
+        uint256 lDenominator = (aReserveOut - aAmountOut).mulDiv(FEE_ACCURACY - aSwapFee, 1);
         rAmountIn = lNumerator / lDenominator + 1;
     }
 }
