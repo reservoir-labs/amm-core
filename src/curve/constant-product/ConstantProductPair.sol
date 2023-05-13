@@ -149,7 +149,7 @@ contract ConstantProductPair is ReservoirPair {
         _managerCallback();
     }
 
-    function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
+    function swap(int256 aAmount, bool aExactIn, address aTo, bytes calldata aData)
         external
         override
         returns (uint256 rAmountOut)
@@ -159,8 +159,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lAmountIn;
         ERC20 lTokenOut;
 
-        // exact in
-        if (aInOrOut) {
+        if (aExactIn) {
             // swap token0 exact in for token1 variable out
             if (aAmount > 0) {
                 lTokenOut = token1();
@@ -175,9 +174,7 @@ contract ConstantProductPair is ReservoirPair {
                 }
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
             }
-        }
-        // exact out
-        else {
+        } else {
             // swap token1 variable in for token0 exact out
             if (aAmount > 0) {
                 rAmountOut = uint256(aAmount);

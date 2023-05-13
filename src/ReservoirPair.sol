@@ -314,10 +314,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     /// @notice Swaps one token for another. The router must prefund this contract and ensure there isn't too much
     ///         slippage.
     /// @param aAmount positive to indicate token0, negative to indicate token1
-    /// @param aInOrOut true to indicate exact amount in, false to indicate exact amount out
+    /// @param aExactIn true to indicate an exact in trade, false to indicate an exact out trade
     /// @param aTo address to send the output token and leftover input tokens, callee for the flash swap
     /// @param aData calls to with this data, in the event of a flash swap
-    function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
+    function swap(int256 aAmount, bool aExactIn, address aTo, bytes calldata aData)
         external
         virtual
         returns (uint256 rAmountOut);
