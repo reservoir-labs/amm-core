@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import { Math } from "@openzeppelin/utils/math/Math.sol";
+
 import {
     ERC20,
     Bytes32Lib,
@@ -13,6 +15,7 @@ import {
 contract StableMintBurn is StablePair {
     using FactoryStoreLib for IGenericFactory;
     using Bytes32Lib for bytes32;
+    using Math for uint256;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
@@ -44,13 +47,13 @@ contract StableMintBurn is StablePair {
         returns (uint256 rToken0Fee, uint256 rToken1Fee)
     {
         if (aReserve0 == 0 || aReserve1 == 0) return (0, 0);
-        uint256 amount1Optimal = aAmount0 * aReserve1 / aReserve0;
+        uint256 amount1Optimal = aAmount0.mulDiv(aReserve1, aReserve0);
 
         if (amount1Optimal <= aAmount1) {
-            rToken1Fee = (swapFee * (aAmount1 - amount1Optimal)) / (2 * FEE_ACCURACY);
+            rToken1Fee = swapFee.mulDiv(aAmount1 - amount1Optimal, 2 * FEE_ACCURACY);
         } else {
-            uint256 amount0Optimal = aAmount1 * aReserve0 / aReserve1;
-            rToken0Fee = swapFee * (aAmount0 - amount0Optimal) / (2 * FEE_ACCURACY);
+            uint256 amount0Optimal = aAmount1.mulDiv(aReserve0, aReserve1);
+            rToken0Fee = swapFee.mulDiv(aAmount0 - amount0Optimal, 2 * FEE_ACCURACY);
         }
         require(rToken0Fee <= type(uint104).max && rToken1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
@@ -78,7 +81,7 @@ contract StableMintBurn is StablePair {
             rLiquidity = lNewLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
-            rLiquidity = (lNewLiq - lOldLiq) * lTotalSupply / lOldLiq;
+            rLiquidity = (lNewLiq - lOldLiq).mulDiv(lTotalSupply, lOldLiq);
         }
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
         _mint(aTo, rLiquidity);
@@ -105,8 +108,8 @@ contract StableMintBurn is StablePair {
 
         (uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
 
-        rAmount0 = liquidity * lReserve0 / lTotalSupply;
-        rAmount1 = liquidity * lReserve1 / lTotalSupply;
+        rAmount0 = liquidity.mulDiv(lReserve0, lTotalSupply);
+        rAmount1 = liquidity.mulDiv(lReserve1, lTotalSupply);
 
         _burn(address(this), liquidity);
 
