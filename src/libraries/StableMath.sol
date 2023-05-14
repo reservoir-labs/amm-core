@@ -110,9 +110,10 @@ library StableMath {
                 return D;
             }
         }
+        // call to `percentDelta` is safe as the max diff between the two values is uint104 * uint60 = uint164
+        uint256 percentDelta = D.percentDelta(prevD);
         // NB: Sometimes the iteration gets stuck in an oscillating loop so if it is close enough we
         // return it anyway
-        uint256 percentDelta = D.percentDelta(prevD);
         if (percentDelta <= MAX_TOLERABLE_PERCENTAGE_DIFF) {
             return (D + prevD) / 2;
         }

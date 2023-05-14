@@ -14,6 +14,8 @@ library StdMath {
         }
     }
 
+    /// @dev multiplication will not overflow as long as the absolute difference between `a` and `b` is
+    /// less than type(uint256).max / WAD, i.e. around uint197
     function percentDelta(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 absDelta = delta(a, b);
         return absDelta * WAD / b;
