@@ -38,6 +38,7 @@ contract StableMintBurn is StablePair {
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
+    /// multiplications will not phantom overflow as all amounts and reserves are <= uint104
     function _nonOptimalMintFee(uint256 aAmount0, uint256 aAmount1, uint256 aReserve0, uint256 aReserve1)
         internal
         view
@@ -78,6 +79,7 @@ contract StableMintBurn is StablePair {
             rLiquidity = lNewLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
+            // will not phantom overflow as lNewLiq is max ?? and lTotalSupply is max ??
             rLiquidity = (lNewLiq - lOldLiq) * lTotalSupply / lOldLiq;
         }
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
@@ -105,6 +107,7 @@ contract StableMintBurn is StablePair {
 
         (uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
 
+        // will not phantom overflow as liquidity is max ?? and reserves are max uint104
         rAmount0 = liquidity * lReserve0 / lTotalSupply;
         rAmount1 = liquidity * lReserve1 / lTotalSupply;
 
@@ -139,6 +142,7 @@ contract StableMintBurn is StablePair {
                 if (rD > lDLast) {
                     // @dev `platformFee` % of increase in liquidity.
                     uint256 lPlatformFee = platformFee;
+                    // will not phantom overflow as rTotalSupply is max... and rD is max... and lPlatformFee is max 1e6
                     uint256 lNumerator = rTotalSupply * (rD - lDLast) * lPlatformFee;
                     uint256 lDenominator = (FEE_ACCURACY - lPlatformFee) * rD + lPlatformFee * lDLast;
                     uint256 lPlatformShares = lNumerator / lDenominator;
