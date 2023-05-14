@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-// Our gas-optimized implementation of forge-std's stdMath library
+// Our gas-optimized implementation of forge-std's StdMath library
 // We should inherit and override the relevant functions in the future when they make them virtual
-library stdMath {
+library StdMath {
     uint256 private constant WAD = 1e18; // The scalar of ETH and most ERC20s.
 
     function delta(uint256 a, uint256 b) internal pure returns (uint256) {

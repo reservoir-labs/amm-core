@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { stdMath } from "src/libraries/stdMath.sol";
+import { StdMath } from "src/libraries/StdMath.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
@@ -22,7 +22,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
     using SafeTransferLib for address;
-    using stdMath for uint256;
+    using StdMath for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 1e3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%

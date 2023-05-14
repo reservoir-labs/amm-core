@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { stdMath } from "src/libraries/stdMath.sol";
+import { StdMath } from "src/libraries/StdMath.sol";
 
 library StableMath {
     using MathUtils for uint256;
-    using stdMath for uint256;
+    using StdMath for uint256;
 
     /// @dev Extra precision for intermediate calculations.
     uint256 public constant A_PRECISION = 100;
