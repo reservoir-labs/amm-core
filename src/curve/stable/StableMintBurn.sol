@@ -38,7 +38,10 @@ contract StableMintBurn is StablePair {
     }
 
     /// @dev This fee is charged to cover for `swapFee` when users add unbalanced liquidity.
-    /// multiplications will not phantom overflow as all amounts and reserves are <= uint104
+    /// multiplications will not phantom overflow given the following conditions:
+    /// 1. reserves are <= uint104
+    /// 2. aAmount0 and aAmount1 <= uint104 as it would revert anyway at _updateAndUnlock if above uint104
+    /// 3. swapFee <= 0.02e6
     function _nonOptimalMintFee(uint256 aAmount0, uint256 aAmount1, uint256 aReserve0, uint256 aReserve1)
         internal
         view
