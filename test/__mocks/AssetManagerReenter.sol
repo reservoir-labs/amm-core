@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
-
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetManager, IERC20 } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { ReservoirPair } from "src/ReservoirPair.sol";
 
 contract AssetManagerReenter is IAssetManager {
-    mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public _getBalance;
+    mapping(IAssetManagedPair => mapping(IERC20 => uint256)) public _getBalance;
 
     // this is solely to test reentrancy for ReservoirPair::mint/burn when the pair syncs
     // with the asset manager at the beginning of the functions
-    function getBalance(IAssetManagedPair, ERC20) external returns (uint256) {
+    function getBalance(IAssetManagedPair, IERC20) external returns (uint256) {
         ReservoirPair(msg.sender).mint(address(this));
         return 0;
     }
@@ -44,7 +42,7 @@ contract AssetManagerReenter is IAssetManager {
         aPair.adjustManagement(aToken0Amount, aToken1Amount);
     }
 
-    function adjustBalance(IAssetManagedPair aOwner, ERC20 aToken, uint256 aNewAmount) external {
+    function adjustBalance(IAssetManagedPair aOwner, IERC20 aToken, uint256 aNewAmount) external {
         _getBalance[aOwner][aToken] = aNewAmount;
     }
 

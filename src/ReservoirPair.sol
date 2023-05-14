@@ -9,13 +9,13 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetManager, IERC20 } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
 import { Observation } from "src/structs/Observation.sol";
 import { Slot0 } from "src/structs/Slot0.sol";
-import { ReservoirERC20, ERC20 } from "src/ReservoirERC20.sol";
+import { ReservoirERC20 } from "src/ReservoirERC20.sol";
 
 abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using FactoryStoreLib for IGenericFactory;
@@ -34,7 +34,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _;
     }
 
-    constructor(ERC20 aToken0, ERC20 aToken1, string memory aSwapFeeName, bool aNotStableMintBurn) {
+    constructor(IERC20 aToken0, IERC20 aToken1, string memory aSwapFeeName, bool aNotStableMintBurn) {
         factory = IGenericFactory(msg.sender);
         _token0 = aToken0;
         _token1 = aToken1;
@@ -60,8 +60,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    ERC20 internal immutable _token0;
-    ERC20 internal immutable _token1;
+    IERC20 internal immutable _token0;
+    IERC20 internal immutable _token1;
 
     // Multipliers for each pooled token's precision to get to POOL_PRECISION_DECIMALS. For example,
     // TBTC has 18 decimals, so the multiplier should be 1. WBTC has 8, so the multiplier should be
@@ -69,11 +69,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     uint128 internal immutable _token0PrecisionMultiplier;
     uint128 internal immutable _token1PrecisionMultiplier;
 
-    function token0() public view virtual returns (ERC20) {
+    function token0() public view virtual returns (IERC20) {
         return _token0;
     }
 
-    function token1() public view virtual returns (ERC20) {
+    function token1() public view virtual returns (IERC20) {
         return _token1;
     }
 
@@ -256,7 +256,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         platformFee = _platformFee;
     }
 
-    function recoverToken(ERC20 aToken) external {
+    function recoverToken(IERC20 aToken) external {
         require(aToken != token0() && aToken != token1(), "RP: INVALID_TOKEN_TO_RECOVER");
         address _recoverer = factory.read(RECOVERER_NAME).toAddress();
         uint256 _amountToRecover = aToken.balanceOf(address(this));
@@ -270,7 +270,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _safeTransfer(ERC20 aToken, address aTo, uint256 aValue) internal returns (bool) {
+    function _safeTransfer(IERC20 aToken, address aTo, uint256 aValue) internal returns (bool) {
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory data) = address(aToken).call(abi.encodeWithSelector(TRANSFER, aTo, aValue));
         return success && (data.length == 0 || abi.decode(data, (bool)));
@@ -278,7 +278,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     // performs a transfer, if it fails, it attempts to retrieve assets from the
     // AssetManager before retrying the transfer
-    function _checkedTransfer(ERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
+    function _checkedTransfer(IERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
         internal
     {
         if (!_safeTransfer(aToken, aDestination, aAmount)) {
@@ -334,8 +334,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     //////////////////////////////////////////////////////////////////////////*/
 
-    event Profit(ERC20 token, uint256 amount);
-    event Loss(ERC20 token, uint256 amount);
+    event Profit(IERC20 token, uint256 amount);
+    event Loss(IERC20 token, uint256 amount);
 
     IAssetManager public assetManager;
 
@@ -356,7 +356,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         return token1().balanceOf(address(this)) + uint256(token1Managed);
     }
 
-    function _handleReport(ERC20 aToken, uint256 aReserve, uint256 aPrevBalance, uint256 aNewBalance)
+    function _handleReport(IERC20 aToken, uint256 aReserve, uint256 aPrevBalance, uint256 aNewBalance)
         private
         returns (uint256 rUpdatedReserve)
     {
@@ -388,8 +388,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aReserve0, aReserve1);
         }
 
-        ERC20 lToken0 = token0();
-        ERC20 lToken1 = token1();
+        IERC20 lToken0 = token0();
+        IERC20 lToken1 = token1();
 
         uint256 lToken0Managed = assetManager.getBalance(this, lToken0);
         uint256 lToken1Managed = assetManager.getBalance(this, lToken1);
@@ -444,7 +444,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function skimExcessManaged(ERC20 aToken) external returns (uint256 rAmtSkimmed) {
+    function skimExcessManaged(IERC20 aToken) external returns (uint256 rAmtSkimmed) {
         require(aToken == token0() || aToken == token1(), "RP: INVALID_SKIM_TOKEN");
         uint256 lTokenAmtManaged = assetManager.getBalance(this, aToken);
 

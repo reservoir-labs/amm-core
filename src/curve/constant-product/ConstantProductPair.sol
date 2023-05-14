@@ -3,14 +3,13 @@ pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { ConstantProductMath } from "src/libraries/ConstantProductMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
-import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
+import { IGenericFactory, IERC20 } from "src/interfaces/IGenericFactory.sol";
 
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 
@@ -29,7 +28,7 @@ contract ConstantProductPair is ReservoirPair {
     uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // solhint-disable-next-line no-empty-blocks
-    constructor(ERC20 aToken0, ERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) {
+    constructor(IERC20 aToken0, IERC20 aToken1) ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, true) {
         // no additional initialization is required as all constructor logic is in ReservoirPair
     }
 
@@ -157,7 +156,7 @@ contract ConstantProductPair is ReservoirPair {
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
         uint256 lAmountIn;
-        ERC20 lTokenOut;
+        IERC20 lTokenOut;
 
         if (aExactIn) {
             // swap token0 exact in for token1 variable out

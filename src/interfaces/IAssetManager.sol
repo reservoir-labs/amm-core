@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 
 interface IAssetManager {
-    function getBalance(IAssetManagedPair owner, ERC20 token) external returns (uint256 tokenBalance);
+    function getBalance(IAssetManagedPair owner, IERC20 token) external returns (uint256 tokenBalance);
 
     /// @notice called by the pair after mint/burn events to automatically re-balance the amount managed
     /// according to the lower and upper thresholds

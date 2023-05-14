@@ -2,10 +2,8 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
-
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { ReservoirPair } from "src/ReservoirPair.sol";
+import { ReservoirPair, IERC20 } from "src/ReservoirPair.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 contract AssetManagedPairTest is BaseTest {
@@ -120,8 +118,8 @@ contract AssetManagedPairTest is BaseTest {
         vm.prank(address(_factory));
         _pair.setManager(_manager);
 
-        ERC20 lToken0 = _pair.token0();
-        ERC20 lToken1 = _pair.token1();
+        IERC20 lToken0 = _pair.token0();
+        IERC20 lToken1 = _pair.token1();
 
         // sanity
         (uint104 lReserve0, uint104 lReserve1,,) = _pair.getReserves();
@@ -191,15 +189,15 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, uint104(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint104(lNewManagedBalance0)); // some amount lost
 
         // sanity
-        uint256 lTokenAManaged = _manager.getBalance(_pair, _tokenA);
+        uint256 lTokenAManaged = _manager.getBalance(_pair, IERC20(address(_tokenA)));
         assertEq(lTokenAManaged, lNewManagedBalance0);
 
         // act
         _manager.adjustManagement(_pair, 20e18, 20e18);
-        lTokenAManaged = _manager.getBalance(_pair, _tokenA);
+        lTokenAManaged = _manager.getBalance(_pair, IERC20(address(_tokenA)));
 
         // assert
         assertEq(lTokenAManaged, 20e18 + lNewManagedBalance0);
@@ -218,8 +216,8 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, uint104(lNewManagedBalance0)); // some amount lost
-        _manager.adjustBalance(_pair, _tokenB, uint104(lNewManagedBalance1)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint104(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), uint104(lNewManagedBalance1)); // some amount lost
 
         // act
         _tokenA.mint(address(_pair), 100e18);
@@ -244,8 +242,8 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, uint104(lNewManagedBalance0)); // some amount lost
-        _manager.adjustBalance(_pair, _tokenB, uint104(lNewManagedBalance1)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint104(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), uint104(lNewManagedBalance1)); // some amount lost
 
         // act
         uint256 lLpTokenBal = _pair.balanceOf(_alice);
@@ -275,7 +273,7 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, uint104(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint104(lNewManagedBalance0)); // some amount lost
 
         _pair.sync();
 
@@ -298,8 +296,8 @@ contract AssetManagedPairTest is BaseTest {
         vm.prank(address(_factory));
         _constantProductPair.setManager(_manager);
 
-        ERC20 lToken0 = _constantProductPair.token0();
-        ERC20 lToken1 = _constantProductPair.token1();
+        IERC20 lToken0 = _constantProductPair.token0();
+        IERC20 lToken1 = _constantProductPair.token1();
 
         _manager.adjustManagement(_constantProductPair, 20e18, 20e18);
         _tokenA.mint(address(_constantProductPair), 10e18);
@@ -335,8 +333,8 @@ contract AssetManagedPairTest is BaseTest {
         vm.prank(address(_factory));
         _stablePair.setManager(_manager);
 
-        ERC20 lToken0 = _stablePair.token0();
-        ERC20 lToken1 = _stablePair.token1();
+        IERC20 lToken0 = _stablePair.token0();
+        IERC20 lToken1 = _stablePair.token1();
 
         _manager.adjustManagement(_stablePair, 20e18, 20e18);
         _tokenA.mint(address(_stablePair), 10e18);
@@ -409,8 +407,8 @@ contract AssetManagedPairTest is BaseTest {
         _pair.setManager(_manager);
 
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, uint104(lNewManagedBalance0)); // some amount lost
-        _manager.adjustBalance(_pair, _tokenB, uint104(lNewManagedBalance1)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint104(lNewManagedBalance0)); // some amount lost
+        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), uint104(lNewManagedBalance1)); // some amount lost
 
         // act
         uint256 lLpTokenBal = _pair.balanceOf(_alice);
@@ -431,7 +429,7 @@ contract AssetManagedPairTest is BaseTest {
 
         // act - make new managed balance exceed uint104.max
         _manager.adjustManagement(_pair, int256(Constants.INITIAL_MINT_AMOUNT), 0);
-        _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max) + 5);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint256(type(uint104).max) + 5);
         _pair.skimExcessManaged(_pair.token0());
 
         // assert
@@ -446,7 +444,7 @@ contract AssetManagedPairTest is BaseTest {
 
         // act
         _manager.adjustManagement(_pair, int256(Constants.INITIAL_MINT_AMOUNT), 0);
-        _manager.adjustBalance(_pair, _tokenA, uint256(type(uint104).max));
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), uint256(type(uint104).max));
         _pair.skimExcessManaged(_pair.token0());
 
         // assert
@@ -456,6 +454,6 @@ contract AssetManagedPairTest is BaseTest {
     function testSkimExcessManaged_InvalidToken() external allPairs {
         // act & assert
         vm.expectRevert("RP: INVALID_SKIM_TOKEN");
-        _pair.skimExcessManaged(_tokenD);
+        _pair.skimExcessManaged(IERC20(address(_tokenD)));
     }
 }
