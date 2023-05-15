@@ -23,8 +23,6 @@ library StableMath {
     uint256 private constant MAX_LOOP_LIMIT = 256;
     /// @dev Maximum fee, which is 100%.
     uint256 private constant ONE_HUNDRED_PERCENT = 1_000_000;
-    /// @dev In the case where the invariant does not fall within one, we allow a margin of error in order to not brick the pair
-    uint256 private constant MAX_TOLERABLE_PERCENTAGE_DIFF = 0.0000000000004e18;
 
     function _getAmountOut(
         uint256 amountIn,
@@ -109,12 +107,6 @@ library StableMath {
             if (D.within1(prevD)) {
                 return D;
             }
-        }
-        // NB: Sometimes the iteration gets stuck in an oscillating loop so if it is close enough we
-        // return it anyway
-        uint256 percentDelta = D.percentDelta(prevD);
-        if (percentDelta <= MAX_TOLERABLE_PERCENTAGE_DIFF) {
-            return (D + prevD) / 2;
         }
 
         revert("SM: COMPUTE_DID_NOT_CONVERGE");
