@@ -132,7 +132,12 @@ contract StableMintBurn is StablePair {
         revert("SMB: IMPOSSIBLE");
     }
 
-    function mintFee(uint256 aReserve0, uint256 aReserve1) external virtual override returns (uint256, uint256) {
+    function mintFee(uint256 aReserve0, uint256 aReserve1)
+        external
+        virtual
+        override
+        returns (uint256 rTotalSupply, uint256 rD)
+    {
         require(msg.sender == address(this), "SP: NOT_SELF");
         return _mintFee(aReserve0, aReserve1);
     }
