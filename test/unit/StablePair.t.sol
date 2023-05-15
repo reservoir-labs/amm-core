@@ -205,6 +205,17 @@ contract StablePairTest is BaseTest {
         }
     }
 
+    function testMint_CalculationOverflowInStableMath() external {
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenF), address(_tokenD), 1));
+        _tokenD.mint(address(lPair), type(uint80).max);
+        _tokenF.mint(address(lPair), type(uint80).max);
+
+        // act & assert
+        vm.expectRevert();
+        lPair.mint(address(this));
+    }
+
     function testMintFee_CallableBySelf() public {
         // arrange
         vm.prank(address(_stablePair));
