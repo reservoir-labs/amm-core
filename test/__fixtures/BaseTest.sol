@@ -33,7 +33,8 @@ abstract contract BaseTest is Test {
     MintableERC20 internal _tokenB = new MintableERC20("TokenB", "TB", 18);
     MintableERC20 internal _tokenC = new MintableERC20("TokenC", "TC", 18);
     MintableERC20 internal _tokenD = new MintableERC20("TokenD", "TD", 6);
-    MintableERC20 internal _tokenE = new MintableERC20("TokenF", "TF", 25);
+    MintableERC20 internal _tokenE = new MintableERC20("TokenE", "TE", 25);
+    MintableERC20 internal _tokenF = new MintableERC20("TokenF", "TF", 0);
 
     ConstantProductPair internal _constantProductPair;
     StablePair internal _stablePair;
