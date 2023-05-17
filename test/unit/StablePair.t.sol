@@ -205,6 +205,34 @@ contract StablePairTest is BaseTest {
         }
     }
 
+    function testMint_CalculationOverflowInStableMath() external {
+        // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenF), address(_tokenD), 1));
+        _tokenD.mint(address(lPair), type(uint80).max);
+        _tokenF.mint(address(lPair), type(uint80).max);
+
+        // act & assert
+        vm.expectRevert();
+        lPair.mint(address(this));
+    }
+
+    function testMintFee_CallableBySelf() public {
+        // arrange
+        vm.prank(address(_stablePair));
+
+        // act
+        (uint256 lTotalSupply,) = _stablePair.mintFee(0, 0);
+
+        // assert
+        assertEq(lTotalSupply, _stablePair.totalSupply());
+    }
+
+    function testMintFee_NotCallableByOthers() public {
+        // act & assert
+        vm.expectRevert("SP: NOT_SELF");
+        _stablePair.mintFee(0, 0);
+    }
+
     function testMintFee_WhenRampingA_PoolBalanced(uint256 aFutureA) public {
         // assume - for ramping up or down from Constants.DEFAULT_AMP_COEFF
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
@@ -857,6 +885,36 @@ contract StablePairTest is BaseTest {
         (uint256 lAmtC, uint256 lAmtD) = lPair.token0() == _tokenC ? (lAmt0, lAmt1) : (lAmt1, lAmt0);
         assertEq(lAmtD, 0);
         assertGt(lAmtC, 0);
+    }
+
+    function testBurn_SucceedEvenIfMintFeeReverts() public {
+        // arrange - change some values to make iterative function algorithm not converge
+        // I have tried changing the reserves, but no matter how extreme the values are,
+        // StableMath._computeLiquidityFromAdjustedBalances would still converge
+        // which is good for our contracts but not good for my attempt to break it
+        uint192 lLastInvariant = 200e18;
+        uint64 lLastInvariantAmp = 0;
+        bytes32 lEncoded = bytes32(abi.encodePacked(lLastInvariantAmp, lLastInvariant));
+        // hardcoding the slot for now as there is no way to access it publicly
+        // this will break when we change the storage layout
+        vm.store(address(_stablePair), bytes32(uint256(65_553)), lEncoded);
+
+        // ensure that the iterative function that _mintFee calls reverts with the adulterated values
+        vm.prank(address(_stablePair));
+        vm.expectRevert(stdError.arithmeticError);
+        _stablePair.mintFee(100e18, 100e18);
+
+        // act
+        vm.prank(_alice);
+        _stablePair.transfer(address(_stablePair), 1e18);
+        // mintFee indeed reverted but burn still succeeded - this can be seen by examining the callstack
+        (uint256 lAmount0, uint256 lAmount1) = _stablePair.burn(address(this)); // mintFee would fail in this call
+
+        // assert
+        assertEq(lAmount0, 0.5e18);
+        assertEq(lAmount0, lAmount1);
+        assertEq(_tokenA.balanceOf(address(this)), lAmount0);
+        assertEq(_tokenB.balanceOf(address(this)), lAmount1);
     }
 
     function testBurn_LastInvariantUseReserveInsteadOfBalance() external {

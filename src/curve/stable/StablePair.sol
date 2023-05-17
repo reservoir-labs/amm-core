@@ -126,6 +126,10 @@ contract StablePair is ReservoirPair {
         _delegateToMintBurn();
     }
 
+    function mintFee(uint256, uint256) external virtual returns (uint256, uint256) {
+        _delegateToMintBurn();
+    }
+
     function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
         external
         virtual
