@@ -56,45 +56,41 @@ contract GenericFactory is IGenericFactory, Owned {
     }
 
     function getBytecode(bytes32 aCodeKey, IERC20 aToken0, IERC20 aToken1) public view returns (bytes memory) {
-        address[] storage lByteCode = _getByteCode[aCodeKey];
+        address[] memory lByteCode = _getByteCode[aCodeKey];
+        uint256 lByteCodeChunks = lByteCode.length;
 
         bytes memory lInitCode;
-        uint256 lFreeMem;
-
         // SAFETY:
-        // Writes 1 word of new memory and updates the free memory pointer before returning
+        // This block updates the memory pointer before returning to solidity.
         assembly ("memory-safe") {
             lInitCode := mload(0x40)
-            lFreeMem := add(lInitCode, 0x20)
-        }
 
-        uint256 lByteCodeLength = 0;
-        for (uint256 i = 0; i < lByteCode.length; ++i) {
-            address lPointer = lByteCode[i];
-            uint256 lSize = lPointer.code.length - 0x01;
+            let free_mem := add(lInitCode, 0x20)
+            for { let i := 0 } lt(i, lByteCodeChunks) { i := add(i, 1) } {
+                // Load lByteCode[i] using yul.
+                let offset := mul(i, 0x20)
+                let chunk_addr := mload(add(add(lByteCode, offset), 0x20))
 
-            // SAFETY:
-            // Updates the free memory pointer before returning
-            assembly ("memory-safe") {
-                // Copy the entire chunk to memory.
-                extcodecopy(lPointer, lFreeMem, 0x01, lSize)
-                mstore(0x40, add(lFreeMem, lSize))
+                // size = lByteCode[i].code.length - 1;
+                let size := sub(extcodesize(chunk_addr), 0x01)
+
+                // Copy the external code (skipping the first byte which is a
+                // STOP instruction). Then update the stack free_mem pointer to
+                // the new HEAD of memory.
+                extcodecopy(chunk_addr, free_mem, 0x01, size)
+                free_mem := add(free_mem, size)
             }
 
-            lFreeMem += lSize;
-            lByteCodeLength += lSize;
-        }
-
-        // SAFETY:
-        // Updates the free memory pointer after the write
-        assembly ("memory-safe") {
             // Store the two tokens as cstr args.
-            mstore(lFreeMem, aToken0)
-            mstore(add(lFreeMem, 0x20), aToken1)
+            mstore(free_mem, aToken0)
+            mstore(add(free_mem, 0x20), aToken1)
 
-            // Write initCode length and update free mem.
-            mstore(lInitCode, add(lByteCodeLength, 0x40))
-            mstore(0x40, add(lFreeMem, 0x40))
+            // Write initCode length and update free mem. Note that we are using
+            // the difference between free_mem (stack) and mem pointer (memory)
+            // to know how much memory we just wrote and thus the size of the
+            // bytecode.
+            mstore(lInitCode, add(sub(free_mem, mload(0x40)), 0x40))
+            mstore(0x40, add(free_mem, 0x40))
         }
 
         return lInitCode;
