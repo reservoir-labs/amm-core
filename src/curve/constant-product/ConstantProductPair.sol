@@ -109,7 +109,7 @@ contract ConstantProductPair is ReservoirPair {
             rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            // multiplication will not overflow as lTotalSupply is uint104 max
+            // multiplication will not phantom overflow as lTotalSupply is uint104 max
             // lAmount0 has to be <= uint104 for this mint to be valid anyway, else it would revert at _updateAndUnlock
             rLiquidity = Math.min(lAmount0 * lTotalSupply / lReserve0, lAmount1 * lTotalSupply / lReserve1);
         }

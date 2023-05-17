@@ -36,7 +36,8 @@ library StableMath {
         uint256 swapFee,
         uint256 N_A // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 dy) {
-        // overflow and underflow are not possible as reserves, amountIn <= uint104 and precision multipliers are maximum 1e18 (uint60)
+        // overflow and underflow are not possible as reserves, amountIn <= uint104, precision multipliers are maximum 1e18 (uint60)
+        // and swapFee < ONE_HUNDRED_PERCENT
         unchecked {
             uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
             uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
@@ -68,6 +69,7 @@ library StableMath {
         uint256 N_A // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 dx) {
         // overflow and underflow are not possible as reserves, amountIn <= uint104 and precision multipliers are maximum 1e18 (uint60)
+        // and swapFee < ONE_HUNDRED_PERCENT
         unchecked {
             uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
             uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;

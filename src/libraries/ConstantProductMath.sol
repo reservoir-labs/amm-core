@@ -25,7 +25,7 @@ library ConstantProductMath {
     }
 
     /// @dev the function assumes that the following args are within the respective bounds as enforced by ReservoirPair
-    /// and therefore would not overflow
+    /// and therefore the arithmetic operations performed here would not overflow
     /// aAmountOut  <= uint104
     /// aReserveIn  <= uint104
     /// aReserveOut <= uint104
