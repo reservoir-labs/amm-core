@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {
-    ERC20,
+    IERC20,
     Bytes32Lib,
     FactoryStoreLib,
     StableMath,
@@ -17,15 +17,15 @@ contract StableMintBurn is StablePair {
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
     // solhint-disable-next-line no-empty-blocks
-    constructor() StablePair(ERC20(address(0)), ERC20(address(0))) {
+    constructor() StablePair(IERC20(address(0)), IERC20(address(0))) {
         // no additional initialization logic is required as all constructor logic is in StablePair
     }
 
-    function token0() public view override returns (ERC20) {
+    function token0() public view override returns (IERC20) {
         return this.token0();
     }
 
-    function token1() public view override returns (ERC20) {
+    function token1() public view override returns (IERC20) {
         return this.token1();
     }
 

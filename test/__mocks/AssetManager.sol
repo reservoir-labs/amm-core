@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
-
-import { IAssetManager } from "src/interfaces/IAssetManager.sol";
+import { IAssetManager, IERC20 } from "src/interfaces/IAssetManager.sol";
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 
 contract AssetManager is IAssetManager {
-    mapping(IAssetManagedPair => mapping(ERC20 => uint256)) public getBalance;
+    mapping(IAssetManagedPair => mapping(IERC20 => uint256)) public getBalance;
 
     function adjustManagement(IAssetManagedPair aPair, int256 aToken0Amount, int256 aToken1Amount) public {
         require(aToken0Amount != type(int256).min && aToken1Amount != type(int256).min, "AM: OVERFLOW");
@@ -39,7 +37,7 @@ contract AssetManager is IAssetManager {
         }
     }
 
-    function adjustBalance(IAssetManagedPair aOwner, ERC20 aToken, uint256 aNewAmount) external {
+    function adjustBalance(IAssetManagedPair aOwner, IERC20 aToken, uint256 aNewAmount) external {
         getBalance[aOwner][aToken] = aNewAmount;
     }
 
