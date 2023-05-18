@@ -84,10 +84,10 @@ contract StableMintBurn is StablePair {
             rLiquidity = lNewLiq - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
-            // will only phantom overflow when lTotalSupply and lNewLiq is in the range of uint128 which will only happen if:
+            // will only phantom overflow and revert when lTotalSupply and lNewLiq is in the range of uint128 which will only happen if:
             // 1. both tokens have 0 decimals (1e18 is 60 bits) and the amounts are each around 68 bits
             // 2. both tokens have 6 decimals (1e12 is 40 bits) and the amounts are each around 88 bits
-            // in which case the mint will fail anyway
+            // in which case the mint will fail anyway because it would have reverted at _computeLiquidity
             rLiquidity = (lNewLiq - lOldLiq) * lTotalSupply / lOldLiq;
         }
         require(rLiquidity != 0, "SP: INSUFFICIENT_LIQ_MINTED");
