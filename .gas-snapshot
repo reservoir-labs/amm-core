@@ -200,4 +200,3 @@ StablePairTest:testWriteObservations() (gas: 243379)
 StdMathTest:testPercentDelta() (gas: 643)
 StdMathTest:testPercentDelta_MinusOne() (gas: 644)
 StdMathTest:testPercentDelta_PlusOne() (gas: 601)
-
