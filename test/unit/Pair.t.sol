@@ -160,7 +160,7 @@ contract PairTest is BaseTest {
         _tokenC.mint(address(_pair), 1e18);
 
         // act
-        _pair.recoverToken(_tokenC);
+        _pair.recoverToken(IERC20(address(_tokenC)));
 
         // assert
         assertEq(_tokenC.balanceOf(address(_recoverer)), lAmountToRecover);

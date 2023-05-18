@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 import "test/__fixtures/BaseTest.sol";
 import { Errors } from "test/integration/AaveErrors.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 import { IPool } from "src/interfaces/aave/IPool.sol";
@@ -15,7 +14,7 @@ import { IRewardsController } from "src/interfaces/aave/IRewardsController.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager, IAssetManager } from "src/asset-management/AaveManager.sol";
-import { GenericFactory } from "src/GenericFactory.sol";
+import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
 
 struct Network {
     string rpcUrl;
@@ -50,7 +49,7 @@ contract AaveIntegrationTest is BaseTest {
     Network[] private _networks;
     mapping(string => Fork) private _forks;
     // network specific variables
-    ERC20 private USDC;
+    IERC20 private USDC;
     address private _aaveAdmin;
     IPoolAddressesProvider private _poolAddressesProvider;
     IAaveProtocolDataProvider private _dataProvider;
@@ -92,7 +91,7 @@ contract AaveIntegrationTest is BaseTest {
         _deployer.deployStable(type(StablePair).creationCode);
 
         _manager = new AaveManager(IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER));
-        USDC = ERC20(aNetwork.USDC);
+        USDC = IERC20(aNetwork.USDC);
         _poolAddressesProvider = IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER);
         _aaveAdmin = _poolAddressesProvider.getACLAdmin();
         _dataProvider = IAaveProtocolDataProvider(_poolAddressesProvider.getPoolDataProvider());
@@ -211,7 +210,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         assertEq(_manager.getBalance(_pair, USDC), 0);
-        assertEq(_manager.getBalance(_pair, _tokenA), 0);
+        assertEq(_manager.getBalance(_pair, IERC20(address(_tokenA))), 0);
     }
 
     function testAdjustManagement_NotOwner() public allNetworks allPairs {
@@ -241,7 +240,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(_pair.token0Managed(), uint256(lAmountToManage0));
         assertEq(_pair.token1Managed(), uint256(lAmountToManage1));
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT - uint256(lAmountToManage));
@@ -264,7 +263,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert - nothing should have moved as USDC market is frozen
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(_pair.token0Managed(), 0);
         assertEq(_pair.token1Managed(), 0);
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT);
@@ -287,7 +286,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert - nothing should have moved as USDC market is paused
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(_pair.token0Managed(), 0);
         assertEq(_pair.token1Managed(), 0);
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT);
@@ -308,7 +307,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(_pair.token0Managed(), 0);
         assertEq(_pair.token1Managed(), 0);
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT);
@@ -350,7 +349,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         uint256 lUsdcManaged = _pair.token0() == USDC ? _pair.token0Managed() : _pair.token1Managed();
         assertEq(lUsdcManaged, 500e6);
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT - 500e6);
@@ -375,7 +374,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(_pair.token0Managed(), 0);
         assertEq(_pair.token1Managed(), 0);
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT);
@@ -452,7 +451,7 @@ contract AaveIntegrationTest is BaseTest {
         // assume
         ConstantProductPair lOtherPair = _createOtherPair();
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1, lReserveUSDC));
@@ -494,7 +493,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // arrange
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         int256 lAmountToManage0 = _pair.token0() == USDC ? lAmountToManage : int256(0);
         int256 lAmountToManage1 = _pair.token1() == USDC ? lAmountToManage : int256(0);
 
@@ -522,7 +521,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // arrange
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         _manager.adjustManagement(
             _pair,
             _pair.token0() == USDC ? lAmountToManage1 : int256(0),
@@ -723,7 +722,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         (lReserve0, lReserve1,,) = _pair.getReserves();
         lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(USDC.balanceOf(address(this)), MINT_AMOUNT / 2 + 10);
@@ -760,7 +759,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         (lReserve0, lReserve1,,) = _pair.getReserves();
         lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
         assertEq(USDC.balanceOf(address(this)), MINT_AMOUNT / 2 + 10);
@@ -840,7 +839,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // sanity
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(USDC.balanceOf(address(_pair)), MINT_AMOUNT / 2);
         assertEq(_manager.totalShares(lAaveToken), lReserveUSDC / 2);
 
@@ -878,7 +877,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lRawAaveToken);
+        IERC20 lAaveToken = IERC20(lRawAaveToken);
         assertEq(USDC.balanceOf(address(_pair)), lReserveUSDC / 2);
         assertEq(lAaveToken.balanceOf(address(_manager)), lReserveUSDC / 2);
         assertEq(_manager.getBalance(_pair, USDC), lReserveUSDC / 2);
@@ -997,7 +996,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
 
         // assert
-        assertEq(ERC20(lWavax).balanceOf(address(this)), lClaimed);
+        assertEq(IERC20(lWavax).balanceOf(address(this)), lClaimed);
         assertGt(lClaimed, 0);
     }
 
@@ -1016,7 +1015,7 @@ contract AaveIntegrationTest is BaseTest {
         _manager.setRewardSeller(address(this));
         _manager.setRewardsController(address(0x929EC64c34a17401F460460D4B9390518E5B473e));
         (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lUSDCMarket);
+        IERC20 lAaveToken = IERC20(lUSDCMarket);
         address lWavax = address(0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7);
         address[] memory lMarkets = new address[](1);
         lMarkets[0] = lUSDCMarket;
@@ -1067,7 +1066,7 @@ contract AaveIntegrationTest is BaseTest {
         vm.prank(address(_factory));
         lThirdPair.setManager(_manager);
         (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
-        ERC20 lAaveToken = ERC20(lUSDCMarket);
+        IERC20 lAaveToken = IERC20(lUSDCMarket);
         _increaseManagementOneToken(int256(lAmtToManage0));
         _manager.adjustManagement(
             lOtherPair,

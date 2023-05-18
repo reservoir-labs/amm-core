@@ -4,15 +4,13 @@ import "test/__fixtures/BaseTest.sol";
 import { Math } from "test/__fixtures/Math.sol";
 import { stdStorage } from "forge-std/Test.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
-
 import { MintableERC20 } from "test/__fixtures/MintableERC20.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
 
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { Observation } from "src/ReservoirPair.sol";
-import { GenericFactory } from "src/GenericFactory.sol";
+import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
 import { ConstantProductPair, IReservoirCallee } from "src/curve/constant-product/ConstantProductPair.sol";
 
 contract ConstantProductPairTest is BaseTest, IReservoirCallee {
@@ -172,7 +170,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act
         _tokenB.mint(address(lPair), lSwapAmount);
         lPair.swap(
-            lPair.token0() == _tokenB ? int256(lSwapAmount) : -int256(lSwapAmount), true, address(this), bytes("")
+            lPair.token0() == IERC20(address(_tokenB)) ? int256(lSwapAmount) : -int256(lSwapAmount), true, address(this), bytes("")
         );
 
         // assert
@@ -649,8 +647,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // sanity
         assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
-        ERC20 lToken0 = _constantProductPair.token0();
-        ERC20 lToken1 = _constantProductPair.token1();
+        IERC20 lToken0 = _constantProductPair.token0();
+        IERC20 lToken1 = _constantProductPair.token1();
         uint256 lSwapAmount = Constants.INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
@@ -689,8 +687,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // sanity
         assertGt(_constantProductPair.platformFee(), 0);
         _constantProductPair.sync();
-        ERC20 lToken0 = _constantProductPair.token0();
-        ERC20 lToken1 = _constantProductPair.token1();
+        IERC20 lToken0 = _constantProductPair.token0();
+        IERC20 lToken1 = _constantProductPair.token1();
         uint256 lSwapAmount = Constants.INITIAL_MINT_AMOUNT / 2;
         deal(address(lToken0), address(this), lSwapAmount);
 
