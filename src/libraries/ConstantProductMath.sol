@@ -5,7 +5,7 @@ library ConstantProductMath {
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
 
     /// @dev the function assumes that the following args are within the respective bounds as enforced by ReservoirPair
-    /// and therefore would not overflow
+    /// and therefore should not overflow. If overflow happens the transaction will revert
     /// aAmountIn   <= uint104
     /// aReserveIn  <= uint104
     /// aReserveOut <= uint104

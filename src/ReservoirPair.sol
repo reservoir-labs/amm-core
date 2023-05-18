@@ -514,8 +514,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
         }
 
-        // call to `percentDelta` is safe as long as the difference between aCurrRawPrice and aPrevClampedPrice is
-        // less than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
+        // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
+        // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
         if (aCurrRawPrice.percentDelta(aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
             // clamp the price
             // multiplication of maxChangeRate and aTimeElapsed would not overflow as
