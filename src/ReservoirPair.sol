@@ -2,9 +2,10 @@
 pragma solidity ^0.8.0;
 
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
+import { Math } from "@openzeppelin/utils/math/Math.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { stdMath } from "src/libraries/stdMath.sol";
+import { StdMath } from "src/libraries/StdMath.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
@@ -22,7 +23,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using Bytes32Lib for bytes32;
     using SafeCast for uint256;
     using SafeTransferLib for address;
-    using stdMath for uint256;
+    using StdMath for uint256;
+    using Math for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 1e3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
@@ -513,13 +515,18 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
         }
 
+        // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
+        // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
         if (aCurrRawPrice.percentDelta(aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
             // clamp the price
+            // multiplication of maxChangeRate and aTimeElapsed would not overflow as
+            // maxChangeRate <= 0.01e18 (50 bits)
+            // aTimeElapsed <= 32 bits
             if (aCurrRawPrice > aPrevClampedPrice) {
-                rClampedPrice = aPrevClampedPrice * (1e18 + (maxChangeRate * aTimeElapsed)) / 1e18;
+                rClampedPrice = aPrevClampedPrice.mulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
             } else {
                 assert(aPrevClampedPrice > aCurrRawPrice);
-                rClampedPrice = aPrevClampedPrice * (1e18 - (maxChangeRate * aTimeElapsed)) / 1e18;
+                rClampedPrice = aPrevClampedPrice.mulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
             }
             rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
         } else {

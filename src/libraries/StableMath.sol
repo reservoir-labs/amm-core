@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import { MathUtils } from "src/libraries/MathUtils.sol";
-import { stdMath } from "src/libraries/stdMath.sol";
+import { StdMath } from "src/libraries/StdMath.sol";
 
 library StableMath {
     using MathUtils for uint256;
-    using stdMath for uint256;
+    using StdMath for uint256;
 
     /// @dev Extra precision for intermediate calculations.
     uint256 public constant A_PRECISION = 100;
@@ -34,6 +34,8 @@ library StableMath {
         uint256 swapFee,
         uint256 N_A // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 dy) {
+        // overflow and underflow are not possible as reserves, amountIn <= uint104, precision multipliers are maximum 1e18 (uint60)
+        // and swapFee < ONE_HUNDRED_PERCENT
         unchecked {
             uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
             uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
@@ -64,6 +66,8 @@ library StableMath {
         uint256 swapFee,
         uint256 N_A // solhint-disable-line var-name-mixedcase
     ) internal pure returns (uint256 dx) {
+        // overflow and underflow are not possible as reserves, amountIn <= uint104 and precision multipliers are maximum 1e18 (uint60)
+        // and swapFee < ONE_HUNDRED_PERCENT
         unchecked {
             uint256 adjustedReserve0 = reserve0 * token0PrecisionMultiplier;
             uint256 adjustedReserve1 = reserve1 * token1PrecisionMultiplier;
