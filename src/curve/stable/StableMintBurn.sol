@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {
-    ERC20,
+    IERC20,
     Bytes32Lib,
     FactoryStoreLib,
     StableMath,
@@ -17,15 +17,15 @@ contract StableMintBurn is StablePair {
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
     // solhint-disable-next-line no-empty-blocks
-    constructor() StablePair(ERC20(address(0)), ERC20(address(0))) {
+    constructor() StablePair(IERC20(address(0)), IERC20(address(0))) {
         // no additional initialization logic is required as all constructor logic is in StablePair
     }
 
-    function token0() public view override returns (ERC20) {
+    function token0() public view override returns (IERC20) {
         return this.token0();
     }
 
-    function token1() public view override returns (ERC20) {
+    function token1() public view override returns (IERC20) {
         return this.token1();
     }
 
@@ -103,7 +103,12 @@ contract StableMintBurn is StablePair {
 
         uint256 liquidity = balanceOf[address(this)];
 
-        (uint256 lTotalSupply,) = _mintFee(lReserve0, lReserve1);
+        uint256 lTotalSupply;
+        try StablePair(this).mintFee(lReserve0, lReserve1) returns (uint256 rTotalSupply, uint256) {
+            lTotalSupply = rTotalSupply;
+        } catch {
+            lTotalSupply = totalSupply;
+        }
 
         rAmount0 = liquidity * lReserve0 / lTotalSupply;
         rAmount1 = liquidity * lReserve1 / lTotalSupply;
@@ -125,6 +130,16 @@ contract StableMintBurn is StablePair {
 
     function swap(int256, bool, address, bytes calldata) external pure override returns (uint256) {
         revert("SMB: IMPOSSIBLE");
+    }
+
+    function mintFee(uint256 aReserve0, uint256 aReserve1)
+        external
+        virtual
+        override
+        returns (uint256 rTotalSupply, uint256 rD)
+    {
+        require(msg.sender == address(this), "SP: NOT_SELF");
+        return _mintFee(aReserve0, aReserve1);
     }
 
     function _mintFee(uint256 aReserve0, uint256 aReserve1) internal returns (uint256 rTotalSupply, uint256 rD) {

@@ -73,8 +73,8 @@ contract ReservoirPairTest is BaseTest {
         vm.prank(address(_factory));
         _pair.setManager(_manager);
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, 20e18);
-        _manager.adjustBalance(_pair, _tokenB, 20e18);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), 20e18);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), 20e18);
         _stepTime(10);
 
         // act
@@ -93,8 +93,8 @@ contract ReservoirPairTest is BaseTest {
         vm.prank(address(_factory));
         _pair.setManager(_manager);
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, 20e18);
-        _manager.adjustBalance(_pair, _tokenB, 20e18);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), 20e18);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), 20e18);
         _stepTime(10);
 
         // act
@@ -111,8 +111,8 @@ contract ReservoirPairTest is BaseTest {
         vm.prank(address(_factory));
         _pair.setManager(_manager);
         _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, _tokenA, 20e18);
-        _manager.adjustBalance(_pair, _tokenB, 20e18);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), 20e18);
+        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), 20e18);
         _stepTime(10);
 
         // act

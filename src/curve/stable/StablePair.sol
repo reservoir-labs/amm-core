@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import { Math } from "@openzeppelin/utils/math/Math.sol";
-import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
@@ -10,7 +9,7 @@ import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
+import { ReservoirPair, Observation, IERC20 } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
@@ -37,7 +36,7 @@ contract StablePair is ReservoirPair {
     uint192 public lastInvariant;
     uint64 public lastInvariantAmp;
 
-    constructor(ERC20 aToken0, ERC20 aToken1)
+    constructor(IERC20 aToken0, IERC20 aToken1)
         ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, _isStableMintBurn(aToken0, aToken1) ? false : true)
     {
         bool lIsStableMintBurn = _isStableMintBurn(aToken0, aToken1);
@@ -59,7 +58,7 @@ contract StablePair is ReservoirPair {
         }
     }
 
-    function _isStableMintBurn(ERC20 aToken0, ERC20 aToken1) private pure returns (bool) {
+    function _isStableMintBurn(IERC20 aToken0, IERC20 aToken1) private pure returns (bool) {
         return address(aToken0) == address(0) && address(aToken1) == address(0);
     }
 
@@ -126,7 +125,11 @@ contract StablePair is ReservoirPair {
         _delegateToMintBurn();
     }
 
-    function swap(int256 aAmount, bool aInOrOut, address aTo, bytes calldata aData)
+    function mintFee(uint256, uint256) external virtual returns (uint256, uint256) {
+        _delegateToMintBurn();
+    }
+
+    function swap(int256 aAmount, bool aExactIn, address aTo, bytes calldata aData)
         external
         virtual
         override
@@ -135,10 +138,9 @@ contract StablePair is ReservoirPair {
         (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "SP: AMOUNT_ZERO");
         uint256 lAmountIn;
-        ERC20 lTokenOut;
+        IERC20 lTokenOut;
 
-        // exact in
-        if (aInOrOut) {
+        if (aExactIn) {
             // swap token0 exact in for token1 variable out
             if (aAmount > 0) {
                 lTokenOut = token1();
@@ -153,9 +155,7 @@ contract StablePair is ReservoirPair {
                 }
                 rAmountOut = _getAmountOut(lAmountIn, lReserve0, lReserve1, false);
             }
-        }
-        // exact out
-        else {
+        } else {
             // swap token1 variable in for token0 exact out
             if (aAmount > 0) {
                 rAmountOut = uint256(aAmount);
