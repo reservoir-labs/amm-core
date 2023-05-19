@@ -42,6 +42,8 @@ abstract contract BaseTest is Test {
     OracleCaller internal _oracleCaller;
 
     constructor() {
+        vm.warp(type(uint32).max);
+
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {
                 vm.writeJson(_deployerMetadata(), "script/unoptimized-deployer-meta");
