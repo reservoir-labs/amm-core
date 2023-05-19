@@ -104,6 +104,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         rTimestamp = aRawTimestamp & 0x7FFFFFFF;
     }
 
+    /// @notice Writes the packed timestamp & re-entrancy guard into slot0.
+    /// @dev The timestamp argument must not exceed 2**31.
     function _writeSlot0Timestamp(uint32 aTimestamp, bool aLocked) internal {
         uint32 lLocked = aLocked ? uint32(1 << 31) : uint32(0);
         _slot0.packedTimestamp = aTimestamp | lLocked;

@@ -149,4 +149,18 @@ contract ReservoirPairTest is BaseTest {
         vm.expectRevert("RP: TRANSFER_FAILED");
         _pair.swap(lSwapAmt, true, address(this), "");
     }
+
+    function testReentrancyGuard_LargeTimestamp() external allPairs {
+        // arrange
+        vm.warp(2 ** 31); // Has the first bit set.
+
+        // act
+        // If we were not cleaning the upper most bit this would lock the pair
+        // forever.
+        _pair.sync();
+
+        // assert
+        // Luckily we are clearing the upper most bit so this is fine.
+        _pair.sync();
+    }
 }
