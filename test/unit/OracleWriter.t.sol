@@ -6,6 +6,7 @@ import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
+import { Constants } from "src/Constants.sol";
 
 contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
@@ -68,7 +69,7 @@ contract OracleWriterTest is BaseTest {
         _factory.write("Shared::oracleCaller", lNewOracleCaller);
 
         // act
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(true, false, false, true);
         emit OracleCallerUpdated(address(_oracleCaller), lNewOracleCaller);
         _pair.updateOracleCaller();
 
@@ -98,8 +99,8 @@ contract OracleWriterTest is BaseTest {
         _pair.setMaxChangeRate(1);
 
         vm.prank(address(_factory));
-        vm.expectEmit(true, true, false, false);
-        emit MaxChangeRateUpdated(0.01e18, 1);
+        vm.expectEmit(true, false, false, true);
+        emit MaxChangeRateUpdated(Constants.DEFAULT_MAX_CHANGE_RATE, 1);
         _pair.setMaxChangeRate(1);
         assertEq(_pair.maxChangeRate(), 1);
     }
