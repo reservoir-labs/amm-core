@@ -987,7 +987,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // act - step time to accumulate some rewards
         _stepTime(5000);
-        vm.expectEmit(true, true, true, false);
+        vm.expectEmit(false, false, false, true);
         emit RewardsClaimed(address(_manager), lWavax, address(this), address(_manager), 0);
         vm.expectCall(
             address(_manager.rewardsController()),

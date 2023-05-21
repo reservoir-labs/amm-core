@@ -69,7 +69,7 @@ contract OracleWriterTest is BaseTest {
         _factory.write("Shared::oracleCaller", lNewOracleCaller);
 
         // act
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(false, false, false, true);
         emit OracleCallerUpdated(address(_oracleCaller), lNewOracleCaller);
         _pair.updateOracleCaller();
 
@@ -99,7 +99,7 @@ contract OracleWriterTest is BaseTest {
         _pair.setMaxChangeRate(1);
 
         vm.prank(address(_factory));
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(false, false, false, true);
         emit MaxChangeRateUpdated(Constants.DEFAULT_MAX_CHANGE_RATE, 1);
         _pair.setMaxChangeRate(1);
         assertEq(_pair.maxChangeRate(), 1);

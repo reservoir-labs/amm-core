@@ -252,6 +252,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act
         _constantProductPair.transfer(address(_constantProductPair), _constantProductPair.balanceOf(_alice));
         _constantProductPair.burn(_alice);
+        vm.stopPrank();
 
         // assert
         assertEq(_constantProductPair.balanceOf(_alice), 0);
@@ -262,7 +263,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testBurn_Zero() public {
         // act
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(true, false, false, true);
         emit Burn(address(this), 0, 0);
         _constantProductPair.burn(address(this));
 
