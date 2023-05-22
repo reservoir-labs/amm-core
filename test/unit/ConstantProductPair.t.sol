@@ -170,7 +170,10 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act
         _tokenB.mint(address(lPair), lSwapAmount);
         lPair.swap(
-            lPair.token0() == IERC20(address(_tokenB)) ? int256(lSwapAmount) : -int256(lSwapAmount), true, address(this), bytes("")
+            lPair.token0() == IERC20(address(_tokenB)) ? int256(lSwapAmount) : -int256(lSwapAmount),
+            true,
+            address(this),
+            bytes("")
         );
 
         // assert
