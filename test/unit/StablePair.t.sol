@@ -810,6 +810,7 @@ contract StablePairTest is BaseTest {
         // act
         _stablePair.transfer(address(_stablePair), _stablePair.balanceOf(_alice));
         _stablePair.burn(_alice);
+        vm.stopPrank();
 
         // assert
         uint256 lExpectedTokenAReceived;
@@ -840,7 +841,7 @@ contract StablePairTest is BaseTest {
 
     function testBurn_Zero() public {
         // act
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(true, false, false, true);
         emit Burn(address(this), 0, 0);
         _stablePair.burn(address(this));
 
@@ -966,7 +967,7 @@ contract StablePairTest is BaseTest {
         IERC20 lToken0 = _stablePair.token0();
         IERC20 lToken1 = _stablePair.token1();
         uint256 lSwapAmount = Constants.INITIAL_MINT_AMOUNT / 2;
-        deal(address(lToken0), address(this), lSwapAmount);
+        MintableERC20(address(lToken0)).mint(address(this), lSwapAmount);
 
         // swap lSwapAmount back and forth
         lToken0.transfer(address(_stablePair), lSwapAmount);
@@ -1006,7 +1007,7 @@ contract StablePairTest is BaseTest {
         IERC20 lToken0 = _stablePair.token0();
         IERC20 lToken1 = _stablePair.token1();
         uint256 lSwapAmount = Constants.INITIAL_MINT_AMOUNT / 2;
-        deal(address(lToken0), address(this), lSwapAmount);
+        MintableERC20(address(lToken0)).mint(address(this), lSwapAmount);
 
         // act - swap once with platform fee.
         lToken0.transfer(address(_stablePair), lSwapAmount);
@@ -1065,7 +1066,7 @@ contract StablePairTest is BaseTest {
         uint64 lFutureAToSet = 5000;
 
         // act
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(false, false, false, true);
         emit RampA(
             uint64(Constants.DEFAULT_AMP_COEFF) * uint64(StableMath.A_PRECISION),
             lFutureAToSet * uint64(StableMath.A_PRECISION),

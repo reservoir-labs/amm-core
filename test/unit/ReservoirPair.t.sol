@@ -58,7 +58,7 @@ contract ReservoirPairTest is BaseTest {
         assertEq(lReserve1, 100e18);
 
         // act
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(false, false, false, true);
         emit Sync(110e18, 110e18);
         _pair.sync();
 

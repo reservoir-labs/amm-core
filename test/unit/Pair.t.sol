@@ -38,15 +38,15 @@ contract PairTest is BaseTest {
 
     function testEmitEventOnCreation() public {
         // act & assert
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(false, false, false, true);
         emit SwapFee(Constants.DEFAULT_SWAP_FEE_CP);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(false, false, false, true);
         emit PlatformFee(Constants.DEFAULT_PLATFORM_FEE);
         _createPair(address(_tokenC), address(_tokenD), 0);
 
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(false, false, false, true);
         emit SwapFee(Constants.DEFAULT_SWAP_FEE_SP);
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(false, false, false, true);
         emit PlatformFee(Constants.DEFAULT_PLATFORM_FEE);
         _createPair(address(_tokenC), address(_tokenD), 1);
     }
@@ -141,11 +141,11 @@ contract PairTest is BaseTest {
         _factory.write("Shared::platformFee", lNewDefaultPlatformFee);
 
         // act
-        vm.expectEmit(true, false, false, false);
+        vm.expectEmit(false, false, false, true);
         emit SwapFee(lNewDefaultSwapFee);
         _pair.updateSwapFee();
 
-        vm.expectEmit(true, false, false, false);
+        vm.expectEmit(false, false, false, true);
         emit PlatformFee(lNewDefaultPlatformFee);
         _pair.updatePlatformFee();
 

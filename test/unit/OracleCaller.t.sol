@@ -37,7 +37,7 @@ contract OracleCallerTest is BaseTest {
 
     function testWhitelistAddress() external allPairs {
         // act & assert
-        vm.expectEmit(true, true, false, false);
+        vm.expectEmit(false, false, false, true);
         emit WhitelistChanged(_alice, true);
         _oracleCaller.whitelistAddress(_alice, true);
 
