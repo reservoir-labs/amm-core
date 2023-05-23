@@ -24,6 +24,16 @@ library StableMath {
     /// @dev Maximum fee, which is 100%.
     uint256 private constant ONE_HUNDRED_PERCENT = 1_000_000;
 
+    /// @notice Calculates the output tokens for an exact in trade
+    /// @param amountIn input amount, assumed to be type(uint104).max or less
+    /// @param reserve0 reserves of token0, assumed to be type(uint104).max or less
+    /// @param reserve1 reserves of token1, assumed to be type(uint104).max or less
+    /// @param token0PrecisionMultiplier, multiplier for token0 to get to 1e18, assumed to be between 1 and 1e18
+    /// @param token1PrecisionMultiplier, multiplier for token1 to get to 1e18, assumed to be between 1 and 1e18
+    /// @param token0In, true for token0 in token1 out
+    /// @param swapFee, assumed to be ReservoirPair::MAX_SWAP_FEE (0.02e6) or less
+    /// @param N_A, number of tokens multiplied by the amplification coefficient, assumed to be 2 * MAX_A * A_PRECISION or less
+    /// @return dy the amount of output tokens
     function _getAmountOut(
         uint256 amountIn,
         uint256 reserve0,
@@ -56,6 +66,16 @@ library StableMath {
         }
     }
 
+    /// @notice Calculates the input tokens for an exact out trade
+    /// @param amountOut output amount, assumed to be type(uint104).max or less
+    /// @param reserve0 reserves of token0, assumed to be type(uint104).max or less
+    /// @param reserve1 reserves of token1, assumed to be type(uint104).max or less
+    /// @param token0PrecisionMultiplier, multiplier for token0 to get to 1e18, assumed to be between 1 and 1e18
+    /// @param token1PrecisionMultiplier, multiplier for token1 to get to 1e18, assumed to be between 1 and 1e18
+    /// @param token0Out, true for token0 out token1 in
+    /// @param swapFee, assumed to be ReservoirPair::MAX_SWAP_FEE (0.02e6) or less
+    /// @param N_A, number of tokens multiplied by the amplification coefficient, assumed to be 2 * MAX_A * A_PRECISION or less
+    /// @return dx the amount of input tokens
     function _getAmountIn(
         uint256 amountOut,
         uint256 reserve0,
