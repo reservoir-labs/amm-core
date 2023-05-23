@@ -82,6 +82,7 @@ contract ConstantProductPair is ReservoirPair {
                 uint256 lSqrtNewK = FixedPointMathLib.sqrt(aReserve0 * aReserve1);
 
                 if (lSqrtNewK > lSqrtOldK) {
+                    // input arguments fulfill invariants for _calcFee
                     uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
 
                     if (lSharesToIssue > 0) {
@@ -108,8 +109,9 @@ contract ConstantProductPair is ReservoirPair {
             rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            // multiplication will not phantom overflow as lTotalSupply is uint104 max
-            // lAmount0 has to be <= uint104 for this mint to be valid anyway, else it would revert at _updateAndUnlock
+            // will not phantom overflow for valid amounts i.e. lAmount0/1 are <= uint104
+            // also totalSupply is guaranteed to be <= uint104
+            // above valid amounts, multiplication will overflow and revert
             rLiquidity = Math.min(lAmount0 * lTotalSupply / lReserve0, lAmount1 * lTotalSupply / lReserve1);
         }
         require(rLiquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
