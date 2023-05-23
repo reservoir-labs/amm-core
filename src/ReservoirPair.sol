@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
-import { Math } from "@openzeppelin/utils/math/Math.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { StdMath } from "src/libraries/StdMath.sol";
@@ -24,7 +24,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using SafeCast for uint256;
     using SafeTransferLib for address;
     using StdMath for uint256;
-    using Math for uint256;
+    using FixedPointMathLib for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 1e3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
@@ -532,10 +532,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // maxChangeRate <= 0.01e18 (50 bits)
             // aTimeElapsed <= 32 bits
             if (aCurrRawPrice > aPrevClampedPrice) {
-                rClampedPrice = aPrevClampedPrice.mulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
+                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
             } else {
                 assert(aPrevClampedPrice > aCurrRawPrice);
-                rClampedPrice = aPrevClampedPrice.mulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
+                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
             }
             rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
         } else {
