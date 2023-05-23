@@ -24,7 +24,7 @@ library StableMath {
     /// @dev Maximum fee, which is 100%.
     uint256 private constant ONE_HUNDRED_PERCENT = 1_000_000;
 
-    /// @notice Calculates the output tokens for an exact in trade
+    /// @notice Calculates the amount of output tokens for an exact in trade
     /// @param amountIn input amount, assumed to be type(uint104).max or less
     /// @param reserve0 reserves of token0, assumed to be type(uint104).max or less
     /// @param reserve1 reserves of token1, assumed to be type(uint104).max or less
@@ -66,7 +66,7 @@ library StableMath {
         }
     }
 
-    /// @notice Calculates the input tokens for an exact out trade
+    /// @notice Calculates the amount of input tokens for an exact out trade
     /// @param amountOut output amount, assumed to be type(uint104).max or less
     /// @param reserve0 reserves of token0, assumed to be type(uint104).max or less
     /// @param reserve1 reserves of token1, assumed to be type(uint104).max or less
