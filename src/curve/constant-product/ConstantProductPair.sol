@@ -109,9 +109,9 @@ contract ConstantProductPair is ReservoirPair {
             rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            // will not phantom overflow for valid amounts i.e. lAmount0/1 are <= uint104
-            // also totalSupply is guaranteed to be <= uint104
-            // above valid amounts, multiplication will overflow and revert
+            // will not phantom overflow for valid amounts i.e. lAmount0, lAmount1, and totalSupply
+            // are all guaranteed to be <= uint104. if values breach these levels this operation will fail
+            // and revert
             rLiquidity = Math.min(lAmount0 * lTotalSupply / lReserve0, lAmount1 * lTotalSupply / lReserve1);
         }
         require(rLiquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
