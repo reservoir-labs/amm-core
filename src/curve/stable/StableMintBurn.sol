@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
 import {
     IERC20,
     Bytes32Lib,
@@ -14,6 +16,7 @@ import {
 contract StableMintBurn is StablePair {
     using FactoryStoreLib for IGenericFactory;
     using Bytes32Lib for bytes32;
+    using FixedPointMathLib for uint256;
 
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
 
@@ -116,8 +119,8 @@ contract StableMintBurn is StablePair {
             lTotalSupply = totalSupply;
         }
 
-        rAmount0 = liquidity * lReserve0 / lTotalSupply;
-        rAmount1 = liquidity * lReserve1 / lTotalSupply;
+        rAmount0 = liquidity.fullMulDiv(lReserve0, lTotalSupply);
+        rAmount1 = liquidity.fullMulDiv(lReserve1, lTotalSupply);
 
         _burn(address(this), liquidity);
 
