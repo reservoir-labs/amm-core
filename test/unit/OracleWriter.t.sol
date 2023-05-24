@@ -171,7 +171,7 @@ contract OracleWriterTest is BaseTest {
 
     // this test case shows how different reserves in respective curves can result in the same price
     // and that for an oracle consumer, it would choose CP as the more trustworthy source as it has greater liquidity
-    function testOracle_SamePriceDiffLiq() external {
+    function testOracle_SamePriceDiffLiq(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // arrange
         ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
         StablePair lSP = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
@@ -188,12 +188,25 @@ contract OracleWriterTest is BaseTest {
         _stepTime(12);
         lCP.sync();
         lSP.sync();
-        Observation memory lObsCP = _oracleCaller.observation(lCP, 0);
-        Observation memory lObsSP = _oracleCaller.observation(lSP, 0);
-        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog(lObsCP.logAccRawPrice / 12);
-        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog(lObsSP.logAccRawPrice / 12);
+        _stepTime(12);
+        lCP.sync();
+        lSP.sync();
+
+        // sanity - ensure that two oracle observations have been written at slots 0 and 1
+        (,,, uint16 lIndex) = lCP.getReserves();
+        assertEq(lIndex, 1);
+        (,,, lIndex) = lSP.getReserves();
+        assertEq(lIndex, 1);
+
+        // assert
+        Observation memory lObs0CP = _oracleCaller.observation(lCP, 0);
+        Observation memory lObs1CP = _oracleCaller.observation(lCP, 1);
+        Observation memory lObs0SP = _oracleCaller.observation(lSP, 0);
+        Observation memory lObs1SP = _oracleCaller.observation(lSP, 1);
+        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog((lObs1CP.logAccRawPrice - lObs0CP.logAccRawPrice) / 12);
+        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog((lObs1SP.logAccRawPrice - lObs0SP.logAccRawPrice) / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
-        assertGt(lObsCP.logAccLiquidity, lObsSP.logAccLiquidity);
+        assertGt((lObs1CP.logAccLiquidity - lObs0CP.logAccLiquidity) / 12, (lObs1SP.logAccLiquidity - lObs0SP.logAccLiquidity) / 12);
     }
 
     // this test case demonstrates how the two curves can have identical liquidity and price recorded by the oracle
