@@ -516,33 +516,38 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         );
     }
 
-    function testOracle_CorrectLiquidity() public {
+    function testOracle_CorrectLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
-        uint256 lAmountToBurn = 1e18;
+        ConstantProductPair _pair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
+        _tokenB.mint(address(_pair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(_pair), Constants.INITIAL_MINT_AMOUNT);
+        _pair.mint(_alice);
+        _stepTime(5);
+        _pair.sync();
 
         // act
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
+        _stepTime(5);
         vm.prank(_alice);
-        _constantProductPair.transfer(address(_constantProductPair), lAmountToBurn);
-        _constantProductPair.burn(address(this));
+        uint256 lAmountToBurn = 1e18;
+        _pair.transfer(address(_pair), lAmountToBurn);
+        _pair.burn(address(this));
 
         // assert
-        (,,, uint16 lIndex) = _constantProductPair.getReserves();
-        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, lIndex);
-        uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs0 = _oracleCaller.observation(_pair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(_pair, 1);
+
+        uint256 lAverageLiq = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         // we check that it is within 0.01% of accuracy
         assertApproxEqRel(lAverageLiq, Constants.INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
-        vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 5);
-        _constantProductPair.sync();
+        _stepTime(5);
+        _pair.sync();
 
         // assert
-        (,,, lIndex) = _constantProductPair.getReserves();
-        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, lIndex);
-        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
+        Observation memory lObs2 = _oracleCaller.observation(_pair, 2);
+        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs2.logAccLiquidity - lObs1.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
     }
 
