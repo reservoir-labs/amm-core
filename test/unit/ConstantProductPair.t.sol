@@ -482,62 +482,69 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // geo_mean = sqrt3(1 * 4 * 16) = 4
 
         // arrange
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
+        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        lPair.mint(address(this));
+
         vm.prank(address(_factory));
-        _constantProductPair.setCustomSwapFee(0);
+        lPair.setCustomSwapFee(0);
 
         // price = 1
         _stepTime(10);
+        lPair.sync(); // obs0 is written here
 
         // act
         // price = 4
-        _tokenA.mint(address(_constantProductPair), 100e18);
-        _constantProductPair.swap(100e18, true, _bob, "");
+        _tokenB.mint(address(lPair), 100e18);
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs1 is written here
         _stepTime(10);
 
         // price = 16
-        _tokenA.mint(address(_constantProductPair), 200e18);
-        _constantProductPair.swap(200e18, true, _bob, "");
+        _tokenB.mint(address(lPair), 200e18);
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs2 is written here
         _stepTime(10);
-        _constantProductPair.sync();
+        lPair.sync(); // obs3 is written here
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(_constantProductPair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
-        Observation memory lObs2 = _oracleCaller.observation(_constantProductPair, 2);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
+        Observation memory lObs3 = _oracleCaller.observation(lPair, 3);
 
         assertEq(lObs0.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(
-            lObs1.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10, "2"
+            lObs1.logAccRawPrice, -LogCompression.toLowResLog(1e18) * 10 - LogCompression.toLowResLog(0.25e18) * 10, "2"
         );
         assertEq(
             lObs2.logAccRawPrice,
-            LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(0.25e18) * 10
-                + LogCompression.toLowResLog(0.0625e18) * 10,
+            -LogCompression.toLowResLog(1e18) * 10 - LogCompression.toLowResLog(0.25e18) * 10
+                - LogCompression.toLowResLog(0.0625e18) * 10,
             "3"
         );
 
         // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs1.timestamp - lObs0.timestamp)
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
             ),
-            0.25e18,
+            4e18,
             0.0001e18
         );
         // Price for observation window 2-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(lObs2.timestamp - lObs1.timestamp)
+                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs1.timestamp))
             ),
-            0.0625e18,
+            16e18,
             0.0001e18
         );
         // Price for observation window 1-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
             ),
-            0.125e18,
+            8e18,
             0.0001e18
         );
     }
