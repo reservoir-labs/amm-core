@@ -455,7 +455,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         );
     }
 
-    function testOracle_CorrectPriceDiffDecimals() public {
+    function testOracle_CorrectPriceDiffDecimals(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenA), address(_tokenD), 0));
         _tokenA.mint(address(lPair), 100e18);
@@ -465,10 +465,13 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act
         _stepTime(5);
         lPair.sync();
+        _stepTime(5);
+        lPair.sync();
 
         // assert
-        Observation memory lObs = _oracleCaller.observation(lPair, 0);
-        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logAccRawPrice / 5), 0.5e18, 0.0001e18);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        assertApproxEqRel(LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / 5), 0.5e18, 0.0001e18);
     }
 
     function testOracle_SimplePrices() external {
