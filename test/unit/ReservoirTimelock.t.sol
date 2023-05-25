@@ -64,14 +64,19 @@ contract ReservoirTimelockTest is BaseTest {
         _timelock.setCustomPlatformFee(_factory, address(_pair), 500);
     }
 
-    function testRampA() external {
+    function testRampA(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
+        // assume
+        // we need this, if not _getCurrentAPrecise would underflow cuz we're going back in time
+        vm.assume(aNewStartTime >= 1);
+
         // act
-        _timelock.rampA(_factory, address(_stablePair), 500, 2 days);
+        uint64 lFutureATime = uint64(block.timestamp) + 2 days;
+        _timelock.rampA(_factory, address(_stablePair), 500, lFutureATime);
 
         // assert
         (, uint64 futureA,, uint64 futureATime) = _stablePair.ampData();
         assertEq(futureA, 500 * StableMath.A_PRECISION);
-        assertEq(futureATime, 2 days);
+        assertEq(futureATime, lFutureATime);
     }
 
     function testRampA_NotAdmin() external {

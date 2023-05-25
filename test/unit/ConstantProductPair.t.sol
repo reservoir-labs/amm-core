@@ -510,7 +510,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
         Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
         Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
-        Observation memory lObs3 = _oracleCaller.observation(lPair, 3);
 
         assertEq(lObs0.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(
