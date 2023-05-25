@@ -378,7 +378,10 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
 
-    function testOracle_OverflowAccLiquidity() public {
+    function testOracle_OverflowAccLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
+        // assume
+        vm.assume(aNewStartTime < 2 ** 31);
+
         // arrange
         (,,, uint16 lIndex) = _constantProductPair.getReserves();
         _writeObservation(_constantProductPair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp));
@@ -474,7 +477,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertApproxEqRel(LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / 5), 0.5e18, 0.0001e18);
     }
 
-    function testOracle_SimplePrices() external {
+    function testOracle_SimplePrices(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // prices = [1, 4, 16]
         // geo_mean = sqrt3(1 * 4 * 16) = 4
 
