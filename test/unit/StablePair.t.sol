@@ -171,8 +171,9 @@ contract StablePairTest is BaseTest {
         assertEq(_stablePair.balanceOf(address(this)), 2 * Constants.INITIAL_MINT_AMOUNT);
     }
 
-    function testMint_WhenRampingA(uint256 aFutureA) external {
+    function testMint_WhenRampingA(uint256 aFutureA, uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // assume - for ramping up or down from Constants.DEFAULT_AMP_COEFF
+        vm.assume(aNewStartTime >= 1);
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
         vm.assume(lFutureAToSet != Constants.DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
@@ -183,7 +184,7 @@ contract StablePairTest is BaseTest {
         uint256 lBefore = vm.snapshot();
 
         // act
-        vm.warp(lFutureATimestamp / 2);
+        vm.warp((block.timestamp + lFutureATimestamp) / 2);
         _tokenA.mint(address(_stablePair), 5e18);
         _tokenB.mint(address(_stablePair), 10e18);
         _stablePair.mint(address(this));
@@ -828,8 +829,9 @@ contract StablePairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(_stablePair)), Constants.INITIAL_MINT_AMOUNT);
     }
 
-    function testBurn_WhenRampingA(uint256 aFutureA) external {
+    function testBurn_WhenRampingA(uint256 aFutureA, uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // assume - for ramping up or down from Constants.DEFAULT_AMP_COEFF
+        vm.assume(aNewStartTime >= 1);
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
         vm.assume(lFutureAToSet != Constants.DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
@@ -841,7 +843,7 @@ contract StablePairTest is BaseTest {
         uint256 lBefore = vm.snapshot();
 
         // act
-        vm.warp(lFutureATimestamp / 2);
+        vm.warp((block.timestamp + lFutureATimestamp) / 2);
         vm.prank(_alice);
         _stablePair.transfer(address(_stablePair), lBalance / 2);
         _stablePair.burn(address(this));
@@ -1714,32 +1716,37 @@ contract StablePairTest is BaseTest {
         );
     }
 
-    function testOracle_CorrectLiquidity() public {
+    function testOracle_CorrectLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
-        uint256 lAmountToBurn = 1e18;
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        lPair.mint(_alice);
+        _stepTime(5);
+        lPair.sync();
 
         // act
         _stepTime(5);
         vm.prank(_alice);
-        _stablePair.transfer(address(_stablePair), lAmountToBurn);
-        _stablePair.burn(address(this));
+        uint256 lAmountToBurn = 1e18;
+        lPair.transfer(address(lPair), lAmountToBurn);
+        lPair.burn(address(this));
 
         // assert
-        (,,, uint16 lIndex) = _stablePair.getReserves();
-        Observation memory lObs0 = _oracleCaller.observation(_stablePair, lIndex);
-        uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        uint256 lAverageLiq = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         // we check that it is within 0.01% of accuracy
         // sqrt(Constants.INITIAL_MINT_AMOUNT * Constants.INITIAL_MINT_AMOUNT) == Constants.INITIAL_MINT_AMOUNT
         assertApproxEqRel(lAverageLiq, Constants.INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
         _stepTime(5);
-        _stablePair.sync();
+        lPair.sync();
 
         // assert
-        (,,, lIndex) = _stablePair.getReserves();
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, lIndex);
-        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
+        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs2.logAccLiquidity - lObs1.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, Constants.INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
     }
 

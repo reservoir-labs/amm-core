@@ -550,23 +550,23 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
     function testOracle_CorrectLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
-        ConstantProductPair _pair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
-        _tokenB.mint(address(_pair), Constants.INITIAL_MINT_AMOUNT);
-        _tokenC.mint(address(_pair), Constants.INITIAL_MINT_AMOUNT);
-        _pair.mint(_alice);
+        ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
+        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        lPair.mint(_alice);
         _stepTime(5);
-        _pair.sync();
+        lPair.sync();
 
         // act
         _stepTime(5);
         vm.prank(_alice);
         uint256 lAmountToBurn = 1e18;
-        _pair.transfer(address(_pair), lAmountToBurn);
-        _pair.burn(address(this));
+        lPair.transfer(address(lPair), lAmountToBurn);
+        lPair.burn(address(this));
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(_pair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_pair, 1);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
 
         uint256 lAverageLiq = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         // we check that it is within 0.01% of accuracy
@@ -574,10 +574,10 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         // act
         _stepTime(5);
-        _pair.sync();
+        lPair.sync();
 
         // assert
-        Observation memory lObs2 = _oracleCaller.observation(_pair, 2);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
         uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs2.logAccLiquidity - lObs1.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, 99e18, 0.0001e18);
     }
