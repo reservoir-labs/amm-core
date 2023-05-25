@@ -356,7 +356,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertTrue(lObs.timestamp != 0);
     }
 
-    function testOracle_OverflowAccPrice() public {
+    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _constantProductPair.getReserves();
         _writeObservation(
@@ -398,10 +398,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
     }
 
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
-        // TODO: something is happening when the new time is around type(uint32).max / 2
-        // some thing is overflowing and causing the accumulators to become very large
-        //        vm.assume(aNewStartTime < type(uint32).max / 10);
-
         // arrange
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
         _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
