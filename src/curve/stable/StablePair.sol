@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { Math } from "@openzeppelin/utils/math/Math.sol";
-
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-import { ReservoirPair, Observation, IERC20 } from "src/ReservoirPair.sol";
+import { ReservoirPair, Slot0, Observation, IERC20 } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
@@ -135,7 +133,7 @@ contract StablePair is ReservoirPair {
         override
         returns (uint256 rAmountOut)
     {
-        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (Slot0 storage sSlot0, uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "SP: AMOUNT_ZERO");
         uint256 lAmountIn;
         IERC20 lTokenOut;
@@ -191,7 +189,7 @@ contract StablePair is ReservoirPair {
         uint256 lReceived = lTokenOut == token0() ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lReceived >= lAmountIn, "SP: INSUFFICIENT_AMOUNT_IN");
 
-        _updateAndUnlock(lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
+        _updateAndUnlock(sSlot0, lBalance0, lBalance1, uint104(lReserve0), uint104(lReserve1), lBlockTimestampLast);
         emit Swap(msg.sender, lTokenOut == token1(), lReceived, rAmountOut, aTo);
     }
 
@@ -295,9 +293,8 @@ contract StablePair is ReservoirPair {
         int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
         prevClampedPrice = currClampedPrice;
 
-        // overflow is desired here as the consumer of the oracle will be reading the difference in those
-        // accumulated log values
-        // when the index overflows it will overwrite the oldest observation and then forms a loop
+        // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
+        // when the index overflows it will overwrite the oldest observation to form a loop
         unchecked {
             int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =

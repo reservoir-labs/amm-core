@@ -11,7 +11,7 @@ import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMa
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { IGenericFactory, IERC20 } from "src/interfaces/IGenericFactory.sol";
 
-import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
+import { ReservoirPair, Slot0, Observation } from "src/ReservoirPair.sol";
 
 contract ConstantProductPair is ReservoirPair {
     using FactoryStoreLib for IGenericFactory;
@@ -82,6 +82,7 @@ contract ConstantProductPair is ReservoirPair {
                 uint256 lSqrtNewK = FixedPointMathLib.sqrt(aReserve0 * aReserve1);
 
                 if (lSqrtNewK > lSqrtOldK) {
+                    // input arguments fulfill invariants for _calcFee
                     uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
 
                     if (lSharesToIssue > 0) {
@@ -94,7 +95,7 @@ contract ConstantProductPair is ReservoirPair {
     }
 
     function mint(address aTo) external override returns (uint256 rLiquidity) {
-        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (Slot0 storage sSlot0, uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1)); // check asset-manager pnl
 
         uint256 lBalance0 = _totalToken0();
@@ -108,8 +109,9 @@ contract ConstantProductPair is ReservoirPair {
             rLiquidity = FixedPointMathLib.sqrt(lAmount0 * lAmount1) - MINIMUM_LIQUIDITY;
             _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
-            // multiplication will not phantom overflow as lTotalSupply is uint104 max
-            // lAmount0 has to be <= uint104 for this mint to be valid anyway, else it would revert at _updateAndUnlock
+            // will not phantom overflow for valid amounts i.e. lAmount0, lAmount1, and totalSupply
+            // are all guaranteed to be <= uint104. if values breach these levels this operation will fail
+            // and revert
             rLiquidity = Math.min(lAmount0 * lTotalSupply / lReserve0, lAmount1 * lTotalSupply / lReserve1);
         }
         require(rLiquidity > 0, "CP: INSUFFICIENT_LIQ_MINTED");
@@ -119,13 +121,13 @@ contract ConstantProductPair is ReservoirPair {
         kLast = lBalance0 * lBalance1;
         emit Mint(msg.sender, lAmount0, lAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
+        _updateAndUnlock(sSlot0, lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
     function burn(address aTo) external override returns (uint256 rAmount0, uint256 rAmount1) {
         // NB: Must sync management PNL before we load reserves.
-        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (Slot0 storage sSlot0, uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(uint104(lReserve0), uint104(lReserve1)); // check asset-manager pnl
 
         uint256 liquidity = balanceOf[address(this)];
@@ -146,7 +148,7 @@ contract ConstantProductPair is ReservoirPair {
         kLast = lBalance0 * lBalance1;
         emit Burn(msg.sender, rAmount0, rAmount1);
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
+        _updateAndUnlock(sSlot0, lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         _managerCallback();
     }
 
@@ -155,7 +157,7 @@ contract ConstantProductPair is ReservoirPair {
         override
         returns (uint256 rAmountOut)
     {
-        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (Slot0 storage sSlot0, uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         require(aAmount != 0, "CP: AMOUNT_ZERO");
         uint256 lAmountIn;
         IERC20 lTokenOut;
@@ -212,7 +214,7 @@ contract ConstantProductPair is ReservoirPair {
         uint256 lReceived = lTokenOut == token0() ? lBalance1 - lReserve1 : lBalance0 - lReserve0;
         require(lAmountIn <= lReceived, "CP: INSUFFICIENT_AMOUNT_IN");
 
-        _updateAndUnlock(lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
+        _updateAndUnlock(sSlot0, lBalance0, lBalance1, lReserve0, lReserve1, lBlockTimestampLast);
         emit Swap(msg.sender, lTokenOut == token1(), lReceived, rAmountOut, aTo);
     }
 

@@ -58,7 +58,7 @@ contract ReservoirPairTest is BaseTest {
         assertEq(lReserve1, 100e18);
 
         // act
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(false, false, false, true);
         emit Sync(110e18, 110e18);
         _pair.sync();
 
@@ -148,5 +148,19 @@ contract ReservoirPairTest is BaseTest {
         _tokenA.mint(address(_pair), uint256(lSwapAmt));
         vm.expectRevert("RP: TRANSFER_FAILED");
         _pair.swap(lSwapAmt, true, address(this), "");
+    }
+
+    function testReentrancyGuard_LargeTimestamp() external allPairs {
+        // arrange
+        vm.warp(2 ** 31); // Has the first bit set.
+
+        // act
+        // If we were not cleaning the upper most bit this would lock the pair
+        // forever.
+        _pair.sync();
+
+        // assert
+        // Luckily we are clearing the upper most bit so this is fine.
+        _pair.sync();
     }
 }

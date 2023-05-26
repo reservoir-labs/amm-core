@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
-import { Math } from "@openzeppelin/utils/math/Math.sol";
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { StdMath } from "src/libraries/StdMath.sol";
@@ -24,7 +24,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     using SafeCast for uint256;
     using SafeTransferLib for address;
     using StdMath for uint256;
-    using Math for uint256;
+    using FixedPointMathLib for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 1e3;
     uint256 public constant FEE_ACCURACY = 1_000_000; // 100%
@@ -99,41 +99,46 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         return uint32(block.timestamp & 0x7FFFFFFF);
     }
 
-    function _splitSlot0Timestamp(uint32 aRawTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
-        rLocked = aRawTimestamp >> 31 == 1;
-        rTimestamp = aRawTimestamp & 0x7FFFFFFF;
+    function _splitSlot0Timestamp(uint32 aPackedTimestamp) internal pure returns (uint32 rTimestamp, bool rLocked) {
+        rLocked = aPackedTimestamp >> 31 == 1;
+        rTimestamp = aPackedTimestamp & 0x7FFFFFFF;
     }
 
-    function _writeSlot0Timestamp(uint32 aTimestamp, bool aLocked) internal {
+    /// @notice Writes the packed timestamp & re-entrancy guard into slot0.
+    /// @dev The timestamp argument must not exceed 2**31.
+    function _writeSlot0Timestamp(Slot0 storage sSlot0, uint32 aTimestamp, bool aLocked) internal {
         uint32 lLocked = aLocked ? uint32(1 << 31) : uint32(0);
-        _slot0.packedTimestamp = aTimestamp | lLocked;
+        sSlot0.packedTimestamp = aTimestamp | lLocked;
     }
 
     function _lockAndLoad()
         internal
-        returns (uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex)
+        returns (Slot0 storage, uint104 rReserve0, uint104 rReserve1, uint32 rBlockTimestampLast, uint16 rIndex)
     {
-        Slot0 memory lSlot0 = _slot0;
+        Slot0 storage sSlot0 = _slot0;
 
         // Load slot0 values.
         bool lLock;
-        rReserve0 = lSlot0.reserve0;
-        rReserve1 = lSlot0.reserve1;
-        (rBlockTimestampLast, lLock) = _splitSlot0Timestamp(lSlot0.packedTimestamp);
-        rIndex = lSlot0.index;
+        rReserve0 = sSlot0.reserve0;
+        rReserve1 = sSlot0.reserve1;
+        (rBlockTimestampLast, lLock) = _splitSlot0Timestamp(sSlot0.packedTimestamp);
+        rIndex = sSlot0.index;
 
         // Acquire reentrancy lock.
         require(!lLock, "REENTRANCY");
-        _writeSlot0Timestamp(rBlockTimestampLast, true);
+        _writeSlot0Timestamp(sSlot0, rBlockTimestampLast, true);
+
+        return (sSlot0, rReserve0, rReserve1, rBlockTimestampLast, rIndex);
     }
 
-    function _unlock(uint32 aBlockTimestampLast) internal {
-        _writeSlot0Timestamp(aBlockTimestampLast, false);
+    function _unlock(Slot0 storage sSlot0, uint32 aBlockTimestampLast) internal {
+        _writeSlot0Timestamp(sSlot0, aBlockTimestampLast, false);
     }
 
     // update reserves with new balances
     // on the first call per block, update price and liq oracle using previous reserves
     function _updateAndUnlock(
+        Slot0 storage sSlot0,
         uint256 aBalance0,
         uint256 aBalance1,
         uint256 aReserve0,
@@ -155,9 +160,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
 
         // update reserves to match latest balances
-        _slot0.reserve0 = uint104(aBalance0);
-        _slot0.reserve1 = uint104(aBalance1);
-        _writeSlot0Timestamp(lBlockTimestamp, false);
+        sSlot0.reserve0 = uint104(aBalance0);
+        sSlot0.reserve1 = uint104(aBalance1);
+        _writeSlot0Timestamp(sSlot0, lBlockTimestamp, false);
 
         emit Sync(uint104(aBalance0), uint104(aBalance1));
     }
@@ -177,19 +182,19 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /// @notice Force reserves to match balances.
     function sync() external {
-        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (Slot0 storage sSlot0, uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
         (lReserve0, lReserve1) = _syncManaged(lReserve0, lReserve1);
 
-        _updateAndUnlock(_totalToken0(), _totalToken1(), lReserve0, lReserve1, lBlockTimestampLast);
+        _updateAndUnlock(sSlot0, _totalToken0(), _totalToken1(), lReserve0, lReserve1, lBlockTimestampLast);
     }
 
     /// @notice Force balances to match reserves.
     function skim(address aTo) external {
-        (uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
+        (Slot0 storage sSlot0, uint256 lReserve0, uint256 lReserve1, uint32 lBlockTimestampLast,) = _lockAndLoad();
 
         _checkedTransfer(token0(), aTo, _totalToken0() - lReserve0, lReserve0, lReserve1);
         _checkedTransfer(token1(), aTo, _totalToken1() - lReserve1, lReserve0, lReserve1);
-        _unlock(lBlockTimestampLast);
+        _unlock(sSlot0, lBlockTimestampLast);
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -280,9 +285,13 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     // performs a transfer, if it fails, it attempts to retrieve assets from the
     // AssetManager before retrying the transfer
-    function _checkedTransfer(IERC20 aToken, address aDestination, uint256 aAmount, uint256 aReserve0, uint256 aReserve1)
-        internal
-    {
+    function _checkedTransfer(
+        IERC20 aToken,
+        address aDestination,
+        uint256 aAmount,
+        uint256 aReserve0,
+        uint256 aReserve1
+    ) internal {
         if (!_safeTransfer(aToken, aDestination, aAmount)) {
             bool lIsToken0 = aToken == token0();
             uint256 lTokenOutManaged = lIsToken0 ? token0Managed : token1Managed;
@@ -523,10 +532,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // maxChangeRate <= 0.01e18 (50 bits)
             // aTimeElapsed <= 32 bits
             if (aCurrRawPrice > aPrevClampedPrice) {
-                rClampedPrice = aPrevClampedPrice.mulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
+                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
             } else {
                 assert(aPrevClampedPrice > aCurrRawPrice);
-                rClampedPrice = aPrevClampedPrice.mulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
+                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
             }
             rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
         } else {
