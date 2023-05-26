@@ -122,7 +122,10 @@ contract OracleWriterTest is BaseTest {
         _pair.setMaxChangeRate(lMaxChangeRate);
     }
 
-    function testOracle_CompareLiquidityTwoCurves_Balanced(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
+    function testOracle_CompareLiquidityTwoCurves_Balanced(uint32 aNewStartTime)
+        external
+        randomizeStartTime(aNewStartTime)
+    {
         // arrange
         ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
         StablePair lSP = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
@@ -139,8 +142,10 @@ contract OracleWriterTest is BaseTest {
         Observation memory lObsCP1 = _oracleCaller.observation(lCP, 1);
         Observation memory lObsSP0 = _oracleCaller.observation(lSP, 0);
         Observation memory lObsSP1 = _oracleCaller.observation(lSP, 1);
-        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog((lObsCP1.logAccLiquidity - lObsCP0.logAccLiquidity) / 12);
-        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog((lObsSP1.logAccLiquidity - lObsSP0.logAccLiquidity) / 12);
+        uint256 lUncompressedLiqCP =
+            LogCompression.fromLowResLog((lObsCP1.logAccLiquidity - lObsCP0.logAccLiquidity) / 12);
+        uint256 lUncompressedLiqSP =
+            LogCompression.fromLowResLog((lObsSP1.logAccLiquidity - lObsSP0.logAccLiquidity) / 12);
         assertEq(lUncompressedLiqSP, lUncompressedLiqCP);
         assertEq(lObsCP1.logAccRawPrice, lObsSP1.logAccRawPrice);
     }
@@ -171,8 +176,10 @@ contract OracleWriterTest is BaseTest {
         Observation memory lObsCP1 = _oracleCaller.observation(lCP, 1);
         Observation memory lObsSP0 = _oracleCaller.observation(lSP, 0);
         Observation memory lObsSP1 = _oracleCaller.observation(lSP, 1);
-        uint256 lUncompressedLiqCP = LogCompression.fromLowResLog((lObsCP1.logAccLiquidity - lObsCP0.logAccLiquidity) / 12);
-        uint256 lUncompressedLiqSP = LogCompression.fromLowResLog((lObsSP1.logAccLiquidity - lObsSP0.logAccLiquidity) / 12);
+        uint256 lUncompressedLiqCP =
+            LogCompression.fromLowResLog((lObsCP1.logAccLiquidity - lObsCP0.logAccLiquidity) / 12);
+        uint256 lUncompressedLiqSP =
+            LogCompression.fromLowResLog((lObsSP1.logAccLiquidity - lObsSP0.logAccLiquidity) / 12);
         assertEq(lUncompressedLiqCP, lUncompressedLiqSP);
         if (lCP.token0() == IERC20(address(_tokenB))) {
             assertGt(lObsSP1.logAccRawPrice, lObsCP1.logAccRawPrice);
@@ -215,10 +222,15 @@ contract OracleWriterTest is BaseTest {
         Observation memory lObs1CP = _oracleCaller.observation(lCP, 1);
         Observation memory lObs0SP = _oracleCaller.observation(lSP, 0);
         Observation memory lObs1SP = _oracleCaller.observation(lSP, 1);
-        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog((lObs1CP.logAccRawPrice - lObs0CP.logAccRawPrice) / 12);
-        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog((lObs1SP.logAccRawPrice - lObs0SP.logAccRawPrice) / 12);
+        uint256 lUncompressedPriceCP =
+            LogCompression.fromLowResLog((lObs1CP.logAccRawPrice - lObs0CP.logAccRawPrice) / 12);
+        uint256 lUncompressedPriceSP =
+            LogCompression.fromLowResLog((lObs1SP.logAccRawPrice - lObs0SP.logAccRawPrice) / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
-        assertGt((lObs1CP.logAccLiquidity - lObs0CP.logAccLiquidity) / 12, (lObs1SP.logAccLiquidity - lObs0SP.logAccLiquidity) / 12);
+        assertGt(
+            (lObs1CP.logAccLiquidity - lObs0CP.logAccLiquidity) / 12,
+            (lObs1SP.logAccLiquidity - lObs0SP.logAccLiquidity) / 12
+        );
     }
 
     // this test case demonstrates how the two curves can have identical liquidity and price recorded by the oracle
@@ -246,8 +258,10 @@ contract OracleWriterTest is BaseTest {
         Observation memory lObsCP1 = _oracleCaller.observation(lCP, 1);
         Observation memory lObsSP0 = _oracleCaller.observation(lSP, 0);
         Observation memory lObsSP1 = _oracleCaller.observation(lSP, 1);
-        uint256 lUncompressedPriceCP = LogCompression.fromLowResLog((lObsCP1.logAccRawPrice - lObsCP0.logAccRawPrice) / 12);
-        uint256 lUncompressedPriceSP = LogCompression.fromLowResLog((lObsSP1.logAccRawPrice - lObsSP0.logAccRawPrice) / 12);
+        uint256 lUncompressedPriceCP =
+            LogCompression.fromLowResLog((lObsCP1.logAccRawPrice - lObsCP0.logAccRawPrice) / 12);
+        uint256 lUncompressedPriceSP =
+            LogCompression.fromLowResLog((lObsSP1.logAccRawPrice - lObsSP0.logAccRawPrice) / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
         assertEq(lObsCP1.logAccLiquidity, lObsSP1.logAccLiquidity);
     }

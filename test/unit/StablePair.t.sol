@@ -1616,7 +1616,7 @@ contract StablePairTest is BaseTest {
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
 
-    function testOracle_OverflowAccLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime)  {
+    function testOracle_OverflowAccLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // assume
         vm.assume(aNewStartTime < 2 ** 31);
 
@@ -1678,14 +1678,16 @@ contract StablePairTest is BaseTest {
 
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
             ),
             lPrice1,
             0.0001e18
         );
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
             ),
             Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
@@ -1746,7 +1748,8 @@ contract StablePairTest is BaseTest {
         // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
             ),
             lSpotPrice1,
             0.0001e18
@@ -1754,7 +1757,8 @@ contract StablePairTest is BaseTest {
         // Price for observation window 2-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs1.timestamp))
+                (lObs2.logAccRawPrice - lObs1.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs2.timestamp, lObs1.timestamp))
             ),
             lSpotPrice2,
             0.0001e18
@@ -1762,7 +1766,8 @@ contract StablePairTest is BaseTest {
         // Price for observation window 1-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
             ),
             Math.sqrt(lSpotPrice1 * lSpotPrice2),
             0.0001e18

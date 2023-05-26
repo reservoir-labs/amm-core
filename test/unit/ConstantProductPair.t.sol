@@ -444,14 +444,16 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
             ),
             lPrice1,
             0.0001e18
         );
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
             ),
             Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
@@ -474,7 +476,9 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // assert
         Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
         Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
-        assertApproxEqRel(LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / 5), 0.5e18, 0.0001e18);
+        assertApproxEqRel(
+            LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / 5), 0.5e18, 0.0001e18
+        );
     }
 
     function testOracle_SimplePrices(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
@@ -525,7 +529,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs1.timestamp, lObs0.timestamp))
             ),
             4e18,
             0.0001e18
@@ -533,7 +538,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // Price for observation window 2-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs1.timestamp))
+                (lObs2.logAccRawPrice - lObs1.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs2.timestamp, lObs1.timestamp))
             ),
             16e18,
             0.0001e18
@@ -541,7 +547,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // Price for observation window 1-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.subtract(lObs2.timestamp, lObs0.timestamp))
             ),
             8e18,
             0.0001e18
