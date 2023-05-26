@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 library Uint31Lib {
     // subtracts b from a
     // wraps around for underflow
-    function subtract(uint32 a, uint32 b) internal pure returns (uint32 rResult) {
+    function sub(uint32 a, uint32 b) internal pure returns (uint32 rResult) {
         require(a < 0x80000000, "a exceeds uint31");
         require(b < 0x80000000, "b exceeds uint31");
 

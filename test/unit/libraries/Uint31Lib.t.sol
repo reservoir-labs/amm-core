@@ -6,15 +6,11 @@ import "forge-std/Test.sol";
 import { Uint31Lib } from "src/libraries/Uint31Lib.sol";
 
 contract Uint31LibTest is Test {
-    function testSubtract() external {
+    function testSub() external {
         uint32 lA = 4;
         uint32 lB = 0x7FFFFFFF; // max value of uint31
 
-        uint32 lResult = Uint31Lib.subtract(lA, lB);
-
-        console.log(lA);
-        console.log(lB);
-        console.log(lResult);
+        uint32 lResult = Uint31Lib.sub(lA, lB);
 
         assertEq(lResult, 5);
     }
