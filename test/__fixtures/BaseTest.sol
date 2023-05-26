@@ -41,6 +41,11 @@ abstract contract BaseTest is Test {
 
     OracleCaller internal _oracleCaller;
 
+    modifier randomizeStartTime(uint32 aNewStartTime) {
+        vm.warp(aNewStartTime);
+        _;
+    }
+
     constructor() {
         try vm.envString("FOUNDRY_PROFILE") returns (string memory lProfile) {
             if (keccak256(abi.encodePacked(lProfile)) == keccak256(abi.encodePacked("coverage"))) {

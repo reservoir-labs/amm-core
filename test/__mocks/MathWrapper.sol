@@ -10,7 +10,7 @@ contract MathWrapper {
         return solmate.mulDivDown(x, y, denominator);
     }
 
-    function soladyMulDiv(uint256 x, uint256 y, uint256 denominator) external pure returns(uint256 result) {
+    function soladyMulDiv(uint256 x, uint256 y, uint256 denominator) external pure returns (uint256 result) {
         return solady.mulDiv(x, y, denominator);
     }
 

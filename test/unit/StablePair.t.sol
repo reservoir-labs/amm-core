@@ -7,6 +7,7 @@ import { Math } from "test/__fixtures/Math.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
+import { Uint31Lib } from "src/libraries/Uint31Lib.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { Observation } from "src/ReservoirPair.sol";
 import { StablePair, AmplificationData, IReservoirCallee } from "src/curve/stable/StablePair.sol";
@@ -171,8 +172,9 @@ contract StablePairTest is BaseTest {
         assertEq(_stablePair.balanceOf(address(this)), 2 * Constants.INITIAL_MINT_AMOUNT);
     }
 
-    function testMint_WhenRampingA(uint256 aFutureA) external {
+    function testMint_WhenRampingA(uint256 aFutureA, uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // assume - for ramping up or down from Constants.DEFAULT_AMP_COEFF
+        vm.assume(aNewStartTime >= 1);
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
         vm.assume(lFutureAToSet != Constants.DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
@@ -183,7 +185,7 @@ contract StablePairTest is BaseTest {
         uint256 lBefore = vm.snapshot();
 
         // act
-        vm.warp(lFutureATimestamp / 2);
+        vm.warp((block.timestamp + lFutureATimestamp) / 2);
         _tokenA.mint(address(_stablePair), 5e18);
         _tokenB.mint(address(_stablePair), 10e18);
         _stablePair.mint(address(this));
@@ -852,8 +854,9 @@ contract StablePairTest is BaseTest {
         assertEq(_tokenB.balanceOf(address(_stablePair)), Constants.INITIAL_MINT_AMOUNT);
     }
 
-    function testBurn_WhenRampingA(uint256 aFutureA) external {
+    function testBurn_WhenRampingA(uint256 aFutureA, uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // assume - for ramping up or down from Constants.DEFAULT_AMP_COEFF
+        vm.assume(aNewStartTime >= 1);
         uint64 lFutureAToSet = uint64(bound(aFutureA, 100, 5000));
         vm.assume(lFutureAToSet != Constants.DEFAULT_AMP_COEFF);
         uint64 lFutureATimestamp = uint64(block.timestamp) + 5 days;
@@ -865,7 +868,7 @@ contract StablePairTest is BaseTest {
         uint256 lBefore = vm.snapshot();
 
         // act
-        vm.warp(lFutureATimestamp / 2);
+        vm.warp((block.timestamp + lFutureATimestamp) / 2);
         vm.prank(_alice);
         _stablePair.transfer(address(_stablePair), lBalance / 2);
         _stablePair.burn(address(this));
@@ -1236,8 +1239,9 @@ contract StablePairTest is BaseTest {
         _stablePair.stopRampA();
     }
 
-    function testStopRampA_Early(uint256 aFutureA) public {
+    function testStopRampA_Early(uint256 aFutureA, uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // assume
+        vm.assume(aNewStartTime >= 1);
         uint64 lFutureAToSet = uint64(bound(aFutureA, StableMath.MIN_A, StableMath.MAX_A));
 
         // arrange
@@ -1248,7 +1252,7 @@ contract StablePairTest is BaseTest {
             address(_stablePair), abi.encodeWithSignature("rampA(uint64,uint64)", lFutureAToSet, lFutureATimestamp), 0
         );
 
-        _stepTime(lFutureATimestamp / 2);
+        vm.warp((lCurrentTimestamp + lFutureATimestamp) / 2);
 
         // act
         _factory.rawCall(address(_stablePair), abi.encodeWithSignature("stopRampA()"), 0);
@@ -1589,10 +1593,13 @@ contract StablePairTest is BaseTest {
         assertTrue(lObs.timestamp != 0);
     }
 
-    function testOracle_OverflowAccPrice() public {
+    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
+        // assume
+        vm.assume(aNewStartTime >= 1);
+
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _stablePair.getReserves();
-        _writeObservation(_stablePair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp));
+        _writeObservation(_stablePair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp % 2 ** 31));
         Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
 
         // act
@@ -1609,7 +1616,10 @@ contract StablePairTest is BaseTest {
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
 
-    function testOracle_OverflowAccLiquidity() public {
+    function testOracle_OverflowAccLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
+        // assume
+        vm.assume(aNewStartTime < 2 ** 31);
+
         // arrange
         (,,, uint16 lIndex) = _stablePair.getReserves();
         _writeObservation(_stablePair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp));
@@ -1625,79 +1635,102 @@ contract StablePairTest is BaseTest {
         assertLt(lCurrObs.logAccLiquidity, lPrevObs.logAccLiquidity);
     }
 
-    function testOracle_CorrectPrice() public {
+    function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
-        uint256 lAmountToSwap = 1e18;
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        lPair.mint(_alice);
+
         _stepTime(5);
 
         // act
-        _tokenA.mint(address(_stablePair), lAmountToSwap);
-        _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
+        uint256 lAmountToSwap = 1e18;
+        _tokenB.mint(address(lPair), lAmountToSwap);
+        lPair.swap(
+            lPair.token0() == IERC20(address(_tokenB)) ? int256(lAmountToSwap) : -int256(lAmountToSwap),
+            true,
+            address(this),
+            ""
+        );
 
-        (uint256 lReserve0_1, uint256 lReserve1_1,,) = _stablePair.getReserves();
-        uint256 lPrice1 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
+        (uint256 lReserve0_1, uint256 lReserve1_1,,) = lPair.getReserves();
+        uint256 lPrice1 = StableOracleMath.calcSpotPrice(lPair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(5);
 
-        _tokenA.mint(address(_stablePair), lAmountToSwap);
-        _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
-        (uint256 lReserve0_2, uint256 lReserve1_2,,) = _stablePair.getReserves();
-        uint256 lPrice2 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
+        _tokenB.mint(address(lPair), lAmountToSwap);
+        lPair.swap(
+            lPair.token0() == IERC20(address(_tokenB)) ? int256(lAmountToSwap) : -int256(lAmountToSwap),
+            true,
+            address(this),
+            ""
+        );
+        (uint256 lReserve0_2, uint256 lReserve1_2,,) = lPair.getReserves();
+        uint256 lPrice2 = StableOracleMath.calcSpotPrice(lPair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
 
         _stepTime(5);
-        _stablePair.sync();
+        lPair.sync();
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(_stablePair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, 1);
-        Observation memory lObs2 = _oracleCaller.observation(_stablePair, 2);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
 
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs1.timestamp - lObs0.timestamp)
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.sub(lObs1.timestamp, lObs0.timestamp))
             ),
             lPrice1,
             0.0001e18
         );
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
             ),
             Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
         );
     }
 
-    function testOracle_SimplePrices() external {
+    function testOracle_SimplePrices(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // prices = [1, 0.4944, 0.0000936563]
         // geo_mean = sqrt3(1 * 0.4944 * 0000936563) = 0.0166676
 
         // arrange
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        lPair.mint(address(this));
+
         vm.prank(address(_factory));
-        _stablePair.setCustomSwapFee(0);
+        lPair.setCustomSwapFee(0);
 
         // price = 1
         _stepTime(10);
+        lPair.sync(); // obs0 is written here
 
         // act
         // price = 0.4944
-        _tokenA.mint(address(_stablePair), 100e18);
-        _stablePair.swap(100e18, true, _bob, "");
-        (uint256 lReserve0_1, uint256 lReserve1_1,,) = _stablePair.getReserves();
-        uint256 lSpotPrice1 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
+        _tokenB.mint(address(lPair), 100e18);
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs1 is written here
+        (uint256 lReserve0_1, uint256 lReserve1_1,,) = lPair.getReserves();
+        uint256 lSpotPrice1 = StableOracleMath.calcSpotPrice(lPair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
         _stepTime(10);
 
         // price = 0.0000936563
-        _tokenA.mint(address(_stablePair), 200e18);
-        _stablePair.swap(200e18, true, _bob, "");
-        (uint256 lReserve0_2, uint256 lReserve1_2,,) = _stablePair.getReserves();
-        uint256 lSpotPrice2 = StableOracleMath.calcSpotPrice(_stablePair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
+        _tokenB.mint(address(lPair), 200e18);
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs2 is written here
+        (uint256 lReserve0_2, uint256 lReserve1_2,,) = lPair.getReserves();
+        uint256 lSpotPrice2 = StableOracleMath.calcSpotPrice(lPair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);
-        _stablePair.sync();
+        lPair.sync(); // obs3 is written here
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(_stablePair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, 1);
-        Observation memory lObs2 = _oracleCaller.observation(_stablePair, 2);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
 
         assertEq(lObs0.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(
@@ -1715,7 +1748,8 @@ contract StablePairTest is BaseTest {
         // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs1.timestamp - lObs0.timestamp)
+                (lObs1.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.sub(lObs1.timestamp, lObs0.timestamp))
             ),
             lSpotPrice1,
             0.0001e18
@@ -1723,7 +1757,8 @@ contract StablePairTest is BaseTest {
         // Price for observation window 2-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(lObs2.timestamp - lObs1.timestamp)
+                (lObs2.logAccRawPrice - lObs1.logAccRawPrice)
+                    / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
             ),
             lSpotPrice2,
             0.0001e18
@@ -1731,39 +1766,45 @@ contract StablePairTest is BaseTest {
         // Price for observation window 1-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(lObs2.timestamp - lObs0.timestamp)
+                (lObs2.logAccRawPrice - lObs0.logAccRawPrice)
+                    / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
             ),
             Math.sqrt(lSpotPrice1 * lSpotPrice2),
             0.0001e18
         );
     }
 
-    function testOracle_CorrectLiquidity() public {
+    function testOracle_CorrectLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
-        uint256 lAmountToBurn = 1e18;
+        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
+        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
+        lPair.mint(_alice);
+        _stepTime(5);
+        lPair.sync();
 
         // act
         _stepTime(5);
         vm.prank(_alice);
-        _stablePair.transfer(address(_stablePair), lAmountToBurn);
-        _stablePair.burn(address(this));
+        uint256 lAmountToBurn = 1e18;
+        lPair.transfer(address(lPair), lAmountToBurn);
+        lPair.burn(address(this));
 
         // assert
-        (,,, uint16 lIndex) = _stablePair.getReserves();
-        Observation memory lObs0 = _oracleCaller.observation(_stablePair, lIndex);
-        uint256 lAverageLiq = LogCompression.fromLowResLog(lObs0.logAccLiquidity / 5);
+        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
+        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        uint256 lAverageLiq = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
         // we check that it is within 0.01% of accuracy
         // sqrt(Constants.INITIAL_MINT_AMOUNT * Constants.INITIAL_MINT_AMOUNT) == Constants.INITIAL_MINT_AMOUNT
         assertApproxEqRel(lAverageLiq, Constants.INITIAL_MINT_AMOUNT, 0.0001e18);
 
         // act
         _stepTime(5);
-        _stablePair.sync();
+        lPair.sync();
 
         // assert
-        (,,, lIndex) = _stablePair.getReserves();
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, lIndex);
-        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
+        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs2.logAccLiquidity - lObs1.logAccLiquidity) / 5);
         assertApproxEqRel(lAverageLiq2, Constants.INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
     }
 

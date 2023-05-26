@@ -24,7 +24,7 @@ contract StablePair is ReservoirPair {
     string private constant PAIR_SWAP_FEE_NAME = "SP::swapFee";
     string private constant AMPLIFICATION_COEFFICIENT_NAME = "SP::amplificationCoefficient";
 
-    event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTme);
+    event RampA(uint64 initialAPrecise, uint64 futureAPrecise, uint64 initialTime, uint64 futureTime);
     event StopRampA(uint64 currentAPrecise, uint64 time);
 
     AmplificationData public ampData;
