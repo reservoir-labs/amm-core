@@ -347,6 +347,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     event Profit(IERC20 token, uint256 amount);
     event Loss(IERC20 token, uint256 amount);
+    event Adjust(IERC20 token, uint256 amount);
 
     IAssetManager public assetManager;
 
@@ -429,6 +430,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             token0Managed += lDelta;
 
             address(token0()).safeTransfer(msg.sender, lDelta);
+            emit Adjust(token0(), token0Managed);
         } else if (aToken0Change < 0) {
             uint104 lDelta = uint256(-aToken0Change).toUint104();
 
@@ -436,6 +438,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             token0Managed -= lDelta;
 
             address(token0()).safeTransferFrom(msg.sender, address(this), lDelta);
+            emit Adjust(token0(), token0Managed);
         }
 
         if (aToken1Change > 0) {
@@ -445,6 +448,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             token1Managed += lDelta;
 
             address(token1()).safeTransfer(msg.sender, lDelta);
+            emit Adjust(token1(), token1Managed);
         } else if (aToken1Change < 0) {
             uint104 lDelta = uint256(-aToken1Change).toUint104();
 
@@ -452,6 +456,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             token1Managed -= lDelta;
 
             address(token1()).safeTransferFrom(msg.sender, address(this), lDelta);
+            emit Adjust(token1(), token1Managed);
         }
     }
 
