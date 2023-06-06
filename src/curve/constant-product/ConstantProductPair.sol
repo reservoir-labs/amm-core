@@ -167,6 +167,8 @@ contract ConstantProductPair is ReservoirPair {
             if (aAmount > 0) {
                 lTokenOut = token1();
                 lAmountIn = uint256(aAmount);
+                // call to lib function is safe as args will be within documented bounds
+                // reverts if beyond bounds
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve0, lReserve1, swapFee);
             }
             // swap token1 exact in for token0 variable out
@@ -175,6 +177,8 @@ contract ConstantProductPair is ReservoirPair {
                 unchecked {
                     lAmountIn = uint256(-aAmount);
                 }
+                // call to lib function is safe as args will be within documented bounds
+                // reverts if beyond bounds
                 rAmountOut = ConstantProductMath.getAmountOut(lAmountIn, lReserve1, lReserve0, swapFee);
             }
         } else {
