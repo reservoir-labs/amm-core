@@ -1,4 +1,4 @@
-# Vexchange v3-core
+# Reservoir AMM-core
 
 ## Setup
 
@@ -55,19 +55,27 @@ To run legacy tests:
 npm run test:uniswap
 ```
 
+## Audits
+
+You can find all audit reports under the audits folder.
+
+V1.0
+
+- [ABDK](./audits/ABDK_ReservoirFi_AMMCore_v_1_0.pdf)
+
 ## Contributing
 
-Are you interested in helping us build the future of Vexchange with our V3?
+Are you interested in helping us build the future of Reservoir?
 Contribute in these ways:
 
 - If you find bugs or code errors, you can open a new
-[issue ticket here.](https://github.com/vexchange/v3-core/issues/new)
+[issue ticket here.](https://github.com/reservoir-labs/amm-core/issues/new)
 
 - If you find an issue and would like to submit a fix for said issue, follow
 these steps:
-  - Start by forking the V3-Core repository to your local environment.
+  - Start by forking the amm-core repository to your local environment.
   - Make the changes you find necessary to your local repository.
-  - Submit your [pull request.](https://github.com/vexchange/v3-core/compare)
+  - Submit your [pull request.](https://github.com/reservoir-labs/amm-core/compare)
 
 - Have questions, or want to interact with the team and the community?
-Join our [discord!](https://discord.gg/vexchange)
+Join our [discord!](https://discord.gg/SZjwsPT7CB)
