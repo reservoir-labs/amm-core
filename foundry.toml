@@ -6,7 +6,7 @@ optimizer_runs = 1_000_000
 libs = ['lib']
 remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
 match_path = "test/unit/*.sol"
-verbosity = 3
+verbosity = 4
 fs_permissions = [
     { access = "write", path = "./script/optimized-deployer-meta" },
     { access = "write", path = "./script/unoptimized-deployer-meta" },
