@@ -9,7 +9,7 @@ remappings = [
     "ds-test/=lib/forge-std/lib/ds-test/src/"
 ]
 match_path = "test/unit/*.sol"
-verbosity = 4
+verbosity = 3
 fs_permissions = [
     { access = "write", path = "./script/optimized-deployer-meta" },
     { access = "write", path = "./script/unoptimized-deployer-meta" },
