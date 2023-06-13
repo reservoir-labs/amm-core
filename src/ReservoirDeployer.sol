@@ -17,12 +17,12 @@ contract ReservoirDeployer {
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant FACTORY_HASH = bytes32(0xb1e9855b7ea822b90a18fbde849307d18e938887df9a89c601da9d3d3877b34b);
+    bytes32 public constant FACTORY_HASH = bytes32(0xda6f297f6ce8cf60c5dcf260b6c4178f82c853ae2f16446c064cf6f4e2e4b1ca);
     bytes32 public constant CONSTANT_PRODUCT_HASH =
-        bytes32(0x3fa69a48a7793180bff09630d213ae34a94a8905e82f5aec805db563708a24be);
-    bytes32 public constant STABLE_HASH = bytes32(0x97a4ebb0edd314c12e5535c2b9d5d253037eb8d49710293b5895f2cc3e1e47fb);
+        bytes32(0xde6d8452b97c785350ce9f82090dfb5962933aa5467827310798925c8725013b);
+    bytes32 public constant STABLE_HASH = bytes32(0x1289a8879d4d1992d308d2a4d8457a5ca8d57e07effe092f2a1f21b0b9b10619);
     bytes32 public constant ORACLE_CALLER_HASH =
-        bytes32(0x262458524d9c8928fe7fd7661236b93f6d6a9535182f48fd582a75f18bfbf85f);
+        bytes32(0x1dcb29ca6399be1a5f8a4b3f168a83ff20697718c3d5434ddeeb4a8050fdc615);
 
     // Deployment addresses.
     GenericFactory public factory;
