@@ -167,22 +167,20 @@ contract StableMintBurn is StablePair {
         );
         if (lFeeOn) {
             uint256 lDLast = lastInvariant;
-            if (lDLast != 0) {
-                if (rD > lDLast) {
-                    // @dev `platformFee` % of increase in liquidity.
-                    uint256 lPlatformFee = platformFee;
-                    // will not phantom overflow as rTotalSupply is max 128 bits. and (rD - lDLast) is usually within 70 bits and lPlatformFee is max 1e6 (20 bits)
-                    uint256 lNumerator = rTotalSupply * (rD - lDLast) * lPlatformFee;
-                    // will not phantom overflow as FEE_ACCURACY and lPlatformFee are max 1e6 (20 bits), and rD and lDLast are max 128 bits
-                    uint256 lDenominator = (FEE_ACCURACY - lPlatformFee) * rD + lPlatformFee * lDLast;
-                    uint256 lPlatformShares = lNumerator / lDenominator;
+            if (rD > lDLast) {
+                // @dev `platformFee` % of increase in liquidity.
+                uint256 lPlatformFee = platformFee;
+                // will not phantom overflow as rTotalSupply is max 128 bits. and (rD - lDLast) is usually within 70 bits and lPlatformFee is max 1e6 (20 bits)
+                uint256 lNumerator = rTotalSupply * (rD - lDLast) * lPlatformFee;
+                // will not phantom overflow as FEE_ACCURACY and lPlatformFee are max 1e6 (20 bits), and rD and lDLast are max 128 bits
+                uint256 lDenominator = (FEE_ACCURACY - lPlatformFee) * rD + lPlatformFee * lDLast;
+                uint256 lPlatformShares = lNumerator / lDenominator;
 
-                    if (lPlatformShares != 0) {
-                        address lPlatformFeeTo = this.factory().read(PLATFORM_FEE_TO_NAME).toAddress();
+                if (lPlatformShares != 0) {
+                    address lPlatformFeeTo = this.factory().read(PLATFORM_FEE_TO_NAME).toAddress();
 
-                        _mint(lPlatformFeeTo, lPlatformShares);
-                        rTotalSupply += lPlatformShares;
-                    }
+                    _mint(lPlatformFeeTo, lPlatformShares);
+                    rTotalSupply += lPlatformShares;
                 }
             }
         }
