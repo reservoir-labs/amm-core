@@ -4,7 +4,10 @@ solc = "0.8.19"
 bytecode_hash = "ipfs"
 optimizer_runs = 1_000_000
 libs = ['lib']
-remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
+remappings = [
+    "@openzeppelin/=lib/openzeppelin-contracts/contracts/",
+    "ds-test/=lib/forge-std/lib/ds-test/src/"
+]
 match_path = "test/unit/*.sol"
 verbosity = 4
 fs_permissions = [
