@@ -35,7 +35,7 @@ contract VaultScript is BaseScript {
     }
 
     function run() external {
-        _ensureDeployerExists(_privateKey);
+        _ensureDeployerExists(_privateKey, msg.sender, msg.sender, msg.sender);
         _deployInfra();
         _deployCore();
     }
