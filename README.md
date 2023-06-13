@@ -1,4 +1,4 @@
-# Reservoir AMM-core 
+# Reservoir AMM-core
 
 ## Setup
 
