@@ -78,4 +78,4 @@ these steps:
   - Submit your [pull request.](https://github.com/reservoir-labs/amm-core/compare)
 
 - Have questions, or want to interact with the team and the community?
-Join our [discord!](https://discord.com/invite/eAyk6eBU)
+Join our [discord!](https://discord.gg/SZjwsPT7CB)
