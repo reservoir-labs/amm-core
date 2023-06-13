@@ -19,9 +19,15 @@ contract DeployScript is BaseScript {
     }
 
     function _deployCore() internal {
+        vm.startBroadcast(msg.sender);
         _deployer.deployFactory(type(GenericFactory).creationCode);
         _deployer.deployConstantProduct(type(ConstantProductPair).creationCode);
         _deployer.deployStable(type(StablePair).creationCode);
         _deployer.deployOracleCaller(type(OracleCaller).creationCode);
+        vm.stopBroadcast();
+
+        require(_deployer.guardian1() == _riley);
+        require(_deployer.guardian2() == _oliver);
+        require(_deployer.guardian3() == _alex);
     }
 }
