@@ -10,13 +10,17 @@ contract BaseScript is Script {
     ReservoirDeployer internal _deployer;
 
     // use private key for testing / dev purposes
-    function _ensureDeployerExists(uint256 aPrivateKey, address aGuardian1, address aGuardian2, address aGuardian3) internal {
+    function _ensureDeployerExists(uint256 aPrivateKey, address aGuardian1, address aGuardian2, address aGuardian3)
+        internal
+    {
         vm.broadcast(aPrivateKey);
         _calculateAddressAndDeployIfNeeded(aGuardian1, aGuardian2, aGuardian3);
     }
 
     // use address for production / deployment purposes
-    function _ensureDeployerExists(address aAddress, address aGuardian1, address aGuardian2, address aGuardian3) internal {
+    function _ensureDeployerExists(address aAddress, address aGuardian1, address aGuardian2, address aGuardian3)
+        internal
+    {
         vm.broadcast(aAddress);
         _calculateAddressAndDeployIfNeeded(aGuardian1, aGuardian2, aGuardian3);
     }

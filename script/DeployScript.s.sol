@@ -9,7 +9,6 @@ import { StablePair } from "src/curve/stable/StablePair.sol";
 import { OracleCaller } from "src/oracle/OracleCaller.sol";
 
 contract DeployScript is BaseScript {
-
     address internal _riley = 0x01569E14C2134d0b2e960654Cf47212e9cEc4bA9;
     address internal _oliver = 0x2F0066c884357e37d93fA1D030517be89d8F8EF3;
     address internal _alex = 0x2508b97B8041960ccA8AaBC7662F07EC8e285F6d;
