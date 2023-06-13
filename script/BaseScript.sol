@@ -17,7 +17,7 @@ contract BaseScript is Script {
         _calculateAddressAndDeployIfNeeded(aGuardian1, aGuardian2, aGuardian3);
     }
 
-    // use address for production / deployment purposes
+    // use address for production / deployment purposes (e.g. with a hardware wallet)
     function _ensureDeployerExists(address aAddress, address aGuardian1, address aGuardian2, address aGuardian3)
         internal
     {
