@@ -77,18 +77,15 @@ contract ConstantProductPair is ReservoirPair {
 
         if (lFeeOn) {
             uint256 lSqrtOldK = FixedPointMathLib.sqrt(kLast); // gas savings
+            uint256 lSqrtNewK = FixedPointMathLib.sqrt(aReserve0 * aReserve1);
 
-            if (lSqrtOldK != 0) {
-                uint256 lSqrtNewK = FixedPointMathLib.sqrt(aReserve0 * aReserve1);
+            if (lSqrtNewK > lSqrtOldK) {
+                // input arguments fulfill invariants for _calcFee
+                uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
 
-                if (lSqrtNewK > lSqrtOldK) {
-                    // input arguments fulfill invariants for _calcFee
-                    uint256 lSharesToIssue = _calcFee(lSqrtNewK, lSqrtOldK, platformFee, totalSupply);
-
-                    if (lSharesToIssue > 0) {
-                        address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
-                        _mint(platformFeeTo, lSharesToIssue);
-                    }
+                if (lSharesToIssue > 0) {
+                    address platformFeeTo = factory.read(PLATFORM_FEE_TO_NAME).toAddress();
+                    _mint(platformFeeTo, lSharesToIssue);
                 }
             }
         }
