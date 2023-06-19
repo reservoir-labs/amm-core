@@ -74,8 +74,12 @@ contract GenericFactoryTest is BaseTest {
         address lPair1 = _factory.createPair(IERC20(address(_tokenC)), IERC20(address(_tokenD)), 0);
         address lPair2 = _factory.createPair(IERC20(address(_tokenC)), IERC20(address(_tokenD)), 1);
 
-        bytes memory lInitBytecode1 = _tokenC < _tokenD ? _factory.getBytecode(lCurves[0], IERC20(address(_tokenC)), IERC20(address(_tokenD))) : _factory.getBytecode(lCurves[0], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
-        bytes memory lInitBytecode2 = _tokenC < _tokenD ? _factory.getBytecode(lCurves[1], IERC20(address(_tokenC)), IERC20(address(_tokenD))) : _factory.getBytecode(lCurves[1], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
+        bytes memory lInitBytecode1 = _tokenC < _tokenD
+            ? _factory.getBytecode(lCurves[0], IERC20(address(_tokenC)), IERC20(address(_tokenD)))
+            : _factory.getBytecode(lCurves[0], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
+        bytes memory lInitBytecode2 = _tokenC < _tokenD
+            ? _factory.getBytecode(lCurves[1], IERC20(address(_tokenC)), IERC20(address(_tokenD)))
+            : _factory.getBytecode(lCurves[1], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
 
         // act
         address lExpectedAddress1 = computeCreate2Address(bytes32(0), keccak256(lInitBytecode1), address(_factory));
