@@ -107,4 +107,15 @@ contract GenericFactoryTest is BaseTest {
         assertEq(_factory.getPair(IERC20(address(_tokenA)), IERC20(address(_tokenB)), 0), address(_constantProductPair));
         assertEq(_factory.getPair(IERC20(address(_tokenB)), IERC20(address(_tokenA)), 0), address(_constantProductPair));
     }
+
+    function testGetBytecode_HasAdditionalConstructorData() external {
+        // act
+        bytes32[] memory lCurves = _factory.curves();
+        bytes memory lBytecode = _factory.getBytecode(lCurves[0], IERC20(address(_tokenA)), IERC20(address(_tokenB)));
+
+        // print
+        console.logBytes(lBytecode);
+        lBytecode = _factory.getBytecode(lCurves[1], IERC20(address(_tokenC)), IERC20(address(_tokenB)));
+        console.logBytes(lBytecode);
+    }
 }
