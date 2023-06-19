@@ -4,11 +4,14 @@ import "test/__fixtures/BaseTest.sol";
 
 import "test/__fixtures/MintableERC20.sol";
 
+import { BytesLib } from "test/helpers/BytesLib.sol";
 import { ConstantProductPair } from "src/curve/constant-product/ConstantProductPair.sol";
 import { StablePair } from "src/curve/stable/StablePair.sol";
 import { GenericFactory } from "src/GenericFactory.sol";
 
 contract GenericFactoryTest is BaseTest {
+    using BytesLib for bytes;
+
     function testCreatePair_AllCurves(uint256 aCurveId) public {
         // assume
         uint256 lCurveId = bound(aCurveId, 0, 1);
@@ -65,6 +68,24 @@ contract GenericFactoryTest is BaseTest {
         _createPair(address(_tokenA), address(_tokenB), lCurveId);
     }
 
+    function testCreatePair_Create2AddressCorrect() external {
+        // arrange
+        bytes32[] memory lCurves = _factory.curves();
+        address lPair1 = _factory.createPair(IERC20(address(_tokenC)), IERC20(address(_tokenD)), 0);
+        address lPair2 = _factory.createPair(IERC20(address(_tokenC)), IERC20(address(_tokenD)), 1);
+
+        bytes memory lInitBytecode1 = _tokenC < _tokenD ? _factory.getBytecode(lCurves[0], IERC20(address(_tokenC)), IERC20(address(_tokenD))) : _factory.getBytecode(lCurves[0], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
+        bytes memory lInitBytecode2 = _tokenC < _tokenD ? _factory.getBytecode(lCurves[1], IERC20(address(_tokenC)), IERC20(address(_tokenD))) : _factory.getBytecode(lCurves[1], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
+
+        // act
+        address lExpectedAddress1 = computeCreate2Address(bytes32(0), keccak256(lInitBytecode1), address(_factory));
+        address lExpectedAddress2 = computeCreate2Address(bytes32(0), keccak256(lInitBytecode2), address(_factory));
+
+        // assert
+        assertEq(lPair1, lExpectedAddress1);
+        assertEq(lPair2, lExpectedAddress2);
+    }
+
     function testAllPairs() public {
         // arrange
         address lPair3 = _factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), 0);
@@ -108,14 +129,16 @@ contract GenericFactoryTest is BaseTest {
         assertEq(_factory.getPair(IERC20(address(_tokenB)), IERC20(address(_tokenA)), 0), address(_constantProductPair));
     }
 
-    function testGetBytecode_HasAdditionalConstructorData() external {
-        // act
+    function testGetBytecode_CorrectConstructorData() external {
+        // arrange
         bytes32[] memory lCurves = _factory.curves();
-        bytes memory lBytecode = _factory.getBytecode(lCurves[0], IERC20(address(_tokenA)), IERC20(address(_tokenB)));
 
-        // print
-        console.logBytes(lBytecode);
-        lBytecode = _factory.getBytecode(lCurves[1], IERC20(address(_tokenC)), IERC20(address(_tokenB)));
-        console.logBytes(lBytecode);
+        // act
+        bytes memory lBytecodeCP = _factory.getBytecode(lCurves[0], IERC20(address(_tokenA)), IERC20(address(_tokenB)));
+        bytes memory lBytecodeSP = _factory.getBytecode(lCurves[1], IERC20(address(_tokenC)), IERC20(address(_tokenB)));
+
+        // assert - the last bytes of the initCode should be the address of the second token, nothing more than that
+        assertEq0(lBytecodeCP.slice(lBytecodeCP.length - 32, 32), abi.encode(_tokenB));
+        assertEq0(lBytecodeSP.slice(lBytecodeSP.length - 32, 32), abi.encode(_tokenB));
     }
 }
