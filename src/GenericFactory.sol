@@ -89,8 +89,15 @@ contract GenericFactory is IGenericFactory, Owned {
             // the difference between free_mem (stack) and mem pointer (memory)
             // to know how much memory we just wrote and thus the size of the
             // bytecode.
-            mstore(lInitCode, add(sub(free_mem, mload(0x40)), 0x40))
-            mstore(0x40, add(free_mem, 0x40))
+            //
+            // Because solidity arrays in memory store their length in the first
+            // word, we get the array size using the following formula:
+            //
+            // old_free_memory = mload(0x40)
+            // new_free_memory = free_mem + 64 (the two tokens)
+            // array_length = new_free_memory - old_free_memory - 32 (the length word)
+            mstore(lInitCode, add(sub(free_mem, mload(0x40)), 32))
+            mstore(0x40, add(free_mem, 64))
         }
 
         return lInitCode;
