@@ -3,28 +3,27 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 
-import { ReservoirDeployer, GenericFactory } from "src/ReservoirDeployer.sol";
+ import { GenericFactory } from "src/ReservoirDeployer.sol";
 import { AaveManager, IAssetManagedPair} from "src/asset-management/AaveManager.sol";
+import { ReservoirTimelock } from "src/ReservoirTimelock.sol";
 
 contract SetAssetManagerForPair is Script {
 
-    ReservoirDeployer internal _deployer = ReservoirDeployer(0xe5f6124f51D61C3b7C4D689768B1c55975b1c0F4);
-    AaveManager internal _assetManager = AaveManager(0x55231617f7E260358022534DB5114F671A3254B1);
+    GenericFactory internal _factory = GenericFactory(0xDd723D9273642D82c5761a4467fD5265d94a22da);
+    ReservoirTimelock internal _timelock = ReservoirTimelock(payable(0xF820eCe0eaaeF4AF1535865Fb6F230f576e586c0));
+    AaveManager internal _assetManager = AaveManager(0xbe8A6DDDA2D2AA6BC88972801Be1119BD228f55e);
 
     function run() external {
-        _setManagerForPair(IAssetManagedPair(0x55231617f7E260358022534DB5114F671A3254B1));
+        _queueSetManagerForPair(IAssetManagedPair(0x146D00567Cef404c1c0aAF1dfD2abEa9F260B8C7));
     }
 
-    function _setManagerForPair(IAssetManagedPair aPair) internal {
-        vm.startBroadcast();
-        GenericFactory lFactory = _deployer.factory();
+    function _queueSetManagerForPair(IAssetManagedPair aPair) internal {
+        vm.startBroadcast(msg.sender);
 
         bytes memory lCalldataForFactory = abi.encodeCall(IAssetManagedPair.setManager, (_assetManager));
-        bytes memory lCalldataForDeployer = abi.encodeCall(lFactory.rawCall, (address(aPair) , lCalldataForFactory, 0));
-        _deployer.rawCall(address(lFactory), lCalldataForDeployer, 0);
+        bytes memory lCalldataForTimelock = abi.encodeCall(_factory.rawCall, (address(aPair) , lCalldataForFactory, 0));
+        _timelock.queueTransaction(address(_factory), 0, "rawCall(address,bytes,uint256)", lCalldataForTimelock, 1687452720);
 
         vm.stopBroadcast();
-
-        require(aPair.assetManager() == _assetManager, "MANAGER_NOT_SET_CORRECTLY");
     }
 }
