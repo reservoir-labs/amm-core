@@ -20,7 +20,7 @@ For alternative installation options & more details [see the foundry repo](https
 git submodule update --init --recursive
 nvm use
 npm ci
-npm run install 
+npm run install
 ```
 
 ## Building
@@ -67,6 +67,8 @@ V1.0
 
 Are you interested in helping us build the future of Reservoir?
 Contribute in these ways:
+
+- For SECURITY related or sensitive bugs, please get in touch with the team at security@reservoir.fi or on discord instead of opening an issue on github.
 
 - If you find bugs or code errors, you can open a new
 [issue ticket here.](https://github.com/reservoir-labs/amm-core/issues/new)
