@@ -1143,7 +1143,7 @@ contract AaveIntegrationTest is BaseTest {
 
     function testAaveReserves_AllLentOut() external allNetworks allPairs {
         // assume
-        uint256 lAmtWETHToDeal = 3000e18;
+        uint256 lAmtWETHToDeal = 4000e18;
 
         // arrange
         _increaseManagementOneToken(10e6);
@@ -1156,32 +1156,27 @@ contract AaveIntegrationTest is BaseTest {
         vm.stopPrank();
 
         // sanity
-        //        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(WETH));
-        //        assertEq(WETH.balanceOf(_alice), 0);
-        //        assertEq(IERC20(lRawAaveToken).balanceOf(_alice), lAmtWETHToDeal);
+        (address lRawAaveTokenWETH,,) = _dataProvider.getReserveTokensAddresses(address(WETH));
+        assertEq(WETH.balanceOf(_alice), 0);
+        assertEq(IERC20(lRawAaveTokenWETH).balanceOf(_alice), lAmtWETHToDeal);
 
         // Alice takes out all the USDC as loans in AAVE
-        IUiPoolDataProviderV3 lUiDataProvider = IUiPoolDataProviderV3(0xF71DBe0FAEF1473ffC607d4c555dfF0aEaDb878d);
-        (IUiPoolDataProviderV3.AggregatedReserveData[] memory reserveData,) =
-            lUiDataProvider.getReservesData(_poolAddressesProvider);
-
-        uint256 lAvailableLiqUSDC;
-        for (uint256 i = 0; i < reserveData.length; ++i) {
-            if (reserveData[i].underlyingAsset == address(USDC)) {
-                lAvailableLiqUSDC = reserveData[i].availableLiquidity;
-                break;
-            }
-        }
-
-        console.log("avail", lAvailableLiqUSDC);
-
+        (address lRawAaveTokenUSDC,,address lVarDebtTokenUSDC) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        uint256 lAvailableLiqUSDC = USDC.balanceOf(lRawAaveTokenUSDC);
         vm.prank(_alice);
         lPool.borrow(address(USDC), lAvailableLiqUSDC, 2, 0, _alice);
 
         // ensure that all USDC in the pool has been borrowed
+        assertEq(USDC.balanceOf(lRawAaveTokenUSDC), 0);
+        assertGt(IERC20(lVarDebtTokenUSDC).balanceOf(_alice), 0);
 
-        // act - our pair tries to redeem
-
-        // assert
+        // act & assert - our pair tries to redeem
+        IERC20 lToken0 = _pair.token0();
+        vm.expectRevert();
+        _manager.adjustManagement(
+            _pair,
+            lToken0 == USDC ? int256(-10e6) : int(0),
+            lToken0 == USDC ? int(0) : int256(-10e6)
+        );
     }
 }
