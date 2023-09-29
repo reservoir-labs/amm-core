@@ -15,10 +15,12 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager, IAssetManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
+import { IUiPoolDataProviderV3 } from "../../src/interfaces/aave/IUiPoolDataProviderV3.sol";
 
 struct Network {
     string rpcUrl;
     address USDC;
+    address WETH;
 }
 
 struct Fork {
@@ -50,6 +52,7 @@ contract AaveIntegrationTest is BaseTest {
     mapping(string => Fork) private _forks;
     // network specific variables
     IERC20 private USDC;
+    IERC20 private WETH;
     address private _aaveAdmin;
     IPoolAddressesProvider private _poolAddressesProvider;
     IAaveProtocolDataProvider private _dataProvider;
@@ -92,6 +95,7 @@ contract AaveIntegrationTest is BaseTest {
 
         _manager = new AaveManager(IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER));
         USDC = IERC20(aNetwork.USDC);
+        WETH = IERC20(aNetwork.WETH);
         _poolAddressesProvider = IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER);
         _aaveAdmin = _poolAddressesProvider.getACLAdmin();
         _dataProvider = IAaveProtocolDataProvider(_poolAddressesProvider.getPoolDataProvider());
@@ -118,8 +122,20 @@ contract AaveIntegrationTest is BaseTest {
     }
 
     function setUp() external {
-        _networks.push(Network(getChain("avalanche").rpcUrl, 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E));
-        _networks.push(Network(getChain("polygon").rpcUrl, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174));
+        _networks.push(
+            Network(
+                getChain("avalanche").rpcUrl,
+                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E,
+                0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB
+            )
+        );
+        _networks.push(
+            Network(
+                getChain("polygon").rpcUrl,
+                0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174,
+                0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619
+            )
+        );
 
         vm.makePersistent(address(_tokenA));
         vm.makePersistent(address(_tokenB));
@@ -1123,5 +1139,49 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.shares(_pair, USDC), 0);
         assertEq(_manager.shares(lOtherPair, USDC), 0);
         assertEq(_manager.shares(lThirdPair, USDC), 0);
+    }
+
+    function testAaveReserves_AllLentOut() external allNetworks allPairs {
+        // assume
+        uint256 lAmtWETHToDeal = 3000e18;
+
+        // arrange
+        _increaseManagementOneToken(10e6);
+
+        deal(address(WETH), _alice, lAmtWETHToDeal); // give alice 3000 WETH
+        IPool lPool = _manager.pool();
+        vm.startPrank(_alice);
+        WETH.approve(address(lPool), type(uint256).max);
+        lPool.supply(address(WETH), lAmtWETHToDeal, _alice, 0);
+        vm.stopPrank();
+
+        // sanity
+        //        (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(WETH));
+        //        assertEq(WETH.balanceOf(_alice), 0);
+        //        assertEq(IERC20(lRawAaveToken).balanceOf(_alice), lAmtWETHToDeal);
+
+        // Alice takes out all the USDC as loans in AAVE
+        IUiPoolDataProviderV3 lUiDataProvider = IUiPoolDataProviderV3(0xF71DBe0FAEF1473ffC607d4c555dfF0aEaDb878d);
+        (IUiPoolDataProviderV3.AggregatedReserveData[] memory reserveData,) =
+            lUiDataProvider.getReservesData(_poolAddressesProvider);
+
+        uint256 lAvailableLiqUSDC;
+        for (uint256 i = 0; i < reserveData.length; ++i) {
+            if (reserveData[i].underlyingAsset == address(USDC)) {
+                lAvailableLiqUSDC = reserveData[i].availableLiquidity;
+                break;
+            }
+        }
+
+        console.log("avail", lAvailableLiqUSDC);
+
+        vm.prank(_alice);
+        lPool.borrow(address(USDC), lAvailableLiqUSDC, 2, 0, _alice);
+
+        // ensure that all USDC in the pool has been borrowed
+
+        // act - our pair tries to redeem
+
+        // assert
     }
 }
