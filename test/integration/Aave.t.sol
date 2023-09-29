@@ -1148,7 +1148,7 @@ contract AaveIntegrationTest is BaseTest {
         // arrange
         _increaseManagementOneToken(10e6);
 
-        deal(address(WETH), _alice, lAmtWETHToDeal); // give alice 3000 WETH
+        deal(address(WETH), _alice, lAmtWETHToDeal);
         IPool lPool = _manager.pool();
         vm.startPrank(_alice);
         WETH.approve(address(lPool), type(uint256).max);
