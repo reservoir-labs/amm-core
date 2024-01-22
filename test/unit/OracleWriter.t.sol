@@ -101,7 +101,6 @@ contract OracleWriterTest is BaseTest {
 
     function testUpdateOracle_WriteOldReservesNotNew() external allPairs {
         // arrange
-        uint256 lStartingTimestamp = block.timestamp;
         uint256 lJumpAhead = 10;
         (uint104 lReserve0,,,) = _pair.getReserves();
         assertEq(lReserve0, Constants.INITIAL_MINT_AMOUNT);
@@ -116,12 +115,29 @@ contract OracleWriterTest is BaseTest {
 
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
         assertEq(lNewReserve0, 110e18);
-        assertEq(lObs.timestamp, lStartingTimestamp + lJumpAhead);
         assertApproxEqRel(
             LogCompression.fromLowResLog(lObs.logAccLiquidity / int56(int256(lJumpAhead))),
             Constants.INITIAL_MINT_AMOUNT,
             0.0001e18
         );
+    }
+
+    function testUpdateOracle_LatestTimestampWritten(uint256 aJumpAhead) external allPairs {
+        // assume
+        uint256 lJumpAhead = bound(aJumpAhead, 10, type(uint16).max);
+
+        // arrange
+        uint256 lStartingTimestamp = block.timestamp;
+        _stepTime(lJumpAhead);
+
+        // act
+        _tokenA.mint(address(_pair), 5e18);
+        _pair.swap(5e18, true, address(this), "");
+
+        // assert
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lObs.timestamp, lStartingTimestamp + lJumpAhead);
     }
 
     function testOracle_CompareLiquidityTwoCurves_Balanced(uint32 aNewStartTime)
