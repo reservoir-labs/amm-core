@@ -16,7 +16,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: forge build
 
   lint:
@@ -41,7 +41,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: npm run test:unit
 
   test-integration:
@@ -52,7 +52,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: npm run test:integration
 
   test-e2e:
@@ -63,7 +63,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: npm run test:e2e
 
   test-uniswap-v2:
@@ -75,7 +75,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
@@ -93,7 +93,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: npm run install:balancer
       - run: npm run build:balancer
       - run: npm run test:balancer
@@ -108,7 +108,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: forge snapshot --check
         env:
           FOUNDRY_PROFILE: default
@@ -122,7 +122,7 @@ jobs:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly-e15e33a07c0920189fc336391f538c3dad53da73
+          version: nightly
       - run: ./script/coverage_patch_deployer.sh && forge coverage --report lcov
         env:
           FOUNDRY_PROFILE: coverage
