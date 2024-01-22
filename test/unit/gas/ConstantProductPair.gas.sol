@@ -37,6 +37,7 @@ contract ConstantProductPairGas is BaseTest {
         _oraclePair.burn(address(this));
 
         // This pair will let a user swap without writing the oracle.
+        // solhint-disable-next-line reentrancy
         _simplePair = ConstantProductPair(_factory.createPair(IERC20(address(_tokenA)), IERC20(address(_tokenC)), 0));
         _tokenA.mint(address(_simplePair), 100e18);
         _tokenC.mint(address(_simplePair), 100e18);
