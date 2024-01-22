@@ -415,7 +415,7 @@ contract StablePairTest is BaseTest {
         (uint256 lExpectedPlatformFee, uint256 lGrowthInLiq) =
             _calcExpectedPlatformFee(lPlatformFee, lPair, lReserve0, lReserve1, lTotalSupply, lOldLiq);
         assertEq(lPair.balanceOf(_platformFeeTo), lExpectedPlatformFee);
-        if (aPlatformFee > 0) {
+        if (lPlatformFee > 0) {
             assertGt(lPair.balanceOf(_platformFeeTo), 0);
         }
         assertApproxEqRel(
