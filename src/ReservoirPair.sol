@@ -487,7 +487,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     string internal constant MAX_CHANGE_RATE_NAME = "Shared::maxChangeRate";
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
-    mapping(uint16 => Observation) internal _observations;
+    mapping(uint256 => Observation) internal _observations;
 
     // maximum allowed rate of change of price per second
     // to mitigate oracle manipulation attacks in the face of post-merge ETH
