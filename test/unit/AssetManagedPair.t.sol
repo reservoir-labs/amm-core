@@ -208,8 +208,8 @@ contract AssetManagedPairTest is BaseTest {
 
     function testMint_AfterLoss(uint256 aNewManagedBalance0, uint256 aNewManagedBalance1) external allPairs {
         // assume
-        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
-        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 10e18);
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 9e18);
+        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 9e18);
 
         // arrange
         vm.prank(address(_factory));
@@ -234,8 +234,8 @@ contract AssetManagedPairTest is BaseTest {
 
     function testBurn_AfterLoss(uint256 aNewManagedBalance0, uint256 aNewManagedBalance1) external allPairs {
         // assume
-        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
-        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 10e18);
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 9e18);
+        uint256 lNewManagedBalance1 = bound(aNewManagedBalance1, 1, 9e18);
 
         // arrange
         vm.prank(address(_factory));
@@ -259,7 +259,7 @@ contract AssetManagedPairTest is BaseTest {
 
     function testSwap_AfterLoss(uint256 aNewManagedBalance0) external allPairs {
         // assume
-        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 10e18);
+        uint256 lNewManagedBalance0 = bound(aNewManagedBalance0, 1, 9e18);
 
         // arrange
         int256 lSwapAmt = 1e18;

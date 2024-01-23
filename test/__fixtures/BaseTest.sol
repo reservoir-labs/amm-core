@@ -17,6 +17,7 @@ import { ConstantProductPair } from "src/curve/constant-product/ConstantProductP
 import { StablePair, AmplificationData } from "src/curve/stable/StablePair.sol";
 import { StableMintBurn } from "src/curve/stable/StableMintBurn.sol";
 
+// solhint-disable-next-line max-states-count
 abstract contract BaseTest is Test {
     using FactoryStoreLib for GenericFactory;
 
