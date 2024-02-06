@@ -132,11 +132,11 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         rShares = aAmount.mulDivUp(totalShares[aAaveToken], aAaveToken.balanceOf(address(this)));
 
         uint256 lCurrentShares = shares[aPair][aToken];
-
-        // this is to prevent underflow as we round up in the previous division operation
-        if (rShares > lCurrentShares) {
-            rShares = lCurrentShares;
-        }
+//
+//        // this is to prevent underflow as we round up in the previous division operation
+//        if (rShares > lCurrentShares) {
+//            rShares = lCurrentShares;
+//        }
 
         shares[aPair][aToken] -= rShares;
         totalShares[aAaveToken] -= rShares;

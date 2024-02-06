@@ -15,10 +15,12 @@ import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager, IAssetManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
+import { IUSDC } from "test/interfaces/IUSDC.sol";
 
 struct Network {
     string rpcUrl;
     address USDC;
+    address masterMinterUSDC;
 }
 
 struct Fork {
@@ -50,6 +52,7 @@ contract AaveIntegrationTest is BaseTest {
     mapping(string => Fork) private _forks;
     // network specific variables
     IERC20 private USDC;
+    address private masterMinterUSDC;
     address private _aaveAdmin;
     IPoolAddressesProvider private _poolAddressesProvider;
     IAaveProtocolDataProvider private _dataProvider;
@@ -92,12 +95,13 @@ contract AaveIntegrationTest is BaseTest {
 
         _manager = new AaveManager(IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER));
         USDC = IERC20(aNetwork.USDC);
+        masterMinterUSDC = aNetwork.masterMinterUSDC;
         _poolAddressesProvider = IPoolAddressesProvider(AAVE_POOL_ADDRESS_PROVIDER);
         _aaveAdmin = _poolAddressesProvider.getACLAdmin();
         _dataProvider = IAaveProtocolDataProvider(_poolAddressesProvider.getPoolDataProvider());
         _poolConfigurator = IPoolConfigurator(_poolAddressesProvider.getPoolConfigurator());
 
-        deal(address(USDC), address(this), MINT_AMOUNT, true);
+        _deal(address(USDC), address(this), MINT_AMOUNT);
         _constantProductPair = ConstantProductPair(_createPair(address(_tokenA), address(USDC), 0));
         USDC.transfer(address(_constantProductPair), MINT_AMOUNT);
         _tokenA.mint(address(_constantProductPair), MINT_AMOUNT);
@@ -105,7 +109,7 @@ contract AaveIntegrationTest is BaseTest {
         vm.prank(address(_factory));
         _constantProductPair.setManager(_manager);
 
-        deal(address(USDC), address(this), MINT_AMOUNT, true);
+        _deal(address(USDC), address(this), MINT_AMOUNT);
         _stablePair = StablePair(_createPair(address(_tokenA), address(USDC), 1));
         USDC.transfer(address(_stablePair), MINT_AMOUNT);
         _tokenA.mint(address(_stablePair), 1_000_000e18);
@@ -117,23 +121,32 @@ contract AaveIntegrationTest is BaseTest {
         _pairs.push(_stablePair);
     }
 
-    function setUp() external {
-        _networks.push(Network(getChain("avalanche").rpcUrl, 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E));
-        _networks.push(Network(getChain("polygon").rpcUrl, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174));
-
-        vm.makePersistent(address(_tokenA));
-        vm.makePersistent(address(_tokenB));
-        vm.makePersistent(address(_tokenC));
-    }
-
     function _createOtherPair() private returns (ConstantProductPair rOtherPair) {
         rOtherPair = ConstantProductPair(_createPair(address(_tokenB), address(USDC), 0));
         _tokenB.mint(address(rOtherPair), MINT_AMOUNT);
-        deal(address(USDC), address(this), MINT_AMOUNT, true);
+        _deal(address(USDC), address(this), MINT_AMOUNT);
         USDC.transfer(address(rOtherPair), MINT_AMOUNT);
         rOtherPair.mint(_alice);
         vm.prank(address(_factory));
         rOtherPair.setManager(_manager);
+    }
+
+    function _deal(address aToken, address aRecipient, uint256 aAmount) private {
+        if (aToken == address(USDC)) {
+            vm.startPrank(masterMinterUSDC);
+            IUSDC(address(USDC)).configureMinter(masterMinterUSDC, type(uint256).max);
+            IUSDC(address(USDC)).mint(aRecipient, aAmount);
+            vm.stopPrank();
+        }
+    }
+
+    function setUp() external {
+        _networks.push(Network(getChain("avalanche").rpcUrl, 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E, 0xB7887FED5E2f9dc1A66fBb65f76BA3731d82341A));
+//        _networks.push(Network(getChain("polygon").rpcUrl, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, ));
+
+        vm.makePersistent(address(_tokenA));
+        vm.makePersistent(address(_tokenB));
+        vm.makePersistent(address(_tokenC));
     }
 
     function testUpdatePoolAddress() external allNetworks allPairs {
@@ -565,7 +578,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // act
         _tokenA.mint(address(_pair), 500e6);
-        deal(address(USDC), address(this), 500e6, true);
+        _deal(address(USDC), address(this), 500e6);
         USDC.transfer(address(_pair), 500e6);
         _pair.mint(address(this));
 
@@ -609,7 +622,7 @@ contract AaveIntegrationTest is BaseTest {
         _poolConfigurator.setReserveFreeze(address(USDC), true);
 
         // act & assert
-        deal(address(USDC), address(this), lMintAmt, true);
+        _deal(address(USDC), address(this), lMintAmt);
         USDC.transfer(address(_pair), lMintAmt);
         _tokenA.mint(address(_pair), lMintAmt);
         vm.expectRevert(bytes(Errors.RESERVE_FROZEN));
@@ -623,7 +636,7 @@ contract AaveIntegrationTest is BaseTest {
         _poolConfigurator.setReservePause(address(USDC), true);
 
         // act & assert
-        deal(address(USDC), address(this), lMintAmt, true);
+        _deal(address(USDC), address(this), lMintAmt);
         USDC.transfer(address(_pair), lMintAmt);
         _tokenA.mint(address(_pair), lMintAmt);
         vm.expectRevert(bytes(Errors.RESERVE_PAUSED));
@@ -926,7 +939,7 @@ contract AaveIntegrationTest is BaseTest {
         // arrange
         ConstantProductPair lOtherPair = _createOtherPair();
         StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
-        deal(address(USDC), address(lThirdPair), MINT_AMOUNT, true);
+        _deal(address(USDC), address(lThirdPair), MINT_AMOUNT);
         _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
         lThirdPair.mint(_alice);
         vm.prank(address(_factory));
@@ -1027,7 +1040,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
         assertGt(lClaimed, 0);
         uint256 lAmtUSDC = 9_019_238;
-        deal(address(USDC), address(this), lAmtUSDC, true);
+        _deal(address(USDC), address(this), lAmtUSDC);
         // supply the USDC for aaveUSDC
         IPool lPool = _manager.pool();
         USDC.approve(address(lPool), type(uint256).max);
@@ -1060,7 +1073,7 @@ contract AaveIntegrationTest is BaseTest {
         // arrange
         ConstantProductPair lOtherPair = _createOtherPair();
         StablePair lThirdPair = StablePair(_createPair(address(USDC), address(_tokenC), 1));
-        deal(address(USDC), address(lThirdPair), MINT_AMOUNT, true);
+        _deal(address(USDC), address(lThirdPair), MINT_AMOUNT);
         _tokenC.mint(address(lThirdPair), MINT_AMOUNT);
         lThirdPair.mint(_alice);
         vm.prank(address(_factory));
