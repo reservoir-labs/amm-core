@@ -16,6 +16,7 @@ import { MathUtils } from "src/libraries/MathUtils.sol";
 import { AaveManager, IAssetManager } from "src/asset-management/AaveManager.sol";
 import { GenericFactory, IERC20 } from "src/GenericFactory.sol";
 import { IUSDC } from "test/interfaces/IUSDC.sol";
+import { ReturnAssetExploit } from "../__mocks/ReturnAssetExploit.sol";
 
 struct Network {
     string rpcUrl;
@@ -491,6 +492,8 @@ contract AaveIntegrationTest is BaseTest {
 
         // assert
         assertEq(_manager.shares(_pair, USDC), uint256(lAmountToManagePair));
+        console.log(_manager.getBalance(_pair, USDC));
+        console.log(lAaveTokenAmt2);
         assertTrue(MathUtils.within1(_manager.getBalance(_pair, USDC), lAaveTokenAmt2));
 
         uint256 lExpectedShares =
@@ -1037,6 +1040,7 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lBalAfterTimePair = _manager.getBalance(_pair, USDC);
         uint256 lBalAfterTimeOther = _manager.getBalance(lOtherPair, USDC);
         uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
+        // dummy amount of proceeds from selling the rewards
         uint256 lAmtUSDC = 9_019_238;
         _deal(address(USDC), address(this), lAmtUSDC);
         // supply the USDC for aaveUSDC
@@ -1134,5 +1138,16 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.shares(_pair, USDC), 0);
         assertEq(_manager.shares(lOtherPair, USDC), 0);
         assertEq(_manager.shares(lThirdPair, USDC), 0);
+    }
+
+    function testReturnAsset_Attack() external allNetworks allPairs {
+
+        // arrange
+        _increaseManagementOneToken(11e6);
+        ReturnAssetExploit lExploit = new ReturnAssetExploit(_pair);
+
+        // act & assert - attack should fail with our fix, and should succeed without the fix
+        vm.expectRevert(stdError.arithmeticError);
+        lExploit.attack(_manager);
     }
 }
