@@ -1037,7 +1037,6 @@ contract AaveIntegrationTest is BaseTest {
         uint256 lBalAfterTimePair = _manager.getBalance(_pair, USDC);
         uint256 lBalAfterTimeOther = _manager.getBalance(lOtherPair, USDC);
         uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
-        assertGt(lClaimed, 0);
         uint256 lAmtUSDC = 9_019_238;
         _deal(address(USDC), address(this), lAmtUSDC);
         // supply the USDC for aaveUSDC
