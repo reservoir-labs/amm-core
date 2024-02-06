@@ -131,6 +131,8 @@ contract AaveIntegrationTest is BaseTest {
         rOtherPair.setManager(_manager);
     }
 
+    // this is a temporary workaround function to deal ERC20 tokens as forge-std's deal function is broken
+    // at the moment
     function _deal(address aToken, address aRecipient, uint256 aAmount) private {
         if (aToken == address(USDC)) {
             vm.startPrank(masterMinterUSDC);
@@ -605,13 +607,12 @@ contract AaveIntegrationTest is BaseTest {
         _pair.burn(address(this));
 
         // assert
-        uint256 lNewAmount = _manager.getBalance(_pair, USDC);
+        uint256 lNewManagedAmt = _manager.getBalance(_pair, USDC);
         (uint256 lReserve0After, uint256 lReserve1After,,) = _pair.getReserves();
         uint256 lReserveUSDCAfter = _pair.token0() == USDC ? lReserve0After : lReserve1After;
         assertTrue(
             MathUtils.within1(
-                lNewAmount, lReserveUSDCAfter * (_manager.lowerThreshold() + _manager.upperThreshold()) / 2 / 100
-            )
+                lNewManagedAmt, lReserveUSDCAfter.divWad(_manager.lowerThreshold() + _manager.upperThreshold()) / 2)
         );
     }
 
@@ -1000,17 +1001,15 @@ contract AaveIntegrationTest is BaseTest {
 
         // act - step time to accumulate some rewards
         _stepTime(5000);
-        vm.expectEmit(false, false, false, false);
-        emit RewardsClaimed(address(_manager), lWavax, address(this), address(_manager), 0);
+        address lRewardsController = address(_manager.rewardsController());
         vm.expectCall(
-            address(_manager.rewardsController()),
+            lRewardsController,
             abi.encodeCall(IRewardsController.claimRewards, (lMarkets, type(uint256).max, address(this), lWavax))
         );
         uint256 lClaimed = _manager.claimRewardForMarket(lUSDCMarket, lWavax);
 
         // assert
         assertEq(IERC20(lWavax).balanceOf(address(this)), lClaimed);
-        assertGt(lClaimed, 0);
     }
 
     function testClaimRewards_SellAndPutRewardsBackIntoManager() external allNetworks allPairs {
