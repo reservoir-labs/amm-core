@@ -1144,8 +1144,92 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.shares(lThirdPair, USDC), 0);
     }
 
-    function testReturnAsset_Attack() external allNetworks allPairs {
+    function testFullRedeem_MultiplePairsDifferentTimes(
+        uint256 aAmtToManage0,
+        uint256 aAmtToManage1,
+        uint256 aAmtToManage2,
+        uint256 aFastForwardTime1,
+        uint256 aFastForwardTime2
+    ) external allNetworks allPairs {
+        // assume
+        uint256 lAmtToManage0 = bound(aAmtToManage0, 10, MINT_AMOUNT);
+        uint256 lAmtToManage1 = bound(aAmtToManage1, 10, MINT_AMOUNT);
+        uint256 lAmtToManage2 = bound(aAmtToManage2, 10, MINT_AMOUNT);
+        uint256 lFastForwardTime1 = bound(aFastForwardTime1, 10 days, 60 days);
+        uint256 lFastForwardTime2 = bound(aFastForwardTime2, 10 days, 90 days);
 
+        // arrange
+        ConstantProductPair lPair2 = _createOtherPair();
+        StablePair lPair3 = StablePair(_createPair(address(USDC), address(_tokenC), 1));
+        _deal(address(USDC), address(lPair3), MINT_AMOUNT);
+        _tokenC.mint(address(lPair3), MINT_AMOUNT);
+        lPair3.mint(_alice);
+        vm.prank(address(_factory));
+        lPair3.setManager(_manager);
+        (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
+        IERC20 lAaveToken = IERC20(lUSDCMarket);
+        _increaseManagementOneToken(int256(lAmtToManage0));
+
+        // go forward in time to accumulate some rewards and then the second pair comes in
+        _stepTime(lFastForwardTime1);
+        _manager.adjustManagement(
+            lPair2,
+            lPair2.token0() == USDC ? int256(lAmtToManage1) : int256(0),
+            lPair2.token1() == USDC ? int256(lAmtToManage1) : int256(0)
+        );
+
+        // go forward in time to accumulate some rewards and then the third pair comes in
+        _stepTime(lFastForwardTime2);
+        _manager.adjustManagement(
+            lPair3,
+            lPair3.token0() == USDC ? int256(lAmtToManage2) : int256(0),
+            lPair3.token1() == USDC ? int256(lAmtToManage2) : int256(0)
+        );
+
+        // act - divest everything
+        lPair2.sync();
+        _manager.adjustManagement(
+            lPair2,
+            lPair2.token0() == USDC ? -int256(_manager.getBalance(lPair2, USDC)) : int256(0),
+            lPair2.token1() == USDC ? -int256(_manager.getBalance(lPair2, USDC)) : int256(0)
+        );
+        lPair3.sync();
+        _manager.adjustManagement(
+            lPair3,
+            lPair3.token0() == USDC ? -int256(_manager.getBalance(lPair3, USDC)) : int256(0),
+            lPair3.token1() == USDC ? -int256(_manager.getBalance(lPair3, USDC)) : int256(0)
+        );
+        _pair.sync();
+        _manager.adjustManagement(
+            _pair,
+            _pair.token0() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0),
+            _pair.token1() == USDC ? -int256(_manager.getBalance(_pair, USDC)) : int256(0)
+        );
+
+        // assert
+        // actually these checks for managed amounts zero are kind of redundant
+        // cuz it's checked in setManager anyway
+        assertEq(_pair.token0Managed(), 0, "pair token0Managed");
+        assertEq(_pair.token1Managed(), 0, "pair token1Managed");
+        assertEq(lPair2.token0Managed(), 0, "pair2 token0Managed");
+        assertEq(lPair2.token1Managed(), 0, "pair2 token1Managed");
+        assertEq(lPair3.token0Managed(), 0, "pair3 token0Managed");
+        assertEq(lPair3.token1Managed(), 0, "pair3 token1Managed");
+        vm.startPrank(address(_factory));
+        _pair.setManager(IAssetManager(address(0)));
+        lPair2.setManager(IAssetManager(address(0)));
+        lPair3.setManager(IAssetManager(address(0)));
+        vm.stopPrank();
+        assertEq(address(_pair.assetManager()), address(0));
+        assertEq(address(lPair2.assetManager()), address(0));
+        assertEq(address(lPair3.assetManager()), address(0));
+        assertEq(_manager.totalShares(lAaveToken), 0, "total shares");
+        assertEq(_manager.shares(_pair, USDC), 0, "pair shares");
+        assertEq(_manager.shares(lPair2, USDC), 0, "pair2 shares");
+        assertEq(_manager.shares(lPair3, USDC), 0, "pair3 shares");
+    }
+
+    function testReturnAsset_Attack() external allNetworks allPairs {
         // arrange
         _increaseManagementOneToken(11e6);
         ReturnAssetExploit lExploit = new ReturnAssetExploit(_pair);
