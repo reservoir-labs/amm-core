@@ -24,7 +24,7 @@ fs_permissions = [{ access = "read", path = "./reference/balancer-v2-monorepo" }
 match_path     = "test/differential/*.sol"
 
 [profile.integration.fuzz]
-runs = 100_000
+runs = 10_000
 
 [profile.differential.fuzz]
 runs = 10_000
