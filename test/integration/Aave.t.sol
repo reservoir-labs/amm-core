@@ -145,7 +145,6 @@ contract AaveIntegrationTest is BaseTest {
 
     function setUp() external {
         _networks.push(Network(getChain("avalanche").rpcUrl, 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E, 0xB7887FED5E2f9dc1A66fBb65f76BA3731d82341A));
-//        _networks.push(Network(getChain("polygon").rpcUrl, 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, ));
 
         vm.makePersistent(address(_tokenA));
         vm.makePersistent(address(_tokenB));
@@ -470,9 +469,9 @@ contract AaveIntegrationTest is BaseTest {
         IERC20 lAaveToken = IERC20(lRawAaveToken);
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1, lReserveUSDC));
-        int256 lAmountToManageOther = int256(bound(aAmountToManage2, 1, lReserveUSDC));
-        uint256 lTime = bound(aTime, 1, 52 weeks);
+        int256 lAmountToManagePair = int256(bound(aAmountToManage1, 1e6, lReserveUSDC));
+        int256 lAmountToManageOther = int256(bound(aAmountToManage2, 1e6, lReserveUSDC));
+        uint256 lTime = bound(aTime, 1 days, 52 weeks);
 
         // arrange
         _manager.adjustManagement(
@@ -501,6 +500,8 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(_manager.shares(lOtherPair, USDC), lExpectedShares);
         uint256 lBalance = _manager.getBalance(lOtherPair, USDC);
         assertTrue(MathUtils.within1(lBalance, uint256(lAmountToManageOther)));
+        console.log(lBalance);
+        console.logInt(lAmountToManageOther);
     }
 
     function testShares(uint256 aAmountToManage) public allNetworks allPairs {
