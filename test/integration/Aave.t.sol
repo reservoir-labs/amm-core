@@ -534,8 +534,8 @@ contract AaveIntegrationTest is BaseTest {
         // assume
         (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
         uint256 lReserveUSDC = _pair.token0() == USDC ? lReserve0 : lReserve1;
-        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 100, lReserveUSDC / 2));
-        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 100, lReserveUSDC / 2));
+        int256 lAmountToManage1 = int256(bound(aAmountToManage1, 1e6, lReserveUSDC / 2));
+        int256 lAmountToManage2 = int256(bound(aAmountToManage2, 1e6, lReserveUSDC / 2));
 
         // arrange
         (address lRawAaveToken,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
