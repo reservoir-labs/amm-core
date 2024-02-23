@@ -928,6 +928,24 @@ contract AaveIntegrationTest is BaseTest {
         _manager.setThresholds(uint128(lThreshold), lUpperThreshold);
     }
 
+    function testRawCall_OnlyOwner() public allNetworks {
+        // act & assert
+        uint256 lMintAmt = 500;
+        _manager.rawCall(address(_tokenA), abi.encodeCall(_tokenA.mint, (address(this), lMintAmt)), 0);
+        assertEq(_tokenA.balanceOf(address(this)), lMintAmt);
+    }
+
+    function testRawCall_NotOwner(address aCaller) public allNetworks {
+        // assume
+        vm.assume(aCaller != address(this));
+
+        // act & assert
+        vm.prank(aCaller);
+        vm.expectRevert("UNAUTHORIZED");
+        uint256 lMintAmt = 500;
+        _manager.rawCall(address(_tokenA), abi.encodeCall(_tokenA.mint, (address(this), lMintAmt)), 0);
+    }
+
     function testThresholdToZero_Migrate(
         uint256 aAmtToManage0,
         uint256 aAmtToManage1,
