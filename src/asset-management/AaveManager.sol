@@ -6,6 +6,7 @@ import { Owned } from "solmate/auth/Owned.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SafeCast } from "@openzeppelin/utils/math/SafeCast.sol";
+import { Address } from "@openzeppelin/utils/Address.sol";
 
 import { IAssetManagedPair } from "src/interfaces/IAssetManagedPair.sol";
 import { IAssetManager, IERC20 } from "src/interfaces/IAssetManager.sol";
@@ -107,6 +108,13 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         emit Thresholds(aLowerThreshold, aUpperThreshold);
     }
 
+    function rawCall(address aTarget, bytes calldata aCalldata, uint256 aValue)
+        external
+        onlyOwner
+        returns (bytes memory)
+    {
+        return Address.functionCallWithValue(aTarget, aCalldata, aValue, "FACTORY: RAW_CALL_REVERTED");
+    }
     /*//////////////////////////////////////////////////////////////////////////
                                 HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
