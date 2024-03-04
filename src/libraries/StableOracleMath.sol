@@ -28,9 +28,9 @@ library StableOracleMath {
 
     /// @notice Calculates the spot price of token1 in token0
     /// @param amplificationParameter in precise form (see StableMath.A_PRECISION)
-    /// @param reserve0 token0 reserves normalized to 18 decimals
-    /// @param reserve1 token1 reserves normalized to 18 decimals
-    /// @return spotPrice price where 1e18 == 1
+    /// @param reserve0 normalized to 18 decimals
+    /// @param reserve1 normalized to 18 decimals
+    /// @return spotPrice 18 decimal fixed point number. Minimum price is 1e-18 (1 wei)
     function calcSpotPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure

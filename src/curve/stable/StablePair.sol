@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+
 import { IReservoirCallee } from "src/interfaces/IReservoirCallee.sol";
 import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 
@@ -300,9 +302,10 @@ contract StablePair is ReservoirPair {
                 previous.logAccClampedPrice + int56(logInstantClampedPrice) * int56(int256(uint256(aTimeElapsed)));
             _slot0.index += 1;
             _observations[_slot0.index] = Observation(
-                logInstantRawPrice,
-                logInstantClampedPrice,
-                logAccRawPrice,
+                // TODO: prove that these values are guaranteed <=int56 to remove these safe casts
+                SafeCastLib.toInt56(logInstantRawPrice),
+                SafeCastLib.toInt56(logInstantClampedPrice),
+                SafeCastLib.toInt56(logAccRawPrice),
                 logAccClampedPrice,
                 aCurrentTimestamp
             );
