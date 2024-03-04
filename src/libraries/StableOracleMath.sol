@@ -9,7 +9,12 @@ import { StableMath } from "src/libraries/StableMath.sol";
 library StableOracleMath {
     using FixedPointMathLib for uint256;
 
-    /// @dev Calculates the spot price of token1/token0 for the stable pair
+    /// @notice Calculates the spot price of token1/token0 for the stable pair
+    /// @param amplificationParameter in precise form (see StableMath.A_PRECISION)
+    /// @param reserve0 normalized to 18 decimals
+    /// @param reserve1 normalized to 18 decimals
+    /// @return spotPrice price of token1/token0, 18 decimal fixed point number
+    /// @return logSpotPrice natural log of the spot price, 4 decimal fixed point number
     function calcLogPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure
@@ -21,7 +26,11 @@ library StableOracleMath {
         logSpotPrice = int112(rawLogSpotPrice);
     }
 
-    /// @dev Calculates the spot price of token1 in token0
+    /// @notice Calculates the spot price of token1 in token0
+    /// @param amplificationParameter in precise form (see StableMath.A_PRECISION)
+    /// @param reserve0 token0 reserves normalized to 18 decimals
+    /// @param reserve1 token1 reserves normalized to 18 decimals
+    /// @return spotPrice price where 1e18 == 1
     function calcSpotPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure

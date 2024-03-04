@@ -23,9 +23,10 @@ library ConstantProductOracleMath {
 
     /**
      * @notice Calculates the spot price of token1/token0 for the constant product pair.
-     * @dev Minimum price is 1e-18, as we do not round to zero.
-     * @param reserve0 Should never be 0, as checked by _updateAndUnlock().
-     * @param reserve1 Should never be 0, as checked by _updateAndUnlock().
+     * @param reserve0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
+     * @param reserve1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
+     * @return spotPrice price of token1/token0, 18 decimals fixed point number. Minimum price is 1e-18 (1 wei), as we do not round to zero.
+     * @return logSpotPrice natural log of the spot price, 4 decimal fixed point number
      */
     function calcLogPrice(uint256 reserve0, uint256 reserve1)
         internal
@@ -37,14 +38,5 @@ library ConstantProductOracleMath {
 
         int256 rawResult = LogCompression.toLowResLog(spotPrice);
         logSpotPrice = int112(rawResult);
-    }
-
-    /// @param reserve0 Amount in native precision.
-    /// @param reserve1 Amount in native precision.
-    function calcLogLiq(uint256 reserve0, uint256 reserve1) internal pure returns (int112 logLiq) {
-        uint256 sqrtK = FixedPointMathLib.sqrt(reserve0 * reserve1);
-
-        int256 rawResult = LogCompression.toLowResLog(sqrtK);
-        logLiq = int112(rawResult);
     }
 }

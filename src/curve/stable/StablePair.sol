@@ -285,23 +285,27 @@ contract StablePair is ReservoirPair {
     {
         Observation storage previous = _observations[_slot0.index];
 
-        (uint256 currRawPrice, int112 currLogRawPrice) = StableOracleMath.calcLogPrice(
+        (uint256 instantRawPrice, int112 logInstantRawPrice) = StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(), aReserve0 * token0PrecisionMultiplier(), aReserve1 * token1PrecisionMultiplier()
         );
-        (uint256 currClampedPrice, int112 currLogClampedPrice) =
-            _calcClampedPrice(currRawPrice, prevClampedPrice, aTimeElapsed);
-        int112 currLogLiq = ConstantProductOracleMath.calcLogLiq(aReserve0, aReserve1);
-        prevClampedPrice = currClampedPrice;
+        (uint256 instantClampedPrice, int112 logInstantClampedPrice) =
+            _calcClampedPrice(instantRawPrice, prevClampedPrice, aTimeElapsed);
+        prevClampedPrice = instantClampedPrice;
 
         // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
         // when the index overflows it will overwrite the oldest observation to form a loop
         unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + currLogRawPrice * int112(int256(uint256(aTimeElapsed)));
+            int112 logAccRawPrice = previous.logAccRawPrice + logInstantRawPrice * int112(int256(uint256(aTimeElapsed)));
             int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(currLogClampedPrice) * int56(int256(uint256(aTimeElapsed)));
-            int56 logAccLiq = previous.logAccLiquidity + int56(currLogLiq) * int56(int256(uint256(aTimeElapsed)));
+                previous.logAccClampedPrice + int56(logInstantClampedPrice) * int56(int256(uint256(aTimeElapsed)));
             _slot0.index += 1;
-            _observations[_slot0.index] = Observation(logAccRawPrice, logAccClampedPrice, logAccLiq, aCurrentTimestamp);
+            _observations[_slot0.index] = Observation(
+                logInstantRawPrice,
+                logInstantClampedPrice,
+                logAccRawPrice,
+                logAccClampedPrice,
+                aCurrentTimestamp
+            );
         }
     }
 }
