@@ -1567,13 +1567,11 @@ contract StablePairTest is BaseTest {
         Observation memory lObs = _oracleCaller.observation(_stablePair, 0);
         assertTrue(lObs.logAccRawPrice == 0);
         assertTrue(lObs.logAccClampedPrice == 0);
-        assertTrue(lObs.logAccLiquidity != 0);
         assertTrue(lObs.timestamp != 0);
 
         lObs = _oracleCaller.observation(_stablePair, 1);
         assertTrue(lObs.logAccRawPrice != 0);
         assertTrue(lObs.logAccClampedPrice != 0);
-        assertTrue(lObs.logAccLiquidity != 0);
         assertTrue(lObs.timestamp != 0);
 
         // act
@@ -1583,13 +1581,11 @@ contract StablePairTest is BaseTest {
         lObs = _oracleCaller.observation(_stablePair, 0);
         assertEq(lObs.logAccRawPrice, int112(1337));
         assertEq(lObs.logAccClampedPrice, int112(-1337));
-        assertEq(lObs.logAccLiquidity, int112(-1337));
         assertEq(lObs.timestamp, uint32(666));
 
         lObs = _oracleCaller.observation(_stablePair, 1);
         assertTrue(lObs.logAccRawPrice != 0);
         assertTrue(lObs.logAccClampedPrice != 0);
-        assertTrue(lObs.logAccLiquidity != 0);
         assertTrue(lObs.timestamp != 0);
     }
 
@@ -1614,25 +1610,6 @@ contract StablePairTest is BaseTest {
         (,,, lIndex) = _stablePair.getReserves();
         Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
-    }
-
-    function testOracle_OverflowAccLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
-        // assume
-        vm.assume(aNewStartTime < 2 ** 31);
-
-        // arrange
-        (,,, uint16 lIndex) = _stablePair.getReserves();
-        _writeObservation(_stablePair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp));
-        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
-
-        // act
-        _stepTime(5);
-        _stablePair.sync();
-
-        // assert
-        (,,, lIndex) = _stablePair.getReserves();
-        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
-        assertLt(lCurrObs.logAccLiquidity, lPrevObs.logAccLiquidity);
     }
 
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
@@ -1765,71 +1742,6 @@ contract StablePairTest is BaseTest {
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
             ),
             Math.sqrt(lSpotPrice1 * lSpotPrice2),
-            0.0001e18
-        );
-    }
-
-    function testOracle_CorrectLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
-        // arrange
-        StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
-        _tokenB.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
-        _tokenC.mint(address(lPair), Constants.INITIAL_MINT_AMOUNT);
-        lPair.mint(_alice);
-        _stepTime(5);
-        lPair.sync();
-
-        // act
-        _stepTime(5);
-        vm.prank(_alice);
-        uint256 lAmountToBurn = 1e18;
-        lPair.transfer(address(lPair), lAmountToBurn);
-        lPair.burn(address(this));
-
-        // assert
-        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
-        uint256 lAverageLiq = LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5);
-        // we check that it is within 0.01% of accuracy
-        // sqrt(Constants.INITIAL_MINT_AMOUNT * Constants.INITIAL_MINT_AMOUNT) == Constants.INITIAL_MINT_AMOUNT
-        assertApproxEqRel(lAverageLiq, Constants.INITIAL_MINT_AMOUNT, 0.0001e18);
-
-        // act
-        _stepTime(5);
-        lPair.sync();
-
-        // assert
-        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
-        uint256 lAverageLiq2 = LogCompression.fromLowResLog((lObs2.logAccLiquidity - lObs1.logAccLiquidity) / 5);
-        assertApproxEqRel(lAverageLiq2, Constants.INITIAL_MINT_AMOUNT - lAmountToBurn / 2, 0.0001e18);
-    }
-
-    function testOracle_LiquidityAtMaximum() external {
-        // arrange
-        uint256 lLiquidityToAdd = type(uint104).max - Constants.INITIAL_MINT_AMOUNT;
-        _stepTime(5);
-        _tokenA.mint(address(_stablePair), lLiquidityToAdd);
-        _tokenB.mint(address(_stablePair), lLiquidityToAdd);
-        _stablePair.mint(address(this));
-
-        // sanity
-        (uint104 lReserve0, uint104 lReserve1,,) = _stablePair.getReserves();
-        assertEq(lReserve0, type(uint104).max);
-        assertEq(lReserve1, type(uint104).max);
-
-        // act
-        _stepTime(5);
-        _stablePair.sync();
-
-        // assert
-        uint256 lTotalSupply = _stablePair.totalSupply();
-        assertEq(lTotalSupply, uint256(type(uint104).max) * 2);
-
-        (,,, uint16 lIndex) = _stablePair.getReserves();
-        Observation memory lObs0 = _oracleCaller.observation(_stablePair, 0);
-        Observation memory lObs1 = _oracleCaller.observation(_stablePair, lIndex);
-        assertApproxEqRel(
-            type(uint104).max,
-            LogCompression.fromLowResLog((lObs1.logAccLiquidity - lObs0.logAccLiquidity) / 5),
             0.0001e18
         );
     }
