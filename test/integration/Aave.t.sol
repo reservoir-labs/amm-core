@@ -36,6 +36,7 @@ contract AaveIntegrationTest is BaseTest {
     event RewardsClaimed(
         address indexed user, address indexed reward, address indexed to, address claimer, uint256 amount
     );
+    event Guardian(address newGuardian);
 
     // this amount is tailored to USDC as it only has 6 decimal places
     // using the usual 100e18 would be too large and would break AAVE
@@ -151,7 +152,30 @@ contract AaveIntegrationTest is BaseTest {
         vm.makePersistent(address(_tokenC));
     }
 
-    function testUpdatePoolAddress() external allNetworks allPairs {
+    function testOnlyOwnerOrGuardian() external allNetworks {
+        // arrange
+        _manager.setGuardian(_alice);
+
+        // act & assert
+        vm.startPrank(_alice);
+        _manager.setWindDownMode(true);
+        assertTrue(_manager.windDownMode());
+
+        _manager.setThresholds(0, 0);
+        assertEq(_manager.lowerThreshold(), 0);
+        assertEq(_manager.upperThreshold(), 0);
+        vm.stopPrank();
+
+        vm.startPrank(_bob);
+        vm.expectRevert("AM: UNAUTHORIZED");
+        _manager.setWindDownMode(false);
+
+        vm.expectRevert("AM: UNAUTHORIZED");
+        _manager.setThresholds(30, 30);
+        vm.stopPrank();
+    }
+
+    function testUpdatePoolAddress() external allNetworks {
         // arrange
         vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
 
@@ -164,7 +188,7 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(lNewPool), address(1));
     }
 
-    function testUpdatePoolAddress_NoChange() external allNetworks allPairs {
+    function testUpdatePoolAddress_NoChange() external allNetworks {
         // arrange
         IPool lOldPool = _manager.pool();
 
@@ -176,7 +200,7 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(lNewPool), address(lOldPool));
     }
 
-    function testUpdateDataProvider() external allNetworks allPairs {
+    function testUpdateDataProvider() external allNetworks {
         // arrange
         vm.mockCall(AAVE_POOL_ADDRESS_PROVIDER, bytes(""), abi.encode(address(1)));
 
@@ -189,7 +213,7 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(lNewDataProvider), address(1));
     }
 
-    function testUpdateDataProvider_NoChange() external allNetworks allPairs {
+    function testUpdateDataProvider_NoChange() external allNetworks {
         // arrange
         IAaveProtocolDataProvider lOldDataProvider = _manager.dataProvider();
 
@@ -201,7 +225,30 @@ contract AaveIntegrationTest is BaseTest {
         assertEq(address(lNewDataProvider), address(lOldDataProvider));
     }
 
-    function testSetWindDownMode() external allNetworks allPairs {
+    function testSetGuardian() external allNetworks {
+        // sanity
+        address lGuardian = _manager.guardian();
+        assertEq(lGuardian, address(0));
+
+        // act
+        vm.expectEmit(true, true, false, false);
+        emit Guardian(_alice);
+        _manager.setGuardian(_alice);
+
+        // assert
+        assertEq(_manager.guardian(), _alice);
+    }
+
+    function testSetGuardian_OnlyOwner(address aAddress) external allNetworks {
+        // assume
+        vm.assume(aAddress != address(this));
+
+        // act & assert
+        vm.expectRevert("AM: UNAUTHORIZED");
+        _manager.setGuardian(_alice);
+    }
+
+    function testSetWindDownMode() external allNetworks {
         // sanity
         assertEq(_manager.windDownMode(), false);
 
@@ -1010,7 +1057,7 @@ contract AaveIntegrationTest is BaseTest {
 
         // arrange
         _increaseManagementOneToken(500e6);
-        _manager.setRewardSeller(address(this));
+        _manager.setGuardian(address(this));
         _manager.setRewardsController(address(0x929EC64c34a17401F460460D4B9390518E5B473e));
         (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
         address lWavax = address(0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7);
@@ -1044,7 +1091,7 @@ contract AaveIntegrationTest is BaseTest {
             lOtherPair.token0() == USDC ? int256(100e6) : int256(0),
             lOtherPair.token1() == USDC ? int256(100e6) : int256(0)
         );
-        _manager.setRewardSeller(address(this));
+        _manager.setGuardian(address(this));
         _manager.setRewardsController(address(0x929EC64c34a17401F460460D4B9390518E5B473e));
         (address lUSDCMarket,,) = _dataProvider.getReserveTokensAddresses(address(USDC));
         IERC20 lAaveToken = IERC20(lUSDCMarket);
