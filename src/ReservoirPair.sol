@@ -136,7 +136,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     // update reserves with new balances
-    // on the first call per block, update price and liq oracle using previous reserves
+    // on the first call per block, update price oracle using previous reserves
     function _updateAndUnlock(
         Slot0 storage sSlot0,
         uint256 aBalance0,
@@ -574,5 +574,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     /// @param aBalance1 in its native precision
     /// @return spotPrice where 1e18 == 1
     /// @return logSpotPrice natural log (ln) of the spotPrice
-    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256 spotPrice, int256 logSpotPrice);
+    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1)
+        internal
+        virtual
+        returns (uint256 spotPrice, int256 logSpotPrice);
 }
