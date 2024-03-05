@@ -1575,12 +1575,14 @@ contract StablePairTest is BaseTest {
         assertTrue(lObs.timestamp != 0);
 
         // act
-        _writeObservation(_stablePair, 0, int112(1337), int56(-1337), int56(-1337), uint32(666));
+        _writeObservation(_stablePair, 0, int24(123), int24(-456), int88(789), int56(-1011), uint32(666));
 
         // assert
         lObs = _oracleCaller.observation(_stablePair, 0);
-        assertEq(lObs.logAccRawPrice, int112(1337));
-        assertEq(lObs.logAccClampedPrice, int112(-1337));
+        assertEq(lObs.logInstantRawPrice, int24(123));
+        assertEq(lObs.logInstantClampedPrice, int24(-456));
+        assertEq(lObs.logAccRawPrice, int88(789));
+        assertEq(lObs.logAccClampedPrice, int88(-1011));
         assertEq(lObs.timestamp, uint32(666));
 
         lObs = _oracleCaller.observation(_stablePair, 1);
@@ -1595,7 +1597,9 @@ contract StablePairTest is BaseTest {
 
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _stablePair.getReserves();
-        _writeObservation(_stablePair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp % 2 ** 31));
+        _writeObservation(
+            _stablePair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
+        );
         Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
 
         // act

@@ -344,11 +344,14 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertTrue(lObs.timestamp != 0);
 
         // act
-        _writeObservation(_constantProductPair, 0, int112(1337), int56(-1337), int56(-1337), uint32(666));
+        _writeObservation(_constantProductPair, 0, int24(12), int24(-34), int88(56), int88(-78), uint32(666));
 
         // assert
         lObs = _oracleCaller.observation(_constantProductPair, 0);
-        assertEq(lObs.logAccRawPrice, int112(1337));
+        assertEq(lObs.logInstantRawPrice, int24(12));
+        assertEq(lObs.logInstantClampedPrice, int24(-34));
+        assertEq(lObs.logAccRawPrice, int88(56));
+        assertEq(lObs.logAccClampedPrice, int88(-78));
         assertEq(lObs.timestamp, uint32(666));
 
         lObs = _oracleCaller.observation(_constantProductPair, 1);
@@ -360,7 +363,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _constantProductPair.getReserves();
         _writeObservation(
-            _constantProductPair, lIndex, type(int112).max, type(int56).max, 0, uint32(block.timestamp % 2 ** 31)
+            _constantProductPair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
         );
         Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
 
@@ -376,24 +379,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         (,,, lIndex) = _constantProductPair.getReserves();
         Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, lIndex);
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
-    }
-
-    function testOracle_OverflowAccLiquidity(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
-        // assume
-        vm.assume(aNewStartTime < 2 ** 31);
-
-        // arrange
-        (,,, uint16 lIndex) = _constantProductPair.getReserves();
-        _writeObservation(_constantProductPair, lIndex, 0, 0, type(int56).max, uint32(block.timestamp));
-        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
-
-        // act
-        _stepTime(5);
-        _constantProductPair.sync();
-
-        // assert
-        (,,, lIndex) = _constantProductPair.getReserves();
-        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, lIndex);
     }
 
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {

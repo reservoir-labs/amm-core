@@ -127,15 +127,20 @@ abstract contract BaseTest is Test {
     function _writeObservation(
         ReservoirPair aPair,
         uint256 aIndex,
-        int112 aRawPrice,
-        int56 aClampedPrice,
-        int56 aLiq,
+        int24 aLogInstantRawPrice,
+        int24 aLogInstantClampedPrice,
+        int88 aLogAccRawPrice,
+        int88 aLogAccClampedPrice,
         uint32 aTime
     ) internal {
         require(aTime < 2 ** 31, "TIMESTAMP TOO BIG");
         bytes32 lEncoded = bytes32(
             bytes.concat(
-                bytes4(aTime), bytes7(uint56(aLiq)), bytes7(uint56(aClampedPrice)), bytes14(uint112(aRawPrice))
+                bytes4(aTime),
+                bytes11(uint88(aLogAccClampedPrice)),
+                bytes11(uint88(aLogAccRawPrice)),
+                bytes3(uint24(aLogInstantClampedPrice)),
+                bytes3(uint24(aLogInstantRawPrice))
             )
         );
 
