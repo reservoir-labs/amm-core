@@ -156,7 +156,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            _updateOracle(aReserve0, aReserve1, lTimeElapsed, lBlockTimestamp);
+
+            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcInstantPrice(aBalance0, aBalance1);
+
+            _updateOracle(lLogInstantRawPrice, aReserve0, aReserve1, lTimeElapsed, lBlockTimestamp);
         }
 
         // update reserves to match latest balances
@@ -489,10 +492,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     mapping(uint256 => Observation) internal _observations;
 
-    // maximum allowed rate of change of price per second
-    // to mitigate oracle manipulation attacks in the face of post-merge ETH
+    // maximum allowed rate of change of price per second to mitigate oracle manipulation attacks in the face of
+    // post-merge ETH. 1e18 == 100%
     uint256 public maxChangeRate;
-    uint256 public prevClampedPrice;
 
     address public oracleCaller;
 
@@ -544,7 +546,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aCurrentTimestamp)
+    function _updateOracle(int256 aLogInstantRawPrice, uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aCurrentTimestamp)
         internal
         virtual;
+
+    function _calcInstantPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256, int112);
 }
