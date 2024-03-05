@@ -18,12 +18,11 @@ library StableOracleMath {
     function calcLogPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure
-        returns (uint256 spotPrice, int112 logSpotPrice)
+        returns (uint256 spotPrice, int256 logSpotPrice)
     {
         spotPrice = calcSpotPrice(amplificationParameter, reserve0, reserve1);
 
-        int256 rawLogSpotPrice = LogCompression.toLowResLog(spotPrice);
-        logSpotPrice = int112(rawLogSpotPrice);
+        logSpotPrice = LogCompression.toLowResLog(spotPrice);
     }
 
     /// @notice Calculates the spot price of token1 in token0

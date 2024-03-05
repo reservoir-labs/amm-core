@@ -26,17 +26,16 @@ library ConstantProductOracleMath {
      * @param reserve0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
      * @param reserve1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
      * @return spotPrice price of token1/token0, 18 decimals fixed point number. Minimum price is 1e-18 (1 wei), as we do not round to zero.
-     * @return logSpotPrice natural log of the spot price, 4 decimal fixed point number
+     * @return logSpotPrice natural log of the spot price, 4 decimal fixed point number. Min value is 1
      */
     function calcLogPrice(uint256 reserve0, uint256 reserve1)
         internal
         pure
-        returns (uint256 spotPrice, int112 logSpotPrice)
+        returns (uint256 spotPrice, int256 logSpotPrice)
     {
         // Scaled by 1e18, minimum will be 1 wei as we divUp.
         spotPrice = reserve1.divWadUp(reserve0);
 
-        int256 rawResult = LogCompression.toLowResLog(spotPrice);
-        logSpotPrice = int112(rawResult);
+        logSpotPrice = LogCompression.toLowResLog(spotPrice);
     }
 }

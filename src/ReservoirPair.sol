@@ -519,7 +519,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     function _calcClampedPrice(uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed)
         internal
         virtual
-        returns (uint256 rClampedPrice, int112 rClampedLogPrice)
+        returns (uint256 rClampedPrice, int256 rClampedLogPrice)
     {
         // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
         // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
@@ -536,7 +536,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 assert(aPrevClampedPrice > aCurrRawPrice);
                 rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
             }
-            rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
+            rClampedLogPrice = LogCompression.toLowResLog(rClampedPrice);
         }
     }
 
@@ -548,28 +548,27 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     ) internal {
         Observation storage previous = _observations[_slot0.index];
 
-        (, int112 logInstantClampedPrice) = _calcClampedPrice(
+        (, int256 logInstantClampedPrice) = _calcClampedPrice(
             aInstantRawPrice, LogCompression.fromLowResLog(previous.logInstantClampedPrice), aTimeElapsed
         );
 
         // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
         // when the index overflows it will overwrite the oldest observation to form a loop
         unchecked {
-            int112 logAccRawPrice =
-                previous.logAccRawPrice + previous.logInstantRawPrice * int112(int256(uint256(aTimeElapsed)));
-            int56 logAccClampedPrice =
-                previous.logAccClampedPrice + previous.logInstantClampedPrice * int56(int256(uint256(aTimeElapsed)));
+            int88 logAccRawPrice =
+                previous.logAccRawPrice + previous.logInstantRawPrice * int88(int256(uint256(aTimeElapsed)));
+            int88 logAccClampedPrice =
+                previous.logAccClampedPrice + previous.logInstantClampedPrice * int88(int256(uint256(aTimeElapsed)));
             _slot0.index += 1;
             _observations[_slot0.index] = Observation(
-                // TODO: prove that these values are guaranteed <=int56 to remove these safe casts
-                SafeCast.toInt56(aLogInstantRawPrice),
-                SafeCast.toInt56(logInstantClampedPrice),
-                SafeCast.toInt56(logAccRawPrice),
+                int24(aLogInstantRawPrice),
+                int24(logInstantClampedPrice),
+                logAccRawPrice,
                 logAccClampedPrice,
                 aCurrentTimestamp
             );
         }
     }
 
-    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256, int112);
+    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256, int256);
 }

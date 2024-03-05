@@ -225,7 +225,7 @@ contract ConstantProductPair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal override returns (uint256, int112) {
+    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal override returns (uint256, int256) {
         return ConstantProductOracleMath.calcLogPrice(
             aBalance0 * token0PrecisionMultiplier(), aBalance1 * token1PrecisionMultiplier()
         );
