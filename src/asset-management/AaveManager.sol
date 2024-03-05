@@ -21,8 +21,8 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
 
     event Pool(IPool newPool);
     event DataProvider(IAaveProtocolDataProvider newDataProvider);
-    event RewardSeller(address newRewardSeller);
     event RewardsController(IRewardsController newRewardsController);
+    event Guardian(address newGuardian);
     event WindDownMode(bool windDown);
     event Thresholds(uint128 newLowerThreshold, uint128 newUpperThreshold);
     event Investment(IAssetManagedPair pair, IERC20 token, uint256 shares);
@@ -49,22 +49,32 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
     /// @dev this address is not permanent, aave can change this address to upgrade to a new impl
     IAaveProtocolDataProvider public dataProvider;
 
-    /// @dev trusted party to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
+    /// @dev trusted party to adjust asset management parameters such as thresholds and windDownMode and
+    /// to claim and sell additional rewards (through a DEX/aggregator) into the corresponding
     /// Aave Token on behalf of the asset manager and then transfers the Aave Tokens back into the manager
-    address public rewardSeller;
+    address public guardian;
 
     /// @dev contract that manages additional rewards on top of interest bearing aave tokens
     /// also known as the incentives contract
     IRewardsController public rewardsController;
 
-    /// @dev when set to true by the owner, it will only allow divesting but not investing by the pairs in this mode
-    /// to facilitate replacement of asset managers to newer versions
+    /// @dev when set to true by the owner or guardian, it will only allow divesting but not investing by
+    /// the pairs in this mode to facilitate replacement of asset managers to newer versions
     bool public windDownMode;
 
     constructor(IPoolAddressesProvider aPoolAddressesProvider) {
         addressesProvider = aPoolAddressesProvider;
         updatePoolAddress();
         updateDataProviderAddress();
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                    MODIFIERS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    modifier onlyGuardianOrOwner() {
+        require(msg.sender == guardian || msg.sender == owner, "AM: UNAUTHORIZED");
+        _;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -85,24 +95,23 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
         emit DataProvider(IAaveProtocolDataProvider(lNewDataProvider));
     }
 
-    function setRewardSeller(address aRewardSeller) external onlyOwner {
-        require(aRewardSeller != address(0), "AM: REWARD_SELLER_ADDRESS_ZERO");
-        rewardSeller = aRewardSeller;
-        emit RewardSeller(aRewardSeller);
-    }
-
     function setRewardsController(address aRewardsController) external onlyOwner {
         require(aRewardsController != address(0), "AM: REWARDS_CONTROLLER_ZERO");
         rewardsController = IRewardsController(aRewardsController);
         emit RewardsController(IRewardsController(aRewardsController));
     }
 
-    function setWindDownMode(bool aWindDown) external onlyOwner {
+    function setGuardian(address aGuardian) external onlyOwner {
+        guardian = aGuardian;
+        emit Guardian(aGuardian);
+    }
+
+    function setWindDownMode(bool aWindDown) external onlyGuardianOrOwner {
         windDownMode = aWindDown;
         emit WindDownMode(aWindDown);
     }
 
-    function setThresholds(uint128 aLowerThreshold, uint128 aUpperThreshold) external onlyOwner {
+    function setThresholds(uint128 aLowerThreshold, uint128 aUpperThreshold) external onlyGuardianOrOwner {
         require(aUpperThreshold <= 1e18 && aUpperThreshold >= aLowerThreshold, "AM: INVALID_THRESHOLDS");
         (lowerThreshold, upperThreshold) = (aLowerThreshold, aUpperThreshold);
         emit Thresholds(aLowerThreshold, aUpperThreshold);
@@ -296,14 +305,17 @@ contract AaveManager is IAssetManager, Owned(msg.sender), ReentrancyGuard {
                                 ADDITIONAL REWARDS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function claimRewardForMarket(address aMarket, address aReward) external returns (uint256 rClaimed) {
-        require(msg.sender == rewardSeller, "AM: NOT_REWARD_SELLER");
+    function claimRewardForMarket(address aMarket, address aReward)
+        external
+        onlyGuardianOrOwner
+        returns (uint256 rClaimed)
+    {
         require(aReward != address(0), "AM: REWARD_TOKEN_ZERO");
         require(aMarket != address(0), "AM: MARKET_ZERO");
 
         address[] memory lMarkets = new address[](1);
         lMarkets[0] = aMarket;
 
-        rClaimed = rewardsController.claimRewards(lMarkets, type(uint256).max, rewardSeller, aReward);
+        rClaimed = rewardsController.claimRewards(lMarkets, type(uint256).max, msg.sender, aReward);
     }
 }
