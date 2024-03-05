@@ -279,7 +279,8 @@ contract StablePair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal override returns (uint256, int256) {
+    /// @inheritdoc ReservoirPair
+    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1) internal override returns (uint256, int256) {
         return StableOracleMath.calcLogPrice(
             _getCurrentAPrecise(), aBalance0 * token0PrecisionMultiplier(), aBalance1 * token1PrecisionMultiplier()
         );

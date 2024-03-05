@@ -156,7 +156,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcInstantRawPrice(aBalance0, aBalance1);
+            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aReserve0, aReserve1);
 
             _updateOracle(lInstantPrice, lLogInstantRawPrice, lTimeElapsed, lBlockTimestamp);
         }
@@ -570,5 +570,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256, int256);
+    /// @param aBalance0 in its native precision
+    /// @param aBalance1 in its native precision
+    /// @return spotPrice where 1e18 == 1
+    /// @return logSpotPrice natural log (ln) of the spotPrice
+    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256 spotPrice, int256 logSpotPrice);
 }
