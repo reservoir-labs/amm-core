@@ -244,7 +244,7 @@ contract AaveIntegrationTest is BaseTest {
         vm.assume(aAddress != address(this));
 
         // act & assert
-        vm.expectRevert("AM: UNAUTHORIZED");
+        vm.expectRevert("UNAUTHORIZED");
         _manager.setGuardian(_alice);
     }
 
