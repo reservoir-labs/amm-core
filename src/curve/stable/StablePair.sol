@@ -7,7 +7,7 @@ import { IGenericFactory } from "src/interfaces/IGenericFactory.sol";
 import { Bytes32Lib } from "src/libraries/Bytes32.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
 
-import { ReservoirPair, Slot0, Observation, IERC20, SafeCast, LogCompression } from "src/ReservoirPair.sol";
+import { ReservoirPair, Slot0, Observation, IERC20 } from "src/ReservoirPair.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 import { StableOracleMath } from "src/libraries/StableOracleMath.sol";
 import { ConstantProductOracleMath } from "src/libraries/ConstantProductOracleMath.sol";
@@ -279,38 +279,9 @@ contract StablePair is ReservoirPair {
                                 ORACLE METHODS
     //////////////////////////////////////////////////////////////////////////*/
 
-    function _updateOracle(int256 aLogInstantRawPrice, uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aCurrentTimestamp)
-        internal
-        override
-    {
-        Observation storage previous = _observations[_slot0.index];
-
-        (uint256 instantClampedPrice, int112 logInstantClampedPrice) =
-            _calcClampedPrice(
-                LogCompression.fromLowResLog(previous.logInstantRawPrice),
-                LogCompression.fromLowResLog(previous.logInstantClampedPrice),
-                aTimeElapsed
+    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal override returns (uint256, int112) {
+        return StableOracleMath.calcLogPrice(
+            _getCurrentAPrecise(), aBalance0 * token0PrecisionMultiplier(), aBalance1 * token1PrecisionMultiplier()
         );
-
-        // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
-        // when the index overflows it will overwrite the oldest observation to form a loop
-        unchecked {
-            int112 logAccRawPrice = previous.logAccRawPrice + previous.logInstantRawPrice * int112(int256(uint256(aTimeElapsed)));
-            int56 logAccClampedPrice =
-                previous.logAccClampedPrice + int56(logInstantClampedPrice) * int56(int256(uint256(aTimeElapsed)));
-            _slot0.index += 1;
-            _observations[_slot0.index] = Observation(
-                // TODO: prove that these values are guaranteed <=int56 to remove these safe casts
-                SafeCast.toInt56(aLogInstantRawPrice),
-                SafeCast.toInt56(logInstantClampedPrice),
-                SafeCast.toInt56(logAccRawPrice),
-                logAccClampedPrice,
-                aCurrentTimestamp
-            );
-        }
-    }
-
-    function _calcInstantPrice(uint256 aBalance0, uint256 aBalance1) internal override returns (uint256, int112) {
-
     }
 }

@@ -156,10 +156,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
+            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcInstantRawPrice(aBalance0, aBalance1);
 
-            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcInstantPrice(aBalance0, aBalance1);
-
-            _updateOracle(lLogInstantRawPrice, aReserve0, aReserve1, lTimeElapsed, lBlockTimestamp);
+            _updateOracle(lInstantPrice, lLogInstantRawPrice, lTimeElapsed, lBlockTimestamp);
         }
 
         // update reserves to match latest balances
@@ -522,13 +521,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         virtual
         returns (uint256 rClampedPrice, int112 rClampedLogPrice)
     {
-        if (aPrevClampedPrice == 0) {
-            return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
-        }
-
         // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
         // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
-        if (aCurrRawPrice.percentDelta(aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
+        if (aPrevClampedPrice == 0 || aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangeRate * aTimeElapsed) {
+            (rClampedPrice, rClampedLogPrice) = (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
+        } else {
             // clamp the price
             // multiplication of maxChangeRate and aTimeElapsed would not overflow as
             // maxChangeRate <= 0.01e18 (50 bits)
@@ -540,15 +537,39 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
             }
             rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
-        } else {
-            rClampedPrice = aCurrRawPrice;
-            rClampedLogPrice = int112(LogCompression.toLowResLog(aCurrRawPrice));
         }
     }
 
-    function _updateOracle(int256 aLogInstantRawPrice, uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aCurrentTimestamp)
-        internal
-        virtual;
+    function _updateOracle(
+        uint256 aInstantRawPrice,
+        int256 aLogInstantRawPrice,
+        uint32 aTimeElapsed,
+        uint32 aCurrentTimestamp
+    ) internal {
+        Observation storage previous = _observations[_slot0.index];
 
-    function _calcInstantPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256, int112);
+        (, int112 logInstantClampedPrice) = _calcClampedPrice(
+            aInstantRawPrice, LogCompression.fromLowResLog(previous.logInstantClampedPrice), aTimeElapsed
+        );
+
+        // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
+        // when the index overflows it will overwrite the oldest observation to form a loop
+        unchecked {
+            int112 logAccRawPrice =
+                previous.logAccRawPrice + previous.logInstantRawPrice * int112(int256(uint256(aTimeElapsed)));
+            int56 logAccClampedPrice =
+                previous.logAccClampedPrice + previous.logInstantClampedPrice * int56(int256(uint256(aTimeElapsed)));
+            _slot0.index += 1;
+            _observations[_slot0.index] = Observation(
+                // TODO: prove that these values are guaranteed <=int56 to remove these safe casts
+                SafeCast.toInt56(aLogInstantRawPrice),
+                SafeCast.toInt56(logInstantClampedPrice),
+                SafeCast.toInt56(logAccRawPrice),
+                logAccClampedPrice,
+                aCurrentTimestamp
+            );
+        }
+    }
+
+    function _calcInstantRawPrice(uint256 aBalance0, uint256 aBalance1) internal virtual returns (uint256, int112);
 }
