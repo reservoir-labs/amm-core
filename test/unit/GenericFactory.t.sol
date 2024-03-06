@@ -82,8 +82,8 @@ contract GenericFactoryTest is BaseTest {
             : _factory.getBytecode(lCurves[1], IERC20(address(_tokenD)), IERC20(address(_tokenC)));
 
         // act
-        address lExpectedAddress1 = computeCreate2Address(bytes32(0), keccak256(lInitBytecode1), address(_factory));
-        address lExpectedAddress2 = computeCreate2Address(bytes32(0), keccak256(lInitBytecode2), address(_factory));
+        address lExpectedAddress1 = vm.computeCreate2Address(bytes32(0), keccak256(lInitBytecode1), address(_factory));
+        address lExpectedAddress2 = vm.computeCreate2Address(bytes32(0), keccak256(lInitBytecode2), address(_factory));
 
         // assert
         assertEq(lPair1, lExpectedAddress1);
