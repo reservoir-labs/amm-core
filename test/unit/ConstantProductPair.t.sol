@@ -472,21 +472,21 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         vm.prank(address(_factory));
         lPair.setCustomSwapFee(0);
 
-        // price = 1
+        // price = 1 for 10 seconds
         _stepTime(10);
-        lPair.sync(); // obs0 is written here
 
         // act
-        // price = 4
+        // price = 4 for 10 seconds
         _tokenB.mint(address(lPair), 100e18);
-        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs1 is written here
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs0 is written here
         _stepTime(10);
 
-        // price = 16
+        // price = 16 for 10 seconds
         _tokenB.mint(address(lPair), 200e18);
-        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs2 is written here
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs1 is written here
         _stepTime(10);
-        lPair.sync(); // obs3 is written here
+
+        lPair.sync(); // obs2 is written here
 
         // assert
         Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
@@ -495,14 +495,18 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         assertEq(lObs0.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(
-            lObs1.logAccRawPrice, -LogCompression.toLowResLog(1e18) * 10 - LogCompression.toLowResLog(0.25e18) * 10, "2"
+            lObs1.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(4e18) * 10, "2"
         );
         assertEq(
             lObs2.logAccRawPrice,
-            -LogCompression.toLowResLog(1e18) * 10 - LogCompression.toLowResLog(0.25e18) * 10
-                - LogCompression.toLowResLog(0.0625e18) * 10,
+            LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(4e18) * 10
+                + LogCompression.toLowResLog(16e18) * 10,
             "3"
         );
+
+        assertEq(lObs0.logInstantRawPrice, LogCompression.toLowResLog(4e18));
+        assertEq(lObs1.logInstantRawPrice, LogCompression.toLowResLog(16e18));
+        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(16e18));
 
         // Price for observation window 1-2
         assertApproxEqRel(
