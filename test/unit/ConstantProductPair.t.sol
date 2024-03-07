@@ -319,46 +319,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertEq(lIndex, 3);
     }
 
-    function testWriteObservations() external {
-        // arrange
-        // swap 1
-        _stepTime(1);
-        _tokenA.mint(address(_constantProductPair), 1e17);
-        _constantProductPair.swap(1e17, true, address(this), "");
-
-        // swap 2
-        _stepTime(1);
-        _tokenA.mint(address(_constantProductPair), 1e17);
-        _constantProductPair.swap(1e17, true, address(this), "");
-
-        // sanity
-        (,,, uint256 lIndex) = _constantProductPair.getReserves();
-        assertEq(lIndex, 1);
-
-        Observation memory lObs = _oracleCaller.observation(_constantProductPair, 0);
-        assertTrue(lObs.logAccRawPrice == 0);
-        assertTrue(lObs.timestamp != 0);
-
-        lObs = _oracleCaller.observation(_constantProductPair, 1);
-        assertTrue(lObs.logAccRawPrice != 0);
-        assertTrue(lObs.timestamp != 0);
-
-        // act
-        _writeObservation(_constantProductPair, 0, int24(12), int24(-34), int88(56), int88(-78), uint32(666));
-
-        // assert
-        lObs = _oracleCaller.observation(_constantProductPair, 0);
-        assertEq(lObs.logInstantRawPrice, int24(12));
-        assertEq(lObs.logInstantClampedPrice, int24(-34));
-        assertEq(lObs.logAccRawPrice, int88(56));
-        assertEq(lObs.logAccClampedPrice, int88(-78));
-        assertEq(lObs.timestamp, uint32(666));
-
-        lObs = _oracleCaller.observation(_constantProductPair, 1);
-        assertTrue(lObs.logAccRawPrice != 0);
-        assertTrue(lObs.timestamp != 0);
-    }
-
     function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _constantProductPair.getReserves();

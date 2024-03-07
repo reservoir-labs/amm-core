@@ -31,6 +31,55 @@ contract OracleWriterTest is BaseTest {
         }
     }
 
+    function testWriteObservations() external allPairs {
+        // arrange
+        // swap 1
+        _stepTime(1);
+        (uint256 lReserve0, uint256 lReserve1,,) = _pair.getReserves();
+        _tokenA.mint(address(_pair), 5e18);
+        _pair.swap(5e18, true, address(this), "");
+
+        // swap 2
+        _stepTime(1);
+        (lReserve0, lReserve1,,) = _pair.getReserves();
+        _tokenA.mint(address(_pair), 5e18);
+        _pair.swap(5e18, true, address(this), "");
+
+        // sanity
+        (,,, uint16 lIndex) = _pair.getReserves();
+        assertEq(lIndex, 1);
+
+        Observation memory lObs = _oracleCaller.observation(_pair, 0);
+        assertEq(lObs.logAccRawPrice, 0);
+        assertEq(lObs.logAccClampedPrice, 0);
+        assertNotEq(lObs.logInstantRawPrice, 0);
+        assertNotEq(lObs.logInstantClampedPrice, 0);
+        assertNotEq(lObs.timestamp, 0);
+
+        lObs = _oracleCaller.observation(_pair, 1);
+        assertNotEq(lObs.logAccRawPrice, 0);
+        assertNotEq(lObs.logAccClampedPrice, 0);
+        assertNotEq(lObs.logInstantRawPrice, 0);
+        assertNotEq(lObs.logInstantClampedPrice, 0);
+        assertNotEq(lObs.timestamp, 0);
+
+        // act
+        _writeObservation(_pair, 0, int24(123), int24(-456), int88(789), int56(-1011), uint32(666));
+
+        // assert
+        lObs = _oracleCaller.observation(_pair, 0);
+        assertEq(lObs.logInstantRawPrice, int24(123));
+        assertEq(lObs.logInstantClampedPrice, int24(-456));
+        assertEq(lObs.logAccRawPrice, int88(789));
+        assertEq(lObs.logAccClampedPrice, int88(-1011));
+        assertEq(lObs.timestamp, uint32(666));
+
+        lObs = _oracleCaller.observation(_pair, 1);
+        assertNotEq(lObs.logAccRawPrice, 0);
+        assertNotEq(lObs.logAccClampedPrice, 0);
+        assertNotEq(lObs.timestamp, 0);
+    }
+
     function testObservation_NotOracleCaller(uint256 aIndex) external allPairs {
         // assume
         uint256 lIndex = bound(aIndex, 0, type(uint16).max);
