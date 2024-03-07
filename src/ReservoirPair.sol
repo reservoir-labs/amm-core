@@ -161,7 +161,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
         // the very first attempted oracle update
         else if (_observations[sSlot0.index].timestamp == 0) {
-            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
+            (, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
             _observations[sSlot0.index] = Observation(
                 int24(lLogInstantRawPrice),
                 int24(lLogInstantRawPrice),
@@ -170,6 +170,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 lBlockTimestamp
             );
         }
+
         // update reserves to match latest balances
         sSlot0.reserve0 = uint104(aBalance0);
         sSlot0.reserve1 = uint104(aBalance1);
