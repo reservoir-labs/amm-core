@@ -501,10 +501,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _tokenB.mint(address(_constantProductPair), lSwapAmt);
         _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
-        // sanity
-        // TODO: change to read instant clamped price from latest oracle observation
-        // assertEq(_constantProductPair.prevClampedPrice(), 1e18);
-
         // act
         _stepTime(5);
         _constantProductPair.sync();
@@ -513,8 +509,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
         // no diff between raw and clamped prices
         assertEq(lObs1.logAccClampedPrice, lObs1.logAccRawPrice);
-
-        // assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
+        assertEq(lObs1.logInstantClampedPrice, lObs1.logInstantRawPrice);
+        assertLt(LogCompression.fromLowResLog(lObs1.logInstantClampedPrice), 1.0025e18);
     }
 
     function testOracle_ClampedPrice_AtLimit() external {
@@ -525,9 +521,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _tokenB.mint(address(_constantProductPair), lSwapAmt);
         _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
-        // sanity
-        // assertEq(_constantProductPair.prevClampedPrice(), 1e18);
-
         // act
         _stepTime(5);
         _constantProductPair.sync();
@@ -536,7 +529,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
         // no diff between raw and clamped prices
         assertEq(lObs1.logAccClampedPrice, lObs1.logAccRawPrice);
-        // assertLt(_constantProductPair.prevClampedPrice(), 1.0025e18);
+        assertEq(lObs1.logInstantClampedPrice, lObs1.logInstantRawPrice);
     }
 
     function testOracle_ClampedPrice_OverLimit() external {
@@ -547,9 +540,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _tokenB.mint(address(_constantProductPair), lSwapAmt);
         _constantProductPair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
-        // sanity
-        // assertEq(_constantProductPair.prevClampedPrice(), 1e18);
-
         // act
         _stepTime(5);
         _constantProductPair.sync();
@@ -557,7 +547,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // assert
         Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
         assertGt(lObs1.logAccRawPrice, lObs1.logAccClampedPrice);
-        // assertEq(_constantProductPair.prevClampedPrice(), 1.0025e18);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs1.logInstantClampedPrice), 1.0025e18, 0.0002e18); // 0.02% error
     }
 
     function testPlatformFee_Disable() external {
