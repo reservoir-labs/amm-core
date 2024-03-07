@@ -1690,7 +1690,7 @@ contract StablePairTest is BaseTest {
         _stepTime(10);
 
         // act
-        // price = 0.4944 for 10 seconds
+        // price = 2.0226 for 10 seconds
         _tokenB.mint(address(lPair), 100e18);
         lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs0 is written here
         (uint256 lReserve0_1, uint256 lReserve1_1,,) = lPair.getReserves();
@@ -1701,7 +1701,7 @@ contract StablePairTest is BaseTest {
         );
         _stepTime(10);
 
-        // price = 0.0000936563
+        // price = 10677 for 10 seconds
         _tokenB.mint(address(lPair), 200e18);
         lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs1 is written here
         (uint256 lReserve0_2, uint256 lReserve1_2,,) = lPair.getReserves();
@@ -1729,9 +1729,9 @@ contract StablePairTest is BaseTest {
 
         assertEq(lObs0.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice1));
         assertEq(lObs1.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice2));
-        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice2));
+        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice2)); // spot price has not changed between obs1 and obs2
 
-        // price is token1/token0, meaning tokenB / tokenC
+        // anchor expected values to a hardcoded one
         assertApproxEqRel(lSpotPrice1, uint256(2.0226e18), 0.0001e18);
         assertApproxEqRel(lSpotPrice2, uint256(10677e18), 0.0001e18);
 

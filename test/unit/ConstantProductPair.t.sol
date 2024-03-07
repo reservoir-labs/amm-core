@@ -506,9 +506,9 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
 
         assertEq(lObs0.logInstantRawPrice, LogCompression.toLowResLog(4e18));
         assertEq(lObs1.logInstantRawPrice, LogCompression.toLowResLog(16e18));
-        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(16e18));
+        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(16e18)); // spot price has not changed between obs1 and obs2
 
-        // Price for observation window 1-2
+        // Price for observation window 0-1
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs1.timestamp, lObs0.timestamp))
@@ -516,7 +516,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
             4e18,
             0.0001e18
         );
-        // Price for observation window 2-3
+        // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
@@ -524,7 +524,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
             16e18,
             0.0001e18
         );
-        // Price for observation window 1-3
+        // Price for observation window 0-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
