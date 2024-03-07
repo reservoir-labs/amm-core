@@ -1674,8 +1674,8 @@ contract StablePairTest is BaseTest {
     }
 
     function testOracle_SimplePrices(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
-        // prices = [1, 0.4944, 0.0000936563]
-        // geo_mean = sqrt3(1 * 0.4944 * 0000936563) = 0.0166676
+        // prices = [1, 2.0226, 10677]
+        // geo_mean = sqrt3(1 * 2.0226 * 10677) = 27.848
 
         // arrange
         StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));
@@ -1686,25 +1686,28 @@ contract StablePairTest is BaseTest {
         vm.prank(address(_factory));
         lPair.setCustomSwapFee(0);
 
-        // price = 1
+        // price = 1 for 10 seconds
         _stepTime(10);
-        lPair.sync(); // obs0 is written here
 
         // act
-        // price = 0.4944
+        // price = 0.4944 for 10 seconds
         _tokenB.mint(address(lPair), 100e18);
-        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs1 is written here
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs0 is written here
         (uint256 lReserve0_1, uint256 lReserve1_1,,) = lPair.getReserves();
-        uint256 lSpotPrice1 = StableOracleMath.calcSpotPrice(lPair.getCurrentAPrecise(), lReserve0_1, lReserve1_1);
+        uint256 lSpotPrice1 = StableOracleMath.calcSpotPrice(
+            lPair.getCurrentAPrecise(),
+            lReserve0_1 * lPair.token0PrecisionMultiplier(),
+            lReserve1_1 * lPair.token1PrecisionMultiplier()
+        );
         _stepTime(10);
 
         // price = 0.0000936563
         _tokenB.mint(address(lPair), 200e18);
-        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs2 is written here
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs1 is written here
         (uint256 lReserve0_2, uint256 lReserve1_2,,) = lPair.getReserves();
         uint256 lSpotPrice2 = StableOracleMath.calcSpotPrice(lPair.getCurrentAPrecise(), lReserve0_2, lReserve1_2);
         _stepTime(10);
-        lPair.sync(); // obs3 is written here
+        lPair.sync(); // obs2 is written here
 
         // assert
         Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
@@ -1724,7 +1727,15 @@ contract StablePairTest is BaseTest {
             "3"
         );
 
-        // Price for observation window 1-2
+        assertEq(lObs0.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice1));
+        assertEq(lObs1.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice2));
+        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(lSpotPrice2));
+
+        // price is token1/token0, meaning tokenB / tokenC
+        assertApproxEqRel(lSpotPrice1, uint256(2.0226e18), 0.0001e18);
+        assertApproxEqRel(lSpotPrice2, uint256(10677e18), 0.0001e18);
+
+        // Price for observation window 0-1
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs1.timestamp, lObs0.timestamp))
@@ -1732,7 +1743,7 @@ contract StablePairTest is BaseTest {
             lSpotPrice1,
             0.0001e18
         );
-        // Price for observation window 2-3
+        // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
@@ -1740,7 +1751,7 @@ contract StablePairTest is BaseTest {
             lSpotPrice2,
             0.0001e18
         );
-        // Price for observation window 1-3
+        // Price for observation window 0-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
