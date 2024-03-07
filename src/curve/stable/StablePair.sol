@@ -35,7 +35,7 @@ contract StablePair is ReservoirPair {
     uint64 public lastInvariantAmp;
 
     constructor(IERC20 aToken0, IERC20 aToken1)
-        ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, _isStableMintBurn(aToken0, aToken1) ? false : true)
+        ReservoirPair(aToken0, aToken1, PAIR_SWAP_FEE_NAME, !_isStableMintBurn(aToken0, aToken1))
     {
         bool lIsStableMintBurn = _isStableMintBurn(aToken0, aToken1);
 
