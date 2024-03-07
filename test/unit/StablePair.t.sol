@@ -1723,9 +1723,6 @@ contract StablePairTest is BaseTest {
         _tokenB.mint(address(_stablePair), lSwapAmt);
         _stablePair.swap(-int256(lSwapAmt), true, address(this), bytes(""));
 
-        // sanity
-        // assertEq(_stablePair.prevClampedPrice(), 1e18);
-
         // act
         _stepTime(5);
         _stablePair.sync();
@@ -1734,6 +1731,7 @@ contract StablePairTest is BaseTest {
         Observation memory lObs1 = _oracleCaller.observation(_stablePair, 1);
         // no diff between raw and clamped prices
         assertEq(lObs1.logAccClampedPrice, lObs1.logAccRawPrice);
-        // assertLt(_stablePair.prevClampedPrice(), 1.0025e18);
+        assertEq(lObs1.logInstantClampedPrice, lObs1.logInstantRawPrice);
+        assertLt(LogCompression.fromLowResLog(lObs1.logInstantClampedPrice), 1.0025e18);
     }
 }
