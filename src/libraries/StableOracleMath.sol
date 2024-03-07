@@ -6,6 +6,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { StableMath } from "src/libraries/StableMath.sol";
 
+// adapted from Balancer's impl at https://github.com/balancer/balancer-v2-monorepo/blob/903d34e491a5e9c5d59dabf512c7addf1ccf9bbd/pkg/pool-stable/contracts/meta/StableOracleMath.sol
 library StableOracleMath {
     using FixedPointMathLib for uint256;
 
