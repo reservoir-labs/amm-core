@@ -99,9 +99,10 @@ contract OracleWriterTest is BaseTest {
         _pair.setMaxChangeRate(lMaxChangeRate);
     }
 
-    function testUpdateOracle_WriteOldReservesNotNew() external allPairs {
+    function testUpdateOracle_WriteOldPricesNotNew() external allPairs {
         // arrange
         uint256 lJumpAhead = 10;
+        uint256 lOriginalPrice = 1e18; // both tokenA and B are INITIAL_MINT_AMOUNT
         (uint104 lReserve0,,,) = _pair.getReserves();
         assertEq(lReserve0, Constants.INITIAL_MINT_AMOUNT);
         _tokenA.mint(address(_pair), 10e18);
@@ -110,12 +111,12 @@ contract OracleWriterTest is BaseTest {
         _stepTime(lJumpAhead);
         _pair.sync();
 
-        // assert - make sure that the written observation is of the previous reserves, not the new reserves
+        // assert - make sure that the written observation is of the previous prices, not the new prices
         (uint256 lNewReserve0,,, uint16 lIndex) = _pair.getReserves();
 
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
         assertEq(lNewReserve0, 110e18);
-        assertApproxEqRel(lObs.logAccRawPrice, 1e18, 0.0001e18);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logAccRawPrice / int88(int256(lJumpAhead))), lOriginalPrice, 0.0001e18);
     }
 
     function testUpdateOracle_LatestTimestampWritten(uint256 aJumpAhead) external allPairs {
