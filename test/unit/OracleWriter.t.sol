@@ -165,7 +165,9 @@ contract OracleWriterTest is BaseTest {
 
         Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
         assertEq(lNewReserve0, 110e18);
-        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logAccRawPrice / int88(int256(lJumpAhead))), lOriginalPrice, 0.0001e18);
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logAccRawPrice / int88(int256(lJumpAhead))), lOriginalPrice, 0.0001e18
+        );
     }
 
     function testUpdateOracle_LatestTimestampWritten(uint256 aJumpAhead) external allPairs {
@@ -208,9 +210,7 @@ contract OracleWriterTest is BaseTest {
         lSP.sync();
 
         // assert
-        Observation memory lObsCP0 = _oracleCaller.observation(lCP, 0);
         Observation memory lObsCP1 = _oracleCaller.observation(lCP, 1);
-        Observation memory lObsSP0 = _oracleCaller.observation(lSP, 0);
         Observation memory lObsSP1 = _oracleCaller.observation(lSP, 1);
         if (lCP.token0() == IERC20(address(_tokenB))) {
             assertGt(lObsSP1.logAccRawPrice, lObsCP1.logAccRawPrice);
