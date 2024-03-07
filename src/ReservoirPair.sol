@@ -148,7 +148,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
         require(aReserve0 <= type(uint104).max && aReserve1 <= type(uint104).max, "RP: OVERFLOW");
 
-        uint32 lBlockTimestamp = uint32(_currentTime());
+        uint32 lBlockTimestamp = _currentTime();
         uint32 lTimeElapsed;
         unchecked {
             // underflow is desired
@@ -156,11 +156,20 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
         if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aReserve0, aReserve1);
-
+            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
             _updateOracle(lInstantPrice, lLogInstantRawPrice, lTimeElapsed, lBlockTimestamp);
         }
-
+        // the very first attempted oracle update
+        else if (_observations[sSlot0.index].timestamp == 0) {
+            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
+            _observations[sSlot0.index] = Observation(
+                int24(lLogInstantRawPrice),
+                int24(lLogInstantRawPrice),
+                0,
+                0,
+                lBlockTimestamp
+            );
+        }
         // update reserves to match latest balances
         sSlot0.reserve0 = uint104(aBalance0);
         sSlot0.reserve1 = uint104(aBalance1);
