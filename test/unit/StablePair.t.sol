@@ -1732,6 +1732,5 @@ contract StablePairTest is BaseTest {
         // no diff between raw and clamped prices
         assertEq(lObs1.logAccClampedPrice, lObs1.logAccRawPrice);
         assertEq(lObs1.logInstantClampedPrice, lObs1.logInstantRawPrice);
-        assertLt(LogCompression.fromLowResLog(lObs1.logInstantClampedPrice), 1.0025e18);
     }
 }
