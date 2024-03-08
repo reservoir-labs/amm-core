@@ -35,14 +35,15 @@ contract OracleWriterTest is BaseTest {
 
     // returns spot price for a given pair
     function _calcPriceForCurve(ReservoirPair aPair) internal view returns (uint256 rSpotPrice, int256 rLogSpotPrice) {
-        (uint256 lReserve0, uint256 lReserve1, , ) = aPair.getReserves();
+        (uint256 lReserve0, uint256 lReserve1,,) = aPair.getReserves();
         uint256 lAdjustedReserves0 = lReserve0 * aPair.token0PrecisionMultiplier();
         uint256 lAdjustedReserves1 = lReserve1 * aPair.token1PrecisionMultiplier();
 
         if (aPair == _constantProductPair) {
             (rSpotPrice, rLogSpotPrice) = ConstantProductOracleMath.calcLogPrice(lAdjustedReserves0, lAdjustedReserves1);
         } else if (aPair == _stablePair) {
-            (rSpotPrice, rLogSpotPrice) = StableOracleMath.calcLogPrice(_stablePair.getCurrentAPrecise(), lAdjustedReserves0, lAdjustedReserves1);
+            (rSpotPrice, rLogSpotPrice) =
+                StableOracleMath.calcLogPrice(_stablePair.getCurrentAPrecise(), lAdjustedReserves0, lAdjustedReserves1);
         }
     }
 
@@ -163,24 +164,49 @@ contract OracleWriterTest is BaseTest {
         _pair.setMaxChangeRate(lMaxChangeRate);
     }
 
-    function testUpdateOracle_CreatePairThenSwap() external allPairs {
+    function testUpdateOracle_CreatePairThenSwapSameBlock() external allPairs {
         // arrange
         uint256 lOriginalPrice = 1e18;
         uint256 lSwapAmt = 10e18;
+
+        // sanity
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        assertEq(lIndex, type(uint16).max);
+        assertEq(LogCompression.fromLowResLog(lObs.logInstantRawPrice), lOriginalPrice);
 
         // act
         _tokenA.mint(address(_pair), lSwapAmt);
         _pair.swap(int256(lSwapAmt), true, address(this), "");
 
         // assert
-        (,,, uint16 lIndex) = _pair.getReserves();
-        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        (,,, lIndex) = _pair.getReserves();
+        lObs = _oracleCaller.observation(_pair, lIndex);
 
+        assertEq(lIndex, type(uint16).max);
         assertNotEq(LogCompression.fromLowResLog(lObs.logInstantRawPrice), lOriginalPrice);
         assertNotEq(LogCompression.fromLowResLog(lObs.logInstantClampedPrice), lOriginalPrice);
 
         (, int256 lLogSpotPrice) = _calcPriceForCurve(_pair);
-        assertEq(lObs.logInstantClampedPrice, lLogSpotPrice);
+        assertEq(lObs.logInstantRawPrice, lLogSpotPrice);
+        assertEq(lObs.logInstantRawPrice, lObs.logInstantClampedPrice);
+    }
+
+    function testUpdateOracle_CreatePairThenSwapSameBlock_UnequalOriginalPrice() external {
+        // arrange
+        uint256 lOriginalPrice = 0.5e18;
+        ReservoirPair lPair = ReservoirPair(_createPair(address(_tokenB), address(_tokenC), 0));
+
+        _tokenB.mint(address(lPair), 50e18);
+        _tokenC.mint(address(lPair), 100e18);
+        lPair.mint(address(this));
+
+        // sanity
+        (,,, uint16 lIndex) = lPair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(lPair, lIndex);
+        assertEq(lIndex, type(uint16).max);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantRawPrice), lOriginalPrice, 0.0001e18);
+        assertEq(lObs.logInstantRawPrice, lObs.logInstantClampedPrice);
     }
 
     function testUpdateOracle_SwapThenBalancedMintSameBlock() external allPairs {
@@ -189,7 +215,7 @@ contract OracleWriterTest is BaseTest {
 
         // act
         _tokenA.mint(address(_pair), 5e18);
-        _pair.swap(int(5e18), true, address(this), "");
+        _pair.swap(int256(5e18), true, address(this), "");
 
         // sanity - ensure that instant prices are updated
         (uint256 lReserve0, uint256 lReserve1,, uint16 lIndex0) = _pair.getReserves();
@@ -217,7 +243,7 @@ contract OracleWriterTest is BaseTest {
 
         // act
         _tokenA.mint(address(_pair), 5e18);
-        _pair.swap(int(5e18), true, address(this), "");
+        _pair.swap(int256(5e18), true, address(this), "");
 
         // sanity - ensure that instant prices are updated
         (uint256 lReserve0, uint256 lReserve1,, uint16 lIndex0) = _pair.getReserves();
@@ -236,13 +262,10 @@ contract OracleWriterTest is BaseTest {
         assertEq(lIndex0, lIndex1);
         assertEq(lObs1.logAccRawPrice, lObs0.logAccRawPrice);
         assertEq(lObs1.logAccClampedPrice, lObs0.logAccClampedPrice);
-        assertNotEq(lObs1.logInstantRawPrice, lObs0.logInstantRawPrice);
-        assertNotEq(lObs1.logInstantClampedPrice, lObs0.logInstantClampedPrice);
+        assertNotEq(lObs1.logInstantRawPrice, lObs0.logInstantRawPrice, "a");
     }
 
-    function testUpdateOracle_BurnThenSwapSameBlock() external allPairs {
-
-    }
+    function testUpdateOracle_BurnThenSwapSameBlock() external allPairs { }
 
     function testUpdateOracle_MultipleSwapsSameBlock() external allPairs {
         // arrange
@@ -274,15 +297,13 @@ contract OracleWriterTest is BaseTest {
         // assert
         assertEq(lObs0.timestamp, lObs1.timestamp);
         assertEq(lObs1.timestamp, lObs2.timestamp);
-        assertEq(lObs0.logAccRawPrice , lObs1.logAccRawPrice);
-        assertEq(lObs1.logAccRawPrice , lObs2.logAccRawPrice);
-        assertEq(lObs0.logAccClampedPrice , lObs1.logAccClampedPrice);
-        assertEq(lObs1.logAccClampedPrice , lObs2.logAccClampedPrice);
+        assertEq(lObs0.logAccRawPrice, lObs1.logAccRawPrice);
+        assertEq(lObs1.logAccRawPrice, lObs2.logAccRawPrice);
+        assertEq(lObs0.logAccClampedPrice, lObs1.logAccClampedPrice);
+        assertEq(lObs1.logAccClampedPrice, lObs2.logAccClampedPrice);
 
         assertNotEq(lObs0.logInstantRawPrice, lObs1.logInstantRawPrice);
         assertNotEq(lObs1.logInstantRawPrice, lObs2.logInstantRawPrice);
-        assertNotEq(lObs0.logInstantClampedPrice, lObs1.logInstantClampedPrice);
-        assertNotEq(lObs1.logInstantClampedPrice, lObs2.logInstantClampedPrice);
     }
 
     function testUpdateOracle_AccumulateOldPricesNotNew() external allPairs {

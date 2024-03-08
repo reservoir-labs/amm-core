@@ -161,16 +161,30 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         if (aBalance0 != 0 && aBalance1 != 0) {
             Observation storage lPrevious = _observations[_slot0.index];
             (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
-            (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
-                lInstantRawPrice, LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice), lTimeElapsed
-            );
-
             // checks to make sure we don't create a new oracle sample at the block of creation
             if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
+                (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                    lInstantRawPrice,
+                    lLogInstantRawPrice,
+                    LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                    lTimeElapsed,
+                    aBlockTimestampLast
+                );
                 _updateOracleNewSample(
                     lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
                 );
             } else {
+                // for instant price updates in the same timestamp, we use the time difference from the previous oracle observation as the time elapsed
+                lTimeElapsed = lBlockTimestamp - lPrevious.timestamp;
+
+                (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                    lInstantRawPrice,
+                    lLogInstantRawPrice,
+                    LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                    lTimeElapsed,
+                    lPrevious.timestamp
+                );
+
                 _updateOracleInstantPrices(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice);
             }
         }
@@ -530,15 +544,18 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         maxChangeRate = aMaxChangeRate;
     }
 
-    function _calcClampedPrice(uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed)
-        internal
-        virtual
-        returns (uint256 rClampedPrice, int256 rClampedLogPrice)
-    {
+    function _calcClampedPrice(
+        uint256 aCurrRawPrice,
+        int256 aCurrLogRawPrice,
+        uint256 aPrevClampedPrice,
+        uint256 aTimeElapsed,
+        uint256 aPreviousTimestamp
+    ) internal virtual returns (uint256 rClampedPrice, int256 rClampedLogPrice) {
         // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
         // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
-        if (aPrevClampedPrice == 0 || aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangeRate * aTimeElapsed) {
-            (rClampedPrice, rClampedLogPrice) = (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
+        // if aPreviousTimestamp is 0, this is the first calculation of clamped price, and so should be set to the raw price
+        if (aPreviousTimestamp == 0 || aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangeRate * aTimeElapsed) {
+            (rClampedPrice, rClampedLogPrice) = (aCurrRawPrice, aCurrLogRawPrice);
         } else {
             // clamp the price
             // multiplication of maxChangeRate and aTimeElapsed would not overflow as
