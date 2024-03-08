@@ -167,7 +167,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
             // checks to make sure we don't create a new oracle sample at the block of creation
             if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-                _updateOracleNewSample(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp);
+                _updateOracleNewSample(
+                    lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
+                );
             } else {
                 _updateOracleInstantPrices(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice);
             }
@@ -577,7 +579,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function _updateOracleInstantPrices(Observation storage aPrevious, int256 aLogInstantRawPrice, int256 aLogInstantClampedPrice) internal {
+    function _updateOracleInstantPrices(
+        Observation storage aPrevious,
+        int256 aLogInstantRawPrice,
+        int256 aLogInstantClampedPrice
+    ) internal {
         aPrevious.logInstantRawPrice = int24(aLogInstantRawPrice);
         aPrevious.logInstantClampedPrice = int24(aLogInstantClampedPrice);
     }

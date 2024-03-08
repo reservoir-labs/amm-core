@@ -224,7 +224,12 @@ contract ConstantProductPair is ReservoirPair {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ReservoirPair
-    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1) internal view override returns (uint256, int256) {
+    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1)
+        internal
+        view
+        override
+        returns (uint256, int256)
+    {
         return ConstantProductOracleMath.calcLogPrice(
             aBalance0 * token0PrecisionMultiplier(), aBalance1 * token1PrecisionMultiplier()
         );
