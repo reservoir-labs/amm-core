@@ -155,20 +155,22 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // however in the case where no swaps happen in ~68 years (2 ** 31 seconds) the timeElapsed would underflow twice
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
-        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            (uint256 lInstantPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
-            _updateOracle(lInstantPrice, lLogInstantRawPrice, lTimeElapsed, lBlockTimestamp);
-        }
-        // the very first attempted oracle update
-        else if (_observations[sSlot0.index].timestamp == 0) {
-            (, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
-            _observations[sSlot0.index] = Observation(
-                int24(lLogInstantRawPrice),
-                int24(lLogInstantRawPrice),
-                0,
-                0,
-                lBlockTimestamp
+
+        // both balance should never be zero
+        // but necessary to check so we don't pass 0 values into arithmetic operations
+        if (aBalance0 != 0 && aBalance1 != 0) {
+            Observation storage lPrevious = _observations[_slot0.index];
+            (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
+            (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                lInstantRawPrice, LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice), lTimeElapsed
             );
+
+            // checks to make sure we don't create a new oracle sample at the block of creation
+            if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
+                _updateOracleNewSample(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp);
+            } else {
+                _updateOracleInstantPrices(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice);
+            }
         }
 
         // update reserves to match latest balances
@@ -550,34 +552,34 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function _updateOracle(
-        uint256 aInstantRawPrice,
+    function _updateOracleNewSample(
+        Observation storage aPrevious,
         int256 aLogInstantRawPrice,
+        int256 aLogInstantClampedPrice,
         uint32 aTimeElapsed,
         uint32 aCurrentTimestamp
     ) internal {
-        Observation storage previous = _observations[_slot0.index];
-
-        (, int256 logInstantClampedPrice) = _calcClampedPrice(
-            aInstantRawPrice, LogCompression.fromLowResLog(previous.logInstantClampedPrice), aTimeElapsed
-        );
-
         // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
         // when the index overflows it will overwrite the oldest observation to form a loop
         unchecked {
             int88 logAccRawPrice =
-                previous.logAccRawPrice + previous.logInstantRawPrice * int88(int256(uint256(aTimeElapsed)));
+                aPrevious.logAccRawPrice + aPrevious.logInstantRawPrice * int88(int256(uint256(aTimeElapsed)));
             int88 logAccClampedPrice =
-                previous.logAccClampedPrice + previous.logInstantClampedPrice * int88(int256(uint256(aTimeElapsed)));
+                aPrevious.logAccClampedPrice + aPrevious.logInstantClampedPrice * int88(int256(uint256(aTimeElapsed)));
             _slot0.index += 1;
             _observations[_slot0.index] = Observation(
                 int24(aLogInstantRawPrice),
-                int24(logInstantClampedPrice),
+                int24(aLogInstantClampedPrice),
                 logAccRawPrice,
                 logAccClampedPrice,
                 aCurrentTimestamp
             );
         }
+    }
+
+    function _updateOracleInstantPrices(Observation storage aPrevious, int256 aLogInstantRawPrice, int256 aLogInstantClampedPrice) internal {
+        aPrevious.logInstantRawPrice = int24(aLogInstantRawPrice);
+        aPrevious.logInstantClampedPrice = int24(aLogInstantClampedPrice);
     }
 
     /// @param aBalance0 in its native precision

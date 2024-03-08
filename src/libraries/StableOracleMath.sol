@@ -12,8 +12,8 @@ library StableOracleMath {
 
     /// @notice Calculates the spot price of token1/token0 for the stable pair
     /// @param amplificationParameter in precise form (see StableMath.A_PRECISION)
-    /// @param reserve0 normalized to 18 decimals
-    /// @param reserve1 normalized to 18 decimals
+    /// @param reserve0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock()
+    /// @param reserve1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock()
     /// @return spotPrice price of token1/token0, 18 decimal fixed point number
     /// @return logSpotPrice natural log of the spot price, 4 decimal fixed point number
     function calcLogPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
