@@ -61,6 +61,10 @@ library StableOracleMath {
         // dy = a.x.y.2 + a.x^2 - b.x
         uint256 derivativeY = axy2 + ((a * reserve0).mulWad(reserve0)) - (b.mulWad(reserve0));
 
+        if (derivativeY == 0 || derivativeX == 0) {
+            return 1e18;
+        }
+
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
