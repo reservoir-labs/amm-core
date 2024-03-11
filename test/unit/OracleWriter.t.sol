@@ -265,8 +265,6 @@ contract OracleWriterTest is BaseTest {
         assertNotEq(lObs1.logInstantRawPrice, lObs0.logInstantRawPrice, "a");
     }
 
-    function testUpdateOracle_BurnThenSwapSameBlock() external allPairs { }
-
     function testUpdateOracle_MultipleSwapsSameBlock() external allPairs {
         // arrange
         _stepTime(5);
