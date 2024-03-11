@@ -760,12 +760,13 @@ contract StablePairTest is BaseTest {
         assertLt(lExpectedOut2, lExpectedOut1);
     }
 
-    function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintAmt) public {
+    function testSwap_DiffAs(uint256 aAmpCoeff, uint256 aSwapAmt, uint256 aMintCAmt, uint256 aMintDAmt) public {
         // assume
         uint256 lAmpCoeff = bound(aAmpCoeff, StableMath.MIN_A, StableMath.MAX_A);
-        uint256 lSwapAmt = bound(aSwapAmt, 1e3, type(uint104).max / 2);
-        uint256 lCMintAmt = bound(aMintAmt, 1e18, 10_000_000_000e18);
-        uint256 lDMintAmt = bound(lCMintAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
+        uint256 lCMintAmt = bound(aMintCAmt, 1e18, 10_000_000_000e18);
+        // this will be between 1e3 and 10 trillion 10_000_000_000_000e6
+        uint256 lDMintAmt = bound(aMintDAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12);
+        uint256 lSwapAmt = bound(aSwapAmt, lDMintAmt / 100, lDMintAmt * 100);
 
         // arrange
         _factory.write("SP::amplificationCoefficient", lAmpCoeff);
