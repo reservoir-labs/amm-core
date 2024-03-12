@@ -159,7 +159,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         // both balance should never be zero
         // but necessary to check so we don't pass 0 values into arithmetic operations
         if (aBalance0 != 0 && aBalance1 != 0) {
-            Observation storage lPrevious = _observations[_slot0.index];
+            Observation storage lPrevious = _observations[sSlot0.index];
             (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
             // checks to make sure we don't create a new oracle sample at the block of creation
             if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
@@ -171,7 +171,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                     aBlockTimestampLast
                 );
                 _updateOracleNewSample(
-                    lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
+                    sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
                 );
             } else {
                 // for instant price updates in the same timestamp, we use the time difference from the previous oracle observation as the time elapsed
@@ -572,6 +572,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     }
 
     function _updateOracleNewSample(
+        Slot0 storage aSlot0,
         Observation storage aPrevious,
         int256 aLogInstantRawPrice,
         int256 aLogInstantClampedPrice,
@@ -585,8 +586,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 aPrevious.logAccRawPrice + aPrevious.logInstantRawPrice * int88(int256(uint256(aTimeElapsed)));
             int88 logAccClampedPrice =
                 aPrevious.logAccClampedPrice + aPrevious.logInstantClampedPrice * int88(int256(uint256(aTimeElapsed)));
-            _slot0.index += 1;
-            _observations[_slot0.index] = Observation(
+            aSlot0.index += 1;
+            _observations[aSlot0.index] = Observation(
                 int24(aLogInstantRawPrice),
                 int24(aLogInstantClampedPrice),
                 logAccRawPrice,
