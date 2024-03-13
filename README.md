@@ -63,6 +63,22 @@ V1.0
 
 - [ABDK](./audits/ABDK_ReservoirFi_AMMCore_v_1_0.pdf)
 
+## Production Parameters
+
+- `ReservoirPair::maxChangeRate`
+  - BTC-ETH pair
+    - Fixed at ...
+  - ETH-USDC pair
+    - Fixed at ..
+  - Stable Pairs
+    - Fixed at ...
+
+- TWAP Period
+  - BTC-ETH pair
+    - 15 min
+  - ETH-USDC pair
+    - 15 min
+
 ## Contributing
 
 Are you interested in helping us build the future of Reservoir?
