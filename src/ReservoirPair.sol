@@ -135,8 +135,11 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _writeSlot0Timestamp(sSlot0, aBlockTimestampLast, false);
     }
 
-    // update reserves with new balances
-    // on the first call per block, update price oracle using previous reserves
+    /// @notice update reserves with new balances
+    /// @notice on the first call per block, accumulate price oracle using previous instant prices and write the new instant prices
+    /// @dev we write an oracle sample even at the time of pair creation. Also we do not update instant prices for
+    /// subsequent mint/burn/swaps in the same block. the team has assessed that this is a small risk given the very
+    /// fast block times on L2s and has decided to make the tradeoff to minimize complexity
     function _updateAndUnlock(
         Slot0 storage sSlot0,
         uint256 aBalance0,
@@ -156,13 +159,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
 
             // both balance should never be zero, but necessary to check so we don't pass 0 values into arithmetic operations
-            // on the first activity of every block, accumulate using previous instant prices and write the current instant prices
-            // we create a new sample even at the time of pair creation
-            // this implies that we do not update instant prices for subsequent mint/burn/swaps in the same block
-            // but the team has assessed that this is a small risk given the very fast block times on L2s
-            // and has decided to make the tradeoff to minimize complexity
-            if (lTimeElapsed * aBalance0 * aBalance1 > 0 ) {
-
+            // shortcut to calculate lTimeElapsed > 0 && aBalance0 > 0 && aBalance1 > 0
+            if (lTimeElapsed * aBalance0 * aBalance1 > 0) {
                 Observation storage lPrevious = _observations[sSlot0.index];
                 (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
 
