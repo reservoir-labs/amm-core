@@ -164,6 +164,26 @@ contract OracleWriterTest is BaseTest {
         _pair.setMaxChangeRate(lMaxChangeRate);
     }
 
+    function testOracle_NoWriteInSameTimestamp() public allPairs {
+        // arrange
+        (,,, uint16 lInitialIndex) = _pair.getReserves();
+        uint256 lAmountToSwap = 1e17;
+
+        // act
+        _tokenA.mint(address(_pair), lAmountToSwap);
+        _pair.swap(int256(lAmountToSwap), true, address(this), "");
+
+        vm.prank(_alice);
+        _pair.transfer(address(_pair), 1e18);
+        _pair.burn(address(this));
+
+        _pair.sync();
+
+        // assert
+        (,,, uint16 lFinalIndex) = _pair.getReserves();
+        assertEq(lFinalIndex, lInitialIndex);
+    }
+
     function testUpdateOracle_CreatePairThenSwapSameBlock() external allPairs {
         // arrange
         uint256 lOriginalPrice = 1e18;

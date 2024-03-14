@@ -1411,26 +1411,6 @@ contract StablePairTest is BaseTest {
                                     ORACLE
     //////////////////////////////////////////////////////////////////////////*/
 
-    function testOracle_NoWriteInSameTimestamp() public {
-        // arrange
-        (,,, uint16 lInitialIndex) = _constantProductPair.getReserves();
-        uint256 lAmountToSwap = 1e17;
-
-        // act
-        _tokenA.mint(address(_stablePair), lAmountToSwap);
-        _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
-
-        vm.prank(_alice);
-        _stablePair.transfer(address(_stablePair), 1e18);
-        _stablePair.burn(address(this));
-
-        _stablePair.sync();
-
-        // assert
-        (,,, uint16 lFinalIndex) = _constantProductPair.getReserves();
-        assertEq(lFinalIndex, lInitialIndex);
-    }
-
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
         StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));

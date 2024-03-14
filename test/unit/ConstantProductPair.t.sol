@@ -282,26 +282,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
                                     ORACLE
     //////////////////////////////////////////////////////////////////////////*/
 
-    function testOracle_NoWriteInSameTimestamp() public {
-        // arrange
-        (,,, uint16 lInitialIndex) = _constantProductPair.getReserves();
-        uint256 lAmountToSwap = 1e17;
-
-        // act
-        _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
-
-        vm.prank(_alice);
-        _constantProductPair.transfer(address(_constantProductPair), 1e18);
-        _constantProductPair.burn(address(this));
-
-        _constantProductPair.sync();
-
-        // assert
-        (,,, uint16 lFinalIndex) = _constantProductPair.getReserves();
-        assertEq(lFinalIndex, lInitialIndex);
-    }
-
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
