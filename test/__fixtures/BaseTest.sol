@@ -43,6 +43,8 @@ abstract contract BaseTest is Test {
     OracleCaller internal _oracleCaller;
 
     modifier randomizeStartTime(uint32 aNewStartTime) {
+        vm.assume(aNewStartTime > 1);
+
         vm.warp(aNewStartTime);
         _;
     }
