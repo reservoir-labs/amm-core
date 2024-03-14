@@ -65,11 +65,23 @@ V1.0
 
 ## Production Parameters
 
+- Assumptions when setting an appropriate max change rate: 
+  - Oracle manipulation attempts will move prices more than the most violent organic runs
+  - So what we need is some 
+- Refer to this spreadsheet for detailed [calculations](https://docs.google.com/spreadsheets/d/1oAn8ghqK1MThrgOcHUl8nP_ATTpnlmMqnDtqBXxeHJs/edit#gid=0)
+
 - `ReservoirPair::maxChangeRate`
   - BTC-ETH pair
-    - Fixed at ...
+    - Fixed at 0.0005e18 (5bp/s)
+    - Implies that:
+      - price can change 3% in 1 minute if swapped once per minute 
+      - price can change 6.09% in 2 minute if swapped once per minute
+      - Price can change 34.39% in 10 minutes if swapped once per minute
+        - compared to 30% in 10 minutes if swapped only once per 10 minutes 
+        - compared to 34.97% in 10 minutes if swapped once per second
+      - In the most violent run
   - ETH-USDC pair
-    - Fixed at ..
+    - Fixed at 0.0005e18 (5bp/s)
   - Stable Pairs
     - Fixed at ...
 
@@ -78,6 +90,9 @@ V1.0
     - 15 min
   - ETH-USDC pair
     - 15 min
+
+- Max price change within one trade
+  - team intuits it should be set somewhere between 1-3% 
 
 ## Contributing
 
