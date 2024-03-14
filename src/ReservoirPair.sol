@@ -154,29 +154,29 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // underflow is desired
             // however in the case where no swaps happen in ~68 years (2 ** 31 seconds) the timeElapsed would underflow twice
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
-        }
 
-        // both balance should never be zero, but necessary to check so we don't pass 0 values into arithmetic operations
-        // on the first activity of every block, accumulate using previous instant prices and write the current instant prices
-        // we create a new sample even at the time of pair creation
-        // this implies that we do not update instant prices for subsequent mint/burn/swaps in the same block
-        // but the team has assessed that this is a small risk given the very fast block times on L2s
-        // and has decided to make the tradeoff to minimize complexity
-        if (lTimeElapsed > 0 && aBalance0 > 0 && aBalance1 > 0) {
+            // both balance should never be zero, but necessary to check so we don't pass 0 values into arithmetic operations
+            // on the first activity of every block, accumulate using previous instant prices and write the current instant prices
+            // we create a new sample even at the time of pair creation
+            // this implies that we do not update instant prices for subsequent mint/burn/swaps in the same block
+            // but the team has assessed that this is a small risk given the very fast block times on L2s
+            // and has decided to make the tradeoff to minimize complexity
+            if (lTimeElapsed * aBalance0 * aBalance1 > 0 ) {
 
-            Observation storage lPrevious = _observations[sSlot0.index];
-            (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
+                Observation storage lPrevious = _observations[sSlot0.index];
+                (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
 
-            (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
-                lInstantRawPrice,
-                lLogInstantRawPrice,
-                LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
-                lTimeElapsed,
-                aBlockTimestampLast // assert: aBlockTimestampLast == lPrevious.timestamp
-            );
-            _updateOracleNewSample(
-                sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
-            );
+                (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                    lInstantRawPrice,
+                    lLogInstantRawPrice,
+                    LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                    lTimeElapsed,
+                    aBlockTimestampLast // assert: aBlockTimestampLast == lPrevious.timestamp
+                );
+                _updateOracleNewSample(
+                    sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
+                );
+            }
         }
 
         // update reserves to match latest balances
