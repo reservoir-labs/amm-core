@@ -156,37 +156,27 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
         }
 
-        // both balance should never be zero
-        // but necessary to check so we don't pass 0 values into arithmetic operations
-        if (aBalance0 != 0 && aBalance1 != 0) {
+        // both balance should never be zero, but necessary to check so we don't pass 0 values into arithmetic operations
+        // on the first activity of every block, accumulate using previous instant prices and write the current instant prices
+        // we create a new sample even at the time of pair creation
+        // this implies that we do not update instant prices for subsequent mint/burn/swaps in the same block
+        // but the team has assessed that this is a small risk given the very fast block times on L2s
+        // can try aBalance0 * aBalance1 != 0
+        if (lTimeElapsed > 0 && aBalance0 != 0 && aBalance1 != 0) {
+
             Observation storage lPrevious = _observations[sSlot0.index];
             (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
-            // checks to make sure we don't create a new oracle sample at the block of creation
-            if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-                (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
-                    lInstantRawPrice,
-                    lLogInstantRawPrice,
-                    LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
-                    lTimeElapsed,
-                    aBlockTimestampLast
-                );
-                _updateOracleNewSample(
-                    sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
-                );
-            } else {
-                // for instant price updates in the same timestamp, we use the time difference from the previous oracle observation as the time elapsed
-                lTimeElapsed = lBlockTimestamp - lPrevious.timestamp;
 
-                (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
-                    lInstantRawPrice,
-                    lLogInstantRawPrice,
-                    LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
-                    lTimeElapsed,
-                    lPrevious.timestamp
-                );
-
-                _updateOracleInstantPrices(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice);
-            }
+            (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                lInstantRawPrice,
+                lLogInstantRawPrice,
+                LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                lTimeElapsed,
+                aBlockTimestampLast // assert: aBlockTimestampLast == lPrevious.timestamp
+            );
+            _updateOracleNewSample(
+                sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
+            );
         }
 
         // update reserves to match latest balances
@@ -595,15 +585,6 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 aCurrentTimestamp
             );
         }
-    }
-
-    function _updateOracleInstantPrices(
-        Observation storage aPrevious,
-        int256 aLogInstantRawPrice,
-        int256 aLogInstantClampedPrice
-    ) internal {
-        aPrevious.logInstantRawPrice = int24(aLogInstantRawPrice);
-        aPrevious.logInstantClampedPrice = int24(aLogInstantClampedPrice);
     }
 
     /// @param aBalance0 in its native precision
