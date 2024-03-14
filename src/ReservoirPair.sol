@@ -162,7 +162,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         // this implies that we do not update instant prices for subsequent mint/burn/swaps in the same block
         // but the team has assessed that this is a small risk given the very fast block times on L2s
         // and has decided to make the tradeoff to minimize complexity
-        if (lTimeElapsed > 0 && aBalance0 & aBalance1 != 0) {
+        if (lTimeElapsed > 0 && aBalance0 > 0 && aBalance1 > 0) {
 
             Observation storage lPrevious = _observations[sSlot0.index];
             (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
