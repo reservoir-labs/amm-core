@@ -63,16 +63,16 @@ contract OracleWriterTest is BaseTest {
 
         // sanity
         (,,, uint16 lIndex) = _pair.getReserves();
-        assertEq(lIndex, 1);
+        assertEq(lIndex, 2);
 
-        Observation memory lObs = _oracleCaller.observation(_pair, 0);
+        Observation memory lObs = _oracleCaller.observation(_pair, 1);
         assertEq(lObs.logAccRawPrice, 0);
         assertEq(lObs.logAccClampedPrice, 0);
         assertNotEq(lObs.logInstantRawPrice, 0);
         assertNotEq(lObs.logInstantClampedPrice, 0);
         assertNotEq(lObs.timestamp, 0);
 
-        lObs = _oracleCaller.observation(_pair, 1);
+        lObs = _oracleCaller.observation(_pair, 2);
         assertNotEq(lObs.logAccRawPrice, 0);
         assertNotEq(lObs.logAccClampedPrice, 0);
         assertNotEq(lObs.logInstantRawPrice, 0);
@@ -80,17 +80,17 @@ contract OracleWriterTest is BaseTest {
         assertNotEq(lObs.timestamp, 0);
 
         // act
-        _writeObservation(_pair, 0, int24(123), int24(-456), int88(789), int56(-1011), uint32(666));
+        _writeObservation(_pair, 1, int24(123), int24(-456), int88(789), int56(-1011), uint32(666));
 
         // assert
-        lObs = _oracleCaller.observation(_pair, 0);
+        lObs = _oracleCaller.observation(_pair, 1);
         assertEq(lObs.logInstantRawPrice, int24(123));
         assertEq(lObs.logInstantClampedPrice, int24(-456));
         assertEq(lObs.logAccRawPrice, int88(789));
         assertEq(lObs.logAccClampedPrice, int88(-1011));
         assertEq(lObs.timestamp, uint32(666));
 
-        lObs = _oracleCaller.observation(_pair, 1);
+        lObs = _oracleCaller.observation(_pair, 2);
         assertNotEq(lObs.logAccRawPrice, 0);
         assertNotEq(lObs.logAccClampedPrice, 0);
         assertNotEq(lObs.timestamp, 0);
