@@ -764,8 +764,7 @@ contract StablePairTest is BaseTest {
         // assume
         uint256 lAmpCoeff = bound(aAmpCoeff, StableMath.MIN_A, StableMath.MAX_A);
         uint256 lCMintAmt = bound(aMintCAmt, 1e18, 10_000_000_000e18);
-        // this will be between 1e3 and 10 trillion 10_000_000_000_000e6
-        uint256 lDMintAmt = bound(aMintDAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12);
+        uint256 lDMintAmt = bound(aMintDAmt, lCMintAmt / 1e12 / 1e3, lCMintAmt / 1e12 * 1e3);
         uint256 lSwapAmt = bound(aSwapAmt, lDMintAmt / 100, lDMintAmt * 100);
 
         // arrange
@@ -1530,7 +1529,7 @@ contract StablePairTest is BaseTest {
         assertApproxEqRel(lSpotPrice1, uint256(2.0226e18), 0.0001e18);
         assertApproxEqRel(lSpotPrice2, uint256(10677e18), 0.0001e18);
 
-        // Price for observation window 0-1
+        // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
@@ -1538,7 +1537,7 @@ contract StablePairTest is BaseTest {
             lSpotPrice1,
             0.0001e18
         );
-        // Price for observation window 1-2
+        // Price for observation window 2-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs3.logAccRawPrice - lObs2.logAccRawPrice) / int32(Uint31Lib.sub(lObs3.timestamp, lObs2.timestamp))
@@ -1546,7 +1545,7 @@ contract StablePairTest is BaseTest {
             lSpotPrice2,
             0.0001e18
         );
-        // Price for observation window 0-2
+        // Price for observation window 1-3
         assertApproxEqRel(
             LogCompression.fromLowResLog(
                 (lObs3.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs3.timestamp, lObs1.timestamp))
