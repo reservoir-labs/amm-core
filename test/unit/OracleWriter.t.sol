@@ -413,7 +413,7 @@ contract OracleWriterTest is BaseTest {
         assertEq(lIndex, 4);
     }
 
-    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
+    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) allPairs {
         // assume
         vm.assume(aNewStartTime >= 1);
 
