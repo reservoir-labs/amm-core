@@ -385,14 +385,14 @@ contract OracleWriterTest is BaseTest {
         _stepTime(12);
         lCP.sync();
         lSP.sync();
-        Observation memory lObsCP0 = _oracleCaller.observation(lCP, 0);
         Observation memory lObsCP1 = _oracleCaller.observation(lCP, 1);
-        Observation memory lObsSP0 = _oracleCaller.observation(lSP, 0);
+        Observation memory lObsCP2 = _oracleCaller.observation(lCP, 2);
         Observation memory lObsSP1 = _oracleCaller.observation(lSP, 1);
+        Observation memory lObsSP2 = _oracleCaller.observation(lSP, 2);
         uint256 lUncompressedPriceCP =
-            LogCompression.fromLowResLog((lObsCP1.logAccRawPrice - lObsCP0.logAccRawPrice) / 12);
+            LogCompression.fromLowResLog((lObsCP2.logAccRawPrice - lObsCP1.logAccRawPrice) / 12);
         uint256 lUncompressedPriceSP =
-            LogCompression.fromLowResLog((lObsSP1.logAccRawPrice - lObsSP0.logAccRawPrice) / 12);
+            LogCompression.fromLowResLog((lObsSP2.logAccRawPrice - lObsSP1.logAccRawPrice) / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
     }
 
