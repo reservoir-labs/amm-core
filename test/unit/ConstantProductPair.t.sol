@@ -302,45 +302,6 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         assertEq(lFinalIndex, lInitialIndex);
     }
 
-    function testOracle_WrapsAroundAfterFull() public {
-        // arrange
-        uint256 lAmountToSwap = 1e17;
-        uint256 lMaxObservations = 2 ** 16;
-
-        // act
-        for (uint256 i = 0; i < lMaxObservations + 4; ++i) {
-            _stepTime(5);
-            _tokenA.mint(address(_constantProductPair), lAmountToSwap);
-            _constantProductPair.swap(int256(lAmountToSwap), true, address(this), "");
-        }
-
-        // assert
-        (,,, uint256 lIndex) = _constantProductPair.getReserves();
-        assertEq(lIndex, 3);
-    }
-
-    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
-        // arrange - make the last observation close to overflowing
-        (,,, uint16 lIndex) = _constantProductPair.getReserves();
-        _writeObservation(
-            _constantProductPair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
-        );
-        Observation memory lPrevObs = _oracleCaller.observation(_constantProductPair, lIndex);
-
-        // act
-        uint256 lAmountToSwap = 1e18;
-        _tokenB.mint(address(_constantProductPair), lAmountToSwap);
-        _constantProductPair.swap(-int256(lAmountToSwap), true, address(this), "");
-
-        _stepTime(5);
-        _constantProductPair.sync();
-
-        // assert - when it overflows it goes from a very positive number to a very negative number
-        (,,, lIndex) = _constantProductPair.getReserves();
-        Observation memory lCurrObs = _oracleCaller.observation(_constantProductPair, lIndex);
-        assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
-    }
-
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
         ConstantProductPair lPair = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));

@@ -1530,48 +1530,6 @@ contract StablePairTest is BaseTest {
         assertEq(lFinalIndex, lInitialIndex);
     }
 
-    function testOracle_WrapsAroundAfterFull() public {
-        // arrange
-        uint256 lAmountToSwap = 1e15;
-        uint256 lMaxObservations = 2 ** 16;
-
-        // act
-        for (uint256 i = 0; i < lMaxObservations + 4; ++i) {
-            _stepTime(5);
-            _tokenA.mint(address(_stablePair), lAmountToSwap);
-            _stablePair.swap(int256(lAmountToSwap), true, address(this), "");
-        }
-
-        // assert
-        (,,, uint16 lIndex) = _stablePair.getReserves();
-        assertEq(lIndex, 3);
-    }
-
-    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
-        // assume
-        vm.assume(aNewStartTime >= 1);
-
-        // arrange - make the last observation close to overflowing
-        (,,, uint16 lIndex) = _stablePair.getReserves();
-        _writeObservation(
-            _stablePair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
-        );
-        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
-
-        // act
-        uint256 lAmountToSwap = 5e18;
-        _tokenB.mint(address(_stablePair), lAmountToSwap);
-        _stablePair.swap(-int256(lAmountToSwap), true, address(this), "");
-
-        _stepTime(5);
-        _stablePair.sync();
-
-        // assert - when it overflows it goes from a very positive number to a very negative number
-        (,,, lIndex) = _stablePair.getReserves();
-        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
-        assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
-    }
-
     function testOracle_CorrectPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
         // arrange
         StablePair lPair = StablePair(_createPair(address(_tokenB), address(_tokenC), 1));

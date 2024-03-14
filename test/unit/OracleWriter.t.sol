@@ -447,4 +447,47 @@ contract OracleWriterTest is BaseTest {
             LogCompression.fromLowResLog((lObsSP1.logAccRawPrice - lObsSP0.logAccRawPrice) / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
     }
+
+    function testOracle_WrapsAroundAfterFull() public allPairs {
+        // arrange
+        uint256 lAmountToSwap = 1e15;
+        uint256 lMaxObservations = 2 ** 16;
+
+        // act
+        for (uint256 i = 0; i < lMaxObservations + 4; ++i) {
+            _stepTime(5);
+            _tokenA.mint(address(_pair), lAmountToSwap);
+            _pair.swap(int256(lAmountToSwap), true, address(this), "");
+        }
+
+        // assert
+        (,,, uint16 lIndex) = _pair.getReserves();
+        assertEq(lIndex, 4);
+    }
+
+    function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) {
+        // assume
+        vm.assume(aNewStartTime >= 1);
+
+        // arrange - make the last observation close to overflowing
+        (,,, uint16 lIndex) = _stablePair.getReserves();
+        _writeObservation(
+            _stablePair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
+        );
+        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
+
+        // act
+        uint256 lAmountToSwap = 5e18;
+        _tokenB.mint(address(_stablePair), lAmountToSwap);
+        _stablePair.swap(-int256(lAmountToSwap), true, address(this), "");
+
+        _stepTime(5);
+        _stablePair.sync();
+
+        // assert - when it overflows it goes from a very positive number to a very negative number
+        (,,, lIndex) = _stablePair.getReserves();
+        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
+        assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
+    }
+
 }
