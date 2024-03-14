@@ -398,21 +398,21 @@ contract OracleWriterTest is BaseTest {
         lCP.sync();
         lSP.sync();
 
-        // sanity - ensure that two oracle observations have been written at slots 0 and 1
+        // sanity - ensure that two oracle observations have been written at slots 1 and 2
         (,,, uint16 lIndex) = lCP.getReserves();
-        assertEq(lIndex, 1);
+        assertEq(lIndex, 2);
         (,,, lIndex) = lSP.getReserves();
-        assertEq(lIndex, 1);
+        assertEq(lIndex, 2);
 
         // assert
-        Observation memory lObs0CP = _oracleCaller.observation(lCP, 0);
         Observation memory lObs1CP = _oracleCaller.observation(lCP, 1);
-        Observation memory lObs0SP = _oracleCaller.observation(lSP, 0);
+        Observation memory lObs2CP = _oracleCaller.observation(lCP, 2);
         Observation memory lObs1SP = _oracleCaller.observation(lSP, 1);
+        Observation memory lObs2SP = _oracleCaller.observation(lSP, 2);
         uint256 lUncompressedPriceCP =
-            LogCompression.fromLowResLog((lObs1CP.logAccRawPrice - lObs0CP.logAccRawPrice) / 12);
+            LogCompression.fromLowResLog((lObs2CP.logAccRawPrice - lObs1CP.logAccRawPrice) / 12);
         uint256 lUncompressedPriceSP =
-            LogCompression.fromLowResLog((lObs1SP.logAccRawPrice - lObs0SP.logAccRawPrice) / 12);
+            LogCompression.fromLowResLog((lObs2SP.logAccRawPrice - lObs1SP.logAccRawPrice) / 12);
         assertEq(lUncompressedPriceCP, lUncompressedPriceSP);
     }
 

@@ -339,20 +339,20 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         lPair.sync(); // obs2 written here
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
         Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
         Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
+        Observation memory lObs3 = _oracleCaller.observation(lPair, 3);
 
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs1.timestamp, lObs0.timestamp))
+                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
             ),
             lPrice1,
             0.0001e18
         );
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
+                (lObs3.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs3.timestamp, lObs1.timestamp))
             ),
             Math.sqrt(lPrice1 * lPrice2),
             0.0001e18
@@ -373,10 +373,10 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         lPair.sync();
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
         Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
+        Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
         assertApproxEqRel(
-            LogCompression.fromLowResLog((lObs1.logAccRawPrice - lObs0.logAccRawPrice) / 5), 0.5e18, 0.0001e18
+            LogCompression.fromLowResLog((lObs2.logAccRawPrice - lObs1.logAccRawPrice) / 5), 0.5e18, 0.0001e18
         );
     }
 
@@ -399,40 +399,40 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // act
         // price = 4 for 10 seconds
         _tokenB.mint(address(lPair), 100e18);
-        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs0 is written here
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(100e18) : int256(-100e18), true, _bob, ""); // obs1 is written here
         _stepTime(10);
 
         // price = 16 for 10 seconds
         _tokenB.mint(address(lPair), 200e18);
-        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs1 is written here
+        lPair.swap(lPair.token0() == IERC20(address(_tokenB)) ? int256(200e18) : int256(-200e18), true, _bob, ""); // obs2 is written here
         _stepTime(10);
 
-        lPair.sync(); // obs2 is written here
+        lPair.sync(); // obs3 is written here
 
         // assert
-        Observation memory lObs0 = _oracleCaller.observation(lPair, 0);
         Observation memory lObs1 = _oracleCaller.observation(lPair, 1);
         Observation memory lObs2 = _oracleCaller.observation(lPair, 2);
+        Observation memory lObs3 = _oracleCaller.observation(lPair, 3);
 
-        assertEq(lObs0.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
+        assertEq(lObs1.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10, "1");
         assertEq(
-            lObs1.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(4e18) * 10, "2"
+            lObs2.logAccRawPrice, LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(4e18) * 10, "2"
         );
         assertEq(
-            lObs2.logAccRawPrice,
+            lObs3.logAccRawPrice,
             LogCompression.toLowResLog(1e18) * 10 + LogCompression.toLowResLog(4e18) * 10
                 + LogCompression.toLowResLog(16e18) * 10,
             "3"
         );
 
-        assertEq(lObs0.logInstantRawPrice, LogCompression.toLowResLog(4e18));
-        assertEq(lObs1.logInstantRawPrice, LogCompression.toLowResLog(16e18));
-        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(16e18)); // spot price has not changed between obs1 and obs2
+        assertEq(lObs1.logInstantRawPrice, LogCompression.toLowResLog(4e18));
+        assertEq(lObs2.logInstantRawPrice, LogCompression.toLowResLog(16e18));
+        assertEq(lObs3.logInstantRawPrice, LogCompression.toLowResLog(16e18)); // spot price has not changed between obs1 and obs2
 
         // Price for observation window 0-1
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs1.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs1.timestamp, lObs0.timestamp))
+                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
             ),
             4e18,
             0.0001e18
@@ -440,7 +440,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // Price for observation window 1-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs1.timestamp))
+                (lObs3.logAccRawPrice - lObs2.logAccRawPrice) / int32(Uint31Lib.sub(lObs3.timestamp, lObs2.timestamp))
             ),
             16e18,
             0.0001e18
@@ -448,7 +448,7 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         // Price for observation window 0-2
         assertApproxEqRel(
             LogCompression.fromLowResLog(
-                (lObs2.logAccRawPrice - lObs0.logAccRawPrice) / int32(Uint31Lib.sub(lObs2.timestamp, lObs0.timestamp))
+                (lObs3.logAccRawPrice - lObs1.logAccRawPrice) / int32(Uint31Lib.sub(lObs3.timestamp, lObs1.timestamp))
             ),
             8e18,
             0.0001e18
@@ -506,8 +506,8 @@ contract ConstantProductPairTest is BaseTest, IReservoirCallee {
         _constantProductPair.sync();
 
         // assert
-        Observation memory lObs1 = _oracleCaller.observation(_constantProductPair, 1);
-        assertGt(lObs1.logAccRawPrice, lObs1.logAccClampedPrice);
-        assertApproxEqRel(LogCompression.fromLowResLog(lObs1.logInstantClampedPrice), 1.0025e18, 0.0002e18); // 0.02% error
+        Observation memory lObs2 = _oracleCaller.observation(_constantProductPair, 2);
+        assertGt(lObs2.logAccRawPrice, lObs2.logAccClampedPrice);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs2.logInstantClampedPrice), 1.0025e18, 0.0002e18); // 0.02% error
     }
 }
