@@ -135,11 +135,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _writeSlot0Timestamp(sSlot0, aBlockTimestampLast, false);
     }
 
-    /// @notice update reserves with new balances
-    /// @notice on the first call per block, accumulate price oracle using previous instant prices and write the new instant prices
-    /// @dev we write an oracle sample even at the time of pair creation. Also we do not update instant prices for
-    /// subsequent mint/burn/swaps in the same block. the team has assessed that this is a small risk given the very
-    /// fast block times on L2s and has decided to make the tradeoff to minimize complexity
+    /// @notice Updates reserves with new balances.
+    /// @notice On the first call per block, accumulate price oracle using previous instant prices and write the new instant prices.
+    /// @dev We write an oracle sample even at the time of pair creation. The price is not updated on subsequent swaps as manipulating
+    /// the instantaneous price does not materially affect the TWAP, especially when using clamped pricing.
     function _updateAndUnlock(
         Slot0 storage sSlot0,
         uint256 aBalance0,
@@ -585,10 +584,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    /// @param aBalance0 in its native precision
-    /// @param aBalance1 in its native precision
-    /// @return spotPrice where 1e18 == 1
-    /// @return logSpotPrice natural log (ln) of the spotPrice
+    /// @param aBalance0 The balance of token0 in its native precision.
+    /// @param aBalance1 The balance of token1 in its native precision.
+    /// @return spotPrice Expressed as 1e18 == 1.
+    /// @return logSpotPrice The natural log (ln) of the spotPrice.
     function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1)
         internal
         virtual

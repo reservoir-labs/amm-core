@@ -10,12 +10,12 @@ import { StableMath } from "src/libraries/StableMath.sol";
 library StableOracleMath {
     using FixedPointMathLib for uint256;
 
-    /// @notice Calculates the spot price of token1/token0 for the stable pair
-    /// @param amplificationParameter in precise form (see StableMath.A_PRECISION)
-    /// @param reserve0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock()
-    /// @param reserve1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock()
-    /// @return spotPrice price of token1/token0, 18 decimal fixed point number
-    /// @return logSpotPrice natural log of the spot price, 4 decimal fixed point number
+    /// @notice Calculates the spot price of token1/token0 for the stable pair.
+    /// @param amplificationParameter The stable amplification parameter in precise form (see StableMath.A_PRECISION).
+    /// @param reserve0 The reserve of token0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
+    /// @param reserve1 The reserve of token1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
+    /// @return spotPrice The price of token1/token0, a 18 decimal fixed point number.
+    /// @return logSpotPrice The natural log of the spot price, a 4 decimal fixed point number.
     function calcLogPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure
@@ -26,11 +26,11 @@ library StableOracleMath {
         logSpotPrice = LogCompression.toLowResLog(spotPrice);
     }
 
-    /// @notice Calculates the spot price of token1 in token0
-    /// @param amplificationParameter in precise form (see StableMath.A_PRECISION)
-    /// @param reserve0 normalized to 18 decimals
-    /// @param reserve1 normalized to 18 decimals
-    /// @return spotPrice 18 decimal fixed point number. Minimum price is 1e-18 (1 wei)
+    /// @notice Calculates the spot price of token1 in token0.
+    /// @param amplificationParameter The stable amplification parameter in precise form (see StableMath.A_PRECISION).
+    /// @param reserve0 The reserve of token0 normalized to 18 decimals.
+    /// @param reserve1 The reserve of token1 normalized to 18 decimals.
+    /// @return spotPrice The price expressed as a 18 decimal fixed point number. Minimum price is 1e-18 (1 wei).
     function calcSpotPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
         internal
         pure

@@ -63,7 +63,7 @@ contract StableMintBurn is StablePair {
         require(rToken0Fee <= type(uint104).max && rToken1Fee <= type(uint104).max, "SP: NON_OPTIMAL_FEE_TOO_LARGE");
     }
 
-    /// @notice Get D, the StableSwap invariant, based on a set of balances and a particular A.
+    /// @notice Calculates D, the StableSwap invariant, based on a set of balances and a particular A.
     /// See the StableSwap paper for details.
     /// @dev Originally
     /// https://github.com/saddle-finance/saddle-contract/blob/0b76f7fb519e34b878aa1d58cffc8d8dc0572c12/contracts/SwapUtils.sol#L319.

@@ -23,10 +23,10 @@ library ConstantProductOracleMath {
 
     /**
      * @notice Calculates the spot price of token1/token0 for the constant product pair.
-     * @param reserve0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
-     * @param reserve1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
-     * @return spotPrice price of token1/token0, 18 decimals fixed point number. Minimum price is 1e-18 (1 wei), as we do not round to zero.
-     * @return logSpotPrice natural log of the spot price, 4 decimal fixed point number. Min value is 1
+     * @param reserve0 The reserve of token0 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
+     * @param reserve1 The reserve of token1 normalized to 18 decimals, and should never be 0 as checked by _updateAndUnlock().
+     * @return spotPrice The price of token1/token0, expressed as a 18 decimals fixed point number. The minimum price is 1e-18 (1 wei), as we do not round to zero.
+     * @return logSpotPrice The natural log of the spot price, 4 decimal fixed point number. Min value is 1.
      */
     function calcLogPrice(uint256 reserve0, uint256 reserve1)
         internal
