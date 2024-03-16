@@ -577,10 +577,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             // maxChangeRate <= 0.01e18 (50 bits)
             // aTimeElapsed <= 32 bits
             if (aCurrRawPrice > aPrevClampedPrice) {
-                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
+                uint256 lRateLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
+                uint256 lPerTradeLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangePerTrade, 1e18);
+                rClampedPrice = lRateLimitedPrice.min(lPerTradeLimitedPrice);
             } else {
                 assert(aPrevClampedPrice > aCurrRawPrice);
-                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
+                uint256 lRateLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
+                uint256 lPerTradeLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangePerTrade , 1e18);
+                rClampedPrice = lRateLimitedPrice.max(lPerTradeLimitedPrice);
             }
             rClampedLogPrice = LogCompression.toLowResLog(rClampedPrice);
         }
