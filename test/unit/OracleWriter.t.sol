@@ -14,7 +14,7 @@ contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
     event OracleCallerUpdated(address oldCaller, address newCaller);
-    event ClampParamsUpdated(uint256 oldMaxChangeRate, uint256 newMaxChangeRate);
+    event ClampParamsUpdated(uint128 newMaxChangeRatePerSecond, uint128 newMaxChangePerTrade);
 
     ReservoirPair[] internal _pairs;
     ReservoirPair internal _pair;
@@ -141,8 +141,8 @@ contract OracleWriterTest is BaseTest {
         _pair.setClampParams(1, 1);
 
         vm.prank(address(_factory));
-        vm.expectEmit(false, false, false, true);
-        emit ClampParamsUpdated(Constants.DEFAULT_MAX_CHANGE_RATE, 1);
+        vm.expectEmit(false, false, false, false);
+        emit ClampParamsUpdated(1, 1);
         _pair.setClampParams(1, 1);
         assertEq(_pair.maxChangeRate(), 1);
     }
