@@ -137,7 +137,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     /// @notice Updates reserves with new balances.
     /// @notice On the first call per block, accumulate price oracle using previous instant prices and write the new instant prices.
-    /// @dev We write an oracle sample even at the time of pair creation. The price is not updated on subsequent swaps as manipulating
+    /// @dev The price is not updated on subsequent swaps as manipulating
     /// the instantaneous price does not materially affect the TWAP, especially when using clamped pricing.
     function _updateAndUnlock(
         Slot0 storage sSlot0,
@@ -158,21 +158,36 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
 
             // both balance should never be zero, but necessary to check so we don't pass 0 values into arithmetic operations
-            // shortcut to calculate lTimeElapsed > 0 && aBalance0 > 0 && aBalance1 > 0
-            if (lTimeElapsed * aBalance0 * aBalance1 > 0) {
+            // shortcut to calculate aBalance0 > 0 && aBalance1 > 0
+            if (aBalance0 * aBalance1 > 0) {
                 Observation storage lPrevious = _observations[sSlot0.index];
                 (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
 
-                (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
-                    lInstantRawPrice,
-                    lLogInstantRawPrice,
-                    LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
-                    lTimeElapsed,
-                    aBlockTimestampLast // assert: aBlockTimestampLast == lPrevious.timestamp
-                );
-                _updateOracleNewSample(
-                    sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
-                );
+                if (lTimeElapsed * aReserve0 * aReserve1 > 0) {
+                    (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                        lInstantRawPrice,
+                        lLogInstantRawPrice,
+                        LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                        lTimeElapsed,
+                        aBlockTimestampLast // assert: aBlockTimestampLast == lPrevious.timestamp
+                    );
+                    _updateOracleNewSample(
+                        sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
+                    );
+                } else {
+                    // for instant price updates in the same timestamp, we use the time difference from the previous oracle observation as the time elapsed
+                    lTimeElapsed = lBlockTimestamp - lPrevious.timestamp;
+
+                    (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                        lInstantRawPrice,
+                        lLogInstantRawPrice,
+                        LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                        lTimeElapsed,
+                        lPrevious.timestamp
+                    );
+
+                    _updateOracleInstantPrices(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice);
+                }
             }
         }
 
@@ -582,6 +597,15 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 aCurrentTimestamp
             );
         }
+    }
+
+    function _updateOracleInstantPrices(
+        Observation storage aPrevious,
+        int256 aLogInstantRawPrice,
+        int256 aLogInstantClampedPrice
+    ) internal {
+        aPrevious.logInstantRawPrice = int24(aLogInstantRawPrice);
+        aPrevious.logInstantClampedPrice = int24(aLogInstantClampedPrice);
     }
 
     /// @param aBalance0 The balance of token0 in its native precision.
