@@ -163,6 +163,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 Observation storage lPrevious = _observations[sSlot0.index];
                 (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
 
+                // a new sample is not written for the first mint
+                // shortcut to calculate lTimeElapsed > 0 && aReserve0 > 0 && aReserve1 > 0
                 if (lTimeElapsed * aReserve0 * aReserve1 > 0) {
                     (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
                         lInstantRawPrice,
