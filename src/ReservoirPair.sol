@@ -49,7 +49,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             updateSwapFee();
             updatePlatformFee();
             updateOracleCaller();
-            setMaxChangeRate(factory.read(MAX_CHANGE_RATE_NAME).toUint256());
+            setClampParams(factory.read(MAX_CHANGE_RATE_NAME).toUint128(), factory.read(MAX_CHANGE_PER_TRADE_NAME).toUint128());
         }
     }
 
@@ -514,18 +514,21 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     //////////////////////////////////////////////////////////////////////////*/
 
     event OracleCallerUpdated(address oldCaller, address newCaller);
-    event MaxChangeRateUpdated(uint256 oldMaxChangePerSecond, uint256 newMaxChangePerSecond);
+    event ClampParamsUpdated(uint128 newMaxChangeRatePerSecond, uint128 newMaxChangePerTrade);
 
     // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
     string internal constant MAX_CHANGE_RATE_NAME = "Shared::maxChangeRate";
+    string internal constant MAX_CHANGE_PER_TRADE_NAME = "Shared::maxChangePerTrade";
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
 
     mapping(uint256 => Observation) internal _observations;
 
     // maximum allowed rate of change of price per second to mitigate oracle manipulation attacks in the face of
     // post-merge ETH. 1e18 == 100%
-    uint256 public maxChangeRate;
+    uint128 public maxChangeRate;
+    // how much the clamped price can move within one trade. 1e18 == 100%
+    uint128 public maxChangePerTrade;
 
     address public oracleCaller;
 
@@ -542,10 +545,12 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         }
     }
 
-    function setMaxChangeRate(uint256 aMaxChangeRate) public onlyFactory {
+    function setClampParams(uint128 aMaxChangeRate, uint128 aMaxChangePerTrade) public onlyFactory {
         require(0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC, "RP: INVALID_CHANGE_PER_SECOND");
-        emit MaxChangeRateUpdated(maxChangeRate, aMaxChangeRate);
+
+        emit ClampParamsUpdated(aMaxChangeRate, aMaxChangePerTrade);
         maxChangeRate = aMaxChangeRate;
+        maxChangePerTrade = aMaxChangePerTrade;
     }
 
     function _calcClampedPrice(
@@ -557,8 +562,14 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
     ) internal virtual returns (uint256 rClampedPrice, int256 rClampedLogPrice) {
         // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
         // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
-        // if aPreviousTimestamp is 0, this is the first calculation of clamped price, and so should be set to the raw price
-        if (aPreviousTimestamp == 0 || aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangeRate * aTimeElapsed) {
+        if (
+            (
+                aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangeRate * aTimeElapsed
+                    && aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangePerTrade
+            )
+            // this is the first ever calculation of clamped price, and so should be set to the raw price
+            || aPreviousTimestamp == 0
+        ) {
             (rClampedPrice, rClampedLogPrice) = (aCurrRawPrice, aCurrLogRawPrice);
         } else {
             // clamp the price

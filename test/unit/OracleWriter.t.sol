@@ -14,7 +14,7 @@ contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
 
     event OracleCallerUpdated(address oldCaller, address newCaller);
-    event MaxChangeRateUpdated(uint256 oldMaxChangeRate, uint256 newMaxChangeRate);
+    event ClampParamsUpdated(uint256 oldMaxChangeRate, uint256 newMaxChangeRate);
 
     ReservoirPair[] internal _pairs;
     ReservoirPair internal _pair;
@@ -135,33 +135,33 @@ contract OracleWriterTest is BaseTest {
         assertEq(_pair.maxChangeRate(), Constants.DEFAULT_MAX_CHANGE_RATE);
     }
 
-    function testSetMaxChangeRate_OnlyFactory() external allPairs {
+    function testSetClampParams_OnlyFactory() external allPairs {
         // act & assert
         vm.expectRevert();
-        _pair.setMaxChangeRate(1);
+        _pair.setClampParams(1, 1);
 
         vm.prank(address(_factory));
         vm.expectEmit(false, false, false, true);
-        emit MaxChangeRateUpdated(Constants.DEFAULT_MAX_CHANGE_RATE, 1);
-        _pair.setMaxChangeRate(1);
+        emit ClampParamsUpdated(Constants.DEFAULT_MAX_CHANGE_RATE, 1);
+        _pair.setClampParams(1, 1);
         assertEq(_pair.maxChangeRate(), 1);
     }
 
-    function testSetMaxChangeRate_TooLow() external allPairs {
+    function testSetClampParams_TooLow() external allPairs {
         // act & assert
         vm.prank(address(_factory));
         vm.expectRevert("RP: INVALID_CHANGE_PER_SECOND");
-        _pair.setMaxChangeRate(0);
+        _pair.setClampParams(0, 0);
     }
 
-    function testSetMaxChangeRate_TooHigh(uint256 aMaxChangeRate) external allPairs {
+    function testSetClampParams_TooHigh(uint256 aMaxChangeRate) external allPairs {
         // assume
-        uint256 lMaxChangeRate = bound(aMaxChangeRate, 0.01e18 + 1, type(uint256).max);
+        uint128 lMaxChangeRate = uint128(bound(aMaxChangeRate, 0.01e18 + 1, type(uint128).max));
 
         // act & assert
         vm.prank(address(_factory));
         vm.expectRevert("RP: INVALID_CHANGE_PER_SECOND");
-        _pair.setMaxChangeRate(lMaxChangeRate);
+        _pair.setClampParams(lMaxChangeRate, 1);
     }
 
     function testOracle_NoWriteInSameTimestamp() public allPairs {
