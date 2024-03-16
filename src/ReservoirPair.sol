@@ -135,8 +135,10 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         _writeSlot0Timestamp(sSlot0, aBlockTimestampLast, false);
     }
 
-    // update reserves with new balances
-    // on the first call per block, update price and liq oracle using previous reserves
+    /// @notice Updates reserves with new balances.
+    /// @notice On the first call per block, accumulate price oracle using previous instant prices and write the new instant prices.
+    /// @dev The price is not updated on subsequent swaps as manipulating
+    /// the instantaneous price does not materially affect the TWAP, especially when using clamped pricing.
     function _updateAndUnlock(
         Slot0 storage sSlot0,
         uint256 aBalance0,
@@ -148,15 +150,47 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         require(aBalance0 <= type(uint104).max && aBalance1 <= type(uint104).max, "RP: OVERFLOW");
         require(aReserve0 <= type(uint104).max && aReserve1 <= type(uint104).max, "RP: OVERFLOW");
 
-        uint32 lBlockTimestamp = uint32(_currentTime());
+        uint32 lBlockTimestamp = _currentTime();
         uint32 lTimeElapsed;
         unchecked {
             // underflow is desired
             // however in the case where no swaps happen in ~68 years (2 ** 31 seconds) the timeElapsed would underflow twice
             lTimeElapsed = lBlockTimestamp - aBlockTimestampLast;
-        }
-        if (lTimeElapsed > 0 && aReserve0 != 0 && aReserve1 != 0) {
-            _updateOracle(aReserve0, aReserve1, lTimeElapsed, lBlockTimestamp);
+
+            // both balance should never be zero, but necessary to check so we don't pass 0 values into arithmetic operations
+            // shortcut to calculate aBalance0 > 0 && aBalance1 > 0
+            if (aBalance0 * aBalance1 > 0) {
+                Observation storage lPrevious = _observations[sSlot0.index];
+                (uint256 lInstantRawPrice, int256 lLogInstantRawPrice) = _calcSpotAndLogPrice(aBalance0, aBalance1);
+
+                // a new sample is not written for the first mint
+                // shortcut to calculate lTimeElapsed > 0 && aReserve0 > 0 && aReserve1 > 0
+                if (lTimeElapsed * aReserve0 * aReserve1 > 0) {
+                    (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                        lInstantRawPrice,
+                        lLogInstantRawPrice,
+                        LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                        lTimeElapsed,
+                        aBlockTimestampLast // assert: aBlockTimestampLast == lPrevious.timestamp
+                    );
+                    _updateOracleNewSample(
+                        sSlot0, lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice, lTimeElapsed, lBlockTimestamp
+                    );
+                } else {
+                    // for instant price updates in the same timestamp, we use the time difference from the previous oracle observation as the time elapsed
+                    lTimeElapsed = lBlockTimestamp - lPrevious.timestamp;
+
+                    (, int256 lLogInstantClampedPrice) = _calcClampedPrice(
+                        lInstantRawPrice,
+                        lLogInstantRawPrice,
+                        LogCompression.fromLowResLog(lPrevious.logInstantClampedPrice),
+                        lTimeElapsed,
+                        lPrevious.timestamp
+                    );
+
+                    _updateOracleInstantPrices(lPrevious, lLogInstantRawPrice, lLogInstantClampedPrice);
+                }
+            }
         }
 
         // update reserves to match latest balances
@@ -489,10 +523,9 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     mapping(uint256 => Observation) internal _observations;
 
-    // maximum allowed rate of change of price per second
-    // to mitigate oracle manipulation attacks in the face of post-merge ETH
+    // maximum allowed rate of change of price per second to mitigate oracle manipulation attacks in the face of
+    // post-merge ETH. 1e18 == 100%
     uint256 public maxChangeRate;
-    uint256 public prevClampedPrice;
 
     address public oracleCaller;
 
@@ -515,18 +548,19 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
         maxChangeRate = aMaxChangeRate;
     }
 
-    function _calcClampedPrice(uint256 aCurrRawPrice, uint256 aPrevClampedPrice, uint256 aTimeElapsed)
-        internal
-        virtual
-        returns (uint256 rClampedPrice, int112 rClampedLogPrice)
-    {
-        if (aPrevClampedPrice == 0) {
-            return (aCurrRawPrice, int112(LogCompression.toLowResLog(aCurrRawPrice)));
-        }
-
+    function _calcClampedPrice(
+        uint256 aCurrRawPrice,
+        int256 aCurrLogRawPrice,
+        uint256 aPrevClampedPrice,
+        uint256 aTimeElapsed,
+        uint256 aPreviousTimestamp
+    ) internal virtual returns (uint256 rClampedPrice, int256 rClampedLogPrice) {
         // call to `percentDelta` will revert if the difference between aCurrRawPrice and aPrevClampedPrice is
         // greater than uint196 (1e59). It is extremely unlikely that one trade can change the price by 1e59
-        if (aCurrRawPrice.percentDelta(aPrevClampedPrice) > maxChangeRate * aTimeElapsed) {
+        // if aPreviousTimestamp is 0, this is the first calculation of clamped price, and so should be set to the raw price
+        if (aPreviousTimestamp == 0 || aCurrRawPrice.percentDelta(aPrevClampedPrice) <= maxChangeRate * aTimeElapsed) {
+            (rClampedPrice, rClampedLogPrice) = (aCurrRawPrice, aCurrLogRawPrice);
+        } else {
             // clamp the price
             // multiplication of maxChangeRate and aTimeElapsed would not overflow as
             // maxChangeRate <= 0.01e18 (50 bits)
@@ -537,14 +571,51 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 assert(aPrevClampedPrice > aCurrRawPrice);
                 rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
             }
-            rClampedLogPrice = int112(LogCompression.toLowResLog(rClampedPrice));
-        } else {
-            rClampedPrice = aCurrRawPrice;
-            rClampedLogPrice = int112(LogCompression.toLowResLog(aCurrRawPrice));
+            rClampedLogPrice = LogCompression.toLowResLog(rClampedPrice);
         }
     }
 
-    function _updateOracle(uint256 aReserve0, uint256 aReserve1, uint32 aTimeElapsed, uint32 aCurrentTimestamp)
+    function _updateOracleNewSample(
+        Slot0 storage aSlot0,
+        Observation storage aPrevious,
+        int256 aLogInstantRawPrice,
+        int256 aLogInstantClampedPrice,
+        uint32 aTimeElapsed,
+        uint32 aCurrentTimestamp
+    ) internal {
+        // overflow is desired here as the consumer of the oracle will be reading the difference in those accumulated log values
+        // when the index overflows it will overwrite the oldest observation to form a loop
+        unchecked {
+            int88 logAccRawPrice =
+                aPrevious.logAccRawPrice + aPrevious.logInstantRawPrice * int88(int256(uint256(aTimeElapsed)));
+            int88 logAccClampedPrice =
+                aPrevious.logAccClampedPrice + aPrevious.logInstantClampedPrice * int88(int256(uint256(aTimeElapsed)));
+            aSlot0.index += 1;
+            _observations[aSlot0.index] = Observation(
+                int24(aLogInstantRawPrice),
+                int24(aLogInstantClampedPrice),
+                logAccRawPrice,
+                logAccClampedPrice,
+                aCurrentTimestamp
+            );
+        }
+    }
+
+    function _updateOracleInstantPrices(
+        Observation storage aPrevious,
+        int256 aLogInstantRawPrice,
+        int256 aLogInstantClampedPrice
+    ) internal {
+        aPrevious.logInstantRawPrice = int24(aLogInstantRawPrice);
+        aPrevious.logInstantClampedPrice = int24(aLogInstantClampedPrice);
+    }
+
+    /// @param aBalance0 The balance of token0 in its native precision.
+    /// @param aBalance1 The balance of token1 in its native precision.
+    /// @return spotPrice Expressed as 1e18 == 1.
+    /// @return logSpotPrice The natural log (ln) of the spotPrice.
+    function _calcSpotAndLogPrice(uint256 aBalance0, uint256 aBalance1)
         internal
-        virtual;
+        virtual
+        returns (uint256 spotPrice, int256 logSpotPrice);
 }

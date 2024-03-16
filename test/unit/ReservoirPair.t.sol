@@ -4,6 +4,7 @@ import "test/__fixtures/BaseTest.sol";
 
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { AssetManager } from "test/__mocks/AssetManager.sol";
+import { LogCompression } from "src/libraries/LogCompression.sol";
 
 contract ReservoirPairTest is BaseTest {
     AssetManager private _manager = new AssetManager();
@@ -68,62 +69,6 @@ contract ReservoirPairTest is BaseTest {
         assertEq(lReserve1, 110e18);
     }
 
-    function testOracleWriteAfterAssetManagerProfit_Mint() external allPairs {
-        // arrange
-        vm.prank(address(_factory));
-        _pair.setManager(_manager);
-        _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), 20e18);
-        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), 20e18);
-        _stepTime(10);
-
-        // act
-        _tokenA.mint(address(_pair), 1e18);
-        _tokenB.mint(address(_pair), 1e18);
-        _pair.mint(address(this));
-
-        // assert
-        (,,, uint16 lIndex) = _pair.getReserves();
-        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 470_050);
-    }
-
-    function testOracleWriteAfterAssetManagerProfit_Burn() external allPairs {
-        // arrange
-        vm.prank(address(_factory));
-        _pair.setManager(_manager);
-        _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), 20e18);
-        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), 20e18);
-        _stepTime(10);
-
-        // act
-        _pair.burn(address(this));
-
-        // assert
-        (,,, uint16 lIndex) = _pair.getReserves();
-        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 470_050);
-    }
-
-    function testOracleWriteAfterAssetManagerProfit_Sync() external allPairs {
-        // arrange
-        vm.prank(address(_factory));
-        _pair.setManager(_manager);
-        _manager.adjustManagement(_pair, 10e18, 10e18);
-        _manager.adjustBalance(_pair, IERC20(address(_tokenA)), 20e18);
-        _manager.adjustBalance(_pair, IERC20(address(_tokenB)), 20e18);
-        _stepTime(10);
-
-        // act
-        _pair.sync();
-
-        // assert
-        (,,, uint16 lIndex) = _pair.getReserves();
-        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
-        assertEq(lObs.logAccLiquidity, 470_050);
-    }
-
     function testCheckedTransfer_RevertWhenTransferFail() external allPairs {
         // arrange
         int256 lSwapAmt = 5e18;
@@ -162,5 +107,135 @@ contract ReservoirPairTest is BaseTest {
         // assert
         // Luckily we are clearing the upper most bit so this is fine.
         _pair.sync();
+    }
+
+    function testPlatformFee_Disable() external allPairs {
+        // sanity
+        assertGt(_pair.platformFee(), 0);
+        _pair.sync();
+        IERC20 lToken0 = _pair.token0();
+        IERC20 lToken1 = _pair.token1();
+        uint256 lSwapAmount = Constants.INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // swap lSwapAmount back and forth
+        lToken0.transfer(address(_pair), lSwapAmount);
+        uint256 lAmountOut = _pair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _pair.sync();
+        assertGt(lToken0.balanceOf(address(_pair)), Constants.INITIAL_MINT_AMOUNT);
+        assertEq(lToken1.balanceOf(address(_pair)), Constants.INITIAL_MINT_AMOUNT);
+        assertEq(_pair.platformFee(), Constants.DEFAULT_PLATFORM_FEE);
+        assertEq(_pair.balanceOf(address(_platformFeeTo)), 0);
+
+        _pair.burn(address(this));
+        uint256 lPlatformShares = _pair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setCustomPlatformFee(0);
+
+        // act
+        lToken0.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_pair), lAmountOut);
+        _pair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _pair.burn(address(this));
+        assertEq(_pair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+    }
+
+    function testPlatformFee_DisableReenable() external allPairs {
+        // sanity
+        assertGt(_pair.platformFee(), 0);
+        _pair.sync();
+        IERC20 lToken0 = _pair.token0();
+        IERC20 lToken1 = _pair.token1();
+        uint256 lSwapAmount = Constants.INITIAL_MINT_AMOUNT / 2;
+        deal(address(lToken0), address(this), lSwapAmount);
+
+        // act - swap once with platform fee.
+        lToken0.transfer(address(_pair), lSwapAmount);
+        uint256 lAmountOut = _pair.swap(int256(lSwapAmount), true, address(this), bytes(""));
+        lToken1.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        _pair.sync();
+        assertGt(lToken0.balanceOf(address(_pair)), Constants.INITIAL_MINT_AMOUNT);
+        assertGe(lToken1.balanceOf(address(_pair)), Constants.INITIAL_MINT_AMOUNT);
+        assertEq(_pair.platformFee(), Constants.DEFAULT_PLATFORM_FEE);
+        assertEq(_pair.balanceOf(address(_platformFeeTo)), 0);
+
+        _pair.burn(address(this));
+        uint256 lPlatformShares = _pair.balanceOf(address(_platformFeeTo));
+        assertGt(lPlatformShares, 0);
+
+        // arrange
+        vm.prank(address(_factory));
+        _pair.setCustomPlatformFee(0);
+
+        // act - swap twice with no platform fee.
+        lToken0.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+        lToken0.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(int256(lAmountOut), true, address(this), bytes(""));
+        lToken1.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert
+        _pair.burn(address(this));
+        assertEq(_pair.balanceOf(address(_platformFeeTo)), lPlatformShares);
+
+        // act - swap once at half volume, again with platform fee.
+        vm.prank(address(_factory));
+        _pair.setCustomPlatformFee(type(uint256).max);
+        _pair.burn(address(this));
+        lToken0.transfer(address(_pair), lAmountOut / 2);
+        lAmountOut = _pair.swap(int256(lAmountOut / 2), true, address(this), bytes(""));
+        lToken1.transfer(address(_pair), lAmountOut);
+        lAmountOut = _pair.swap(-int256(lAmountOut), true, address(this), bytes(""));
+
+        // assert - we shouldn't have received more than the first time because
+        //          we disabled fees for the high volume.
+        _pair.burn(address(this));
+        uint256 lNewShares = _pair.balanceOf(address(_platformFeeTo)) - lPlatformShares;
+        assertLt(lNewShares, lPlatformShares);
+    }
+
+    function testManipulateOracle_TwoSwapsInOneBlock() external allPairs {
+        // arrange
+        _stepTime(12);
+        uint256 lAmtToSwap = Constants.INITIAL_MINT_AMOUNT * 3;
+
+        // act - since the first swap is the one that gets registered, we manipulate the price by several folds
+        _tokenA.mint(address(_pair), lAmtToSwap);
+        uint256 lAmtOut = _pair.swap(int256(lAmtToSwap), true, address(this), "");
+
+        (uint256 lReserve0, uint256 lReserve1,,uint16 lIndex) = _pair.getReserves();
+
+        // immediately arb back
+        _tokenB.transfer(address(_pair), lAmtOut);
+        _pair.swap(-int256(lAmtOut), true, address(this), "");
+
+        (lReserve0, lReserve1,, lIndex) = _pair.getReserves();
+
+        console.log(lReserve0);
+        console.log(lReserve1);
+
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+
+        console.log(LogCompression.fromLowResLog(lObs.logInstantRawPrice));
+        console.log(LogCompression.fromLowResLog(lObs.logInstantClampedPrice));
+
+        // Attacker could repeat this for every second by only paying the swap fees. Thw mitigation factors on our end are that:
+        // 1. Arbitrage bots could submit txs that get sandwiched between the two malicious txs. How realistic is this if the attacker broadcasts 2 txs simultaneously (or even better, make it atomic via a contract call)?
+        //    - seems quite unlikely to me, cuz by the time the the block is included, the price would not have changed much to the arb bots, unless they are really sophisticated
+        // 2. The effect of the clamp
     }
 }
