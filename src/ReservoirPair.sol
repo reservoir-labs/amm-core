@@ -518,6 +518,8 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     // 100 basis points per second which is 60% per minute
     uint256 internal constant MAX_CHANGE_PER_SEC = 0.01e18;
+    // 10%
+    uint256 internal constant MAX_CHANGE_PER_TRADE = 0.1e18;
     string internal constant MAX_CHANGE_RATE_NAME = "Shared::maxChangeRate";
     string internal constant MAX_CHANGE_PER_TRADE_NAME = "Shared::maxChangePerTrade";
     string internal constant ORACLE_CALLER_NAME = "Shared::oracleCaller";
@@ -547,6 +549,7 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
 
     function setClampParams(uint128 aMaxChangeRate, uint128 aMaxChangePerTrade) public onlyFactory {
         require(0 < aMaxChangeRate && aMaxChangeRate <= MAX_CHANGE_PER_SEC, "RP: INVALID_CHANGE_PER_SECOND");
+        require(0 < aMaxChangePerTrade && aMaxChangePerTrade <= MAX_CHANGE_PER_TRADE, "RP: INVALID_CHANGE_PER_TRADE");
 
         emit ClampParamsUpdated(aMaxChangeRate, aMaxChangePerTrade);
         maxChangeRate = aMaxChangeRate;
@@ -582,8 +585,15 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
                 rClampedPrice = lRateLimitedPrice.min(lPerTradeLimitedPrice);
                 assert(rClampedPrice < aCurrRawPrice);
             } else {
-                uint256 lRateLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangeRate * aTimeElapsed, 1e18);
-                uint256 lPerTradeLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangePerTrade , 1e18);
+                // make sure that the time elapsed is not too long, else the subtraction from 1e18 will underflow
+                // if the time elapsed is too long, then we only depend on the per trade limited price
+                uint256 lChangeElapsed = maxChangeRate * aTimeElapsed;
+                if (lChangeElapsed > 1e18) {
+                    lChangeElapsed = 1e18;
+                }
+                uint256 lRateLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - lChangeElapsed, 1e18);
+                // subtraction will not underflow as maxChangePerTrade is limited by MAX_CHANGE_PER_TRADE
+                uint256 lPerTradeLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangePerTrade, 1e18);
                 rClampedPrice = lRateLimitedPrice.max(lPerTradeLimitedPrice);
                 assert(rClampedPrice > aCurrRawPrice);
             }

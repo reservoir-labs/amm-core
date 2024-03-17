@@ -414,28 +414,25 @@ contract OracleWriterTest is BaseTest {
     }
 
     function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) allPairs {
-        // assume
-        vm.assume(aNewStartTime >= 1);
-
         // arrange - make the last observation close to overflowing
-        (,,, uint16 lIndex) = _stablePair.getReserves();
+        (,,, uint16 lIndex) = _pair.getReserves();
+
         _writeObservation(
-            _stablePair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
+            _pair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
         );
-        Observation memory lPrevObs = _oracleCaller.observation(_stablePair, lIndex);
+        Observation memory lPrevObs = _oracleCaller.observation(_pair, lIndex);
 
         // act
         uint256 lAmountToSwap = 5e18;
-        _tokenB.mint(address(_stablePair), lAmountToSwap);
-        _stablePair.swap(-int256(lAmountToSwap), true, address(this), "");
+        _tokenB.mint(address(_pair), lAmountToSwap);
+        _pair.swap(-int256(lAmountToSwap), true, address(this), "");
 
         _stepTime(5);
-        _stablePair.sync();
+        _pair.sync();
 
         // assert - when it overflows it goes from a very positive number to a very negative number
-        (,,, lIndex) = _stablePair.getReserves();
-        Observation memory lCurrObs = _oracleCaller.observation(_stablePair, lIndex);
+        (,,, lIndex) = _pair.getReserves();
+        Observation memory lCurrObs = _oracleCaller.observation(_pair, lIndex);
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
-
 }
