@@ -2,6 +2,8 @@ pragma solidity ^0.8.0;
 
 import "test/__fixtures/BaseTest.sol";
 
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
 import { ReservoirPair, Observation } from "src/ReservoirPair.sol";
 import { LogCompression } from "src/libraries/LogCompression.sol";
 import { FactoryStoreLib } from "src/libraries/FactoryStore.sol";
@@ -12,6 +14,7 @@ import { Constants } from "src/Constants.sol";
 
 contract OracleWriterTest is BaseTest {
     using FactoryStoreLib for GenericFactory;
+    using FixedPointMathLib for uint256;
 
     event OracleCallerUpdated(address oldCaller, address newCaller);
     event ClampParamsUpdated(uint128 newMaxChangeRatePerSecond, uint128 newMaxChangePerTrade);
@@ -292,6 +295,35 @@ contract OracleWriterTest is BaseTest {
         assertEq(lObs.timestamp, lStartingTimestamp + lJumpAhead);
     }
 
+    function testUpdateOracle_DecreasePrice_LongElapsedTime() external allPairs {
+        // arrange - assume that no trade has taken place in a long time
+        uint256 lOriginalPrice = 1e18;
+        uint256 lFastForward = type(uint24).max; // 16777216
+        _stepTime(lFastForward);
+
+        // act
+        _tokenA.mint(address(_pair), 5000e18);
+        _pair.swap(5000e18, true, address(this), "");
+
+        // assert - since the max change rate is useless price given the long time elapsed
+        // the clamped price should only be limited by the max change per trade
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        uint256 lMaxChangePerTrade = _pair.maxChangePerTrade();
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logInstantClampedPrice),
+            lOriginalPrice.fullMulDiv(1e18 - lMaxChangePerTrade, 1e18),
+            0.0001e18
+        );
+        assertLt(lObs.logInstantRawPrice, lObs.logInstantClampedPrice); // the raw price should be more negative than the clamped price
+    }
+
+    function testUpdateOracle_DecreasePrice_ExceedMaxChangeRate() external allPairs { }
+
+    function testUpdateOracle_DecreasePrice_ExceedMaxChangePerTrade() external allPairs { }
+
+    function testUpdateOracle_DecreasePrice_ExceedBothMaxChangeRateAndMaxChangePerTrade() external allPairs { }
+
     function testOracle_SameReservesDiffPrice(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // arrange
         ConstantProductPair lCP = ConstantProductPair(_createPair(address(_tokenB), address(_tokenC), 0));
@@ -417,9 +449,7 @@ contract OracleWriterTest is BaseTest {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _pair.getReserves();
 
-        _writeObservation(
-            _pair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31)
-        );
+        _writeObservation(_pair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31));
         Observation memory lPrevObs = _oracleCaller.observation(_pair, lIndex);
 
         // act
