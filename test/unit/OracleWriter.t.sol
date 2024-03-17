@@ -315,7 +315,7 @@ contract OracleWriterTest is BaseTest {
             lOriginalPrice.fullMulDiv(1e18 - lMaxChangePerTrade, 1e18),
             0.0001e18
         );
-        assertLt(lObs.logInstantRawPrice, lObs.logInstantClampedPrice); // the raw price should be more negative than the clamped price
+        assertLt(lObs.logInstantRawPrice, lObs.logInstantClampedPrice); // the log of the raw price should be more negative than the log of the clamped price
     }
 
     function testUpdateOracle_DecreasePrice_ExceedMaxChangeRate() external allPairs { }
