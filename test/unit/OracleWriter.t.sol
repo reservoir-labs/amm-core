@@ -448,7 +448,6 @@ contract OracleWriterTest is BaseTest {
     function testOracle_OverflowAccPrice(uint32 aNewStartTime) public randomizeStartTime(aNewStartTime) allPairs {
         // arrange - make the last observation close to overflowing
         (,,, uint16 lIndex) = _pair.getReserves();
-
         _writeObservation(_pair, lIndex, 1e3, 1e3, type(int88).max, type(int88).max, uint32(block.timestamp % 2 ** 31));
         Observation memory lPrevObs = _oracleCaller.observation(_pair, lIndex);
 
