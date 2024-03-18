@@ -529,4 +529,47 @@ contract OracleWriterTest is BaseTest {
         Observation memory lCurrObs = _oracleCaller.observation(_pair, lIndex);
         assertLt(lCurrObs.logAccRawPrice, lPrevObs.logAccRawPrice);
     }
+
+    function testOracle_MintWrongPriceThenConverge() public {
+        // arrange - suppose that token C is ETH and token D is USDC
+        ReservoirPair lCP = ReservoirPair(_createPair(address(_tokenC), address(_tokenD), 0));
+        // initialize the pair with a price of 3M USD / ETH
+        _tokenC.mint(address(lCP), 0.000001e18);
+        _tokenD.mint(address(lCP), 3e6);
+        lCP.mint(address(this));
+        vm.prank(address(_factory));
+        lCP.setCustomSwapFee(0);
+
+        // sanity - instant price is 3M
+        (,,, uint16 lIndex) = lCP.getReserves();
+        Observation memory lObs = _oracleCaller.observation(lCP, lIndex);
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logInstantClampedPrice),
+            3_000_000e18,
+            0.0001e18
+        );
+
+        // act - arbitrage happens that make the price go to around 3500 USD / ETH in one trade
+        _stepTime(10);
+        _tokenC.mint(address(lCP), 0.0000283e18);
+        lCP.swap(address(lCP.token0()) == address(_tokenC) ? int256(0.0000283e18) : -int256(0.0000283e18), true, address(this), "");
+
+        // the instant raw price now is at 3494 USD
+        (,,, lIndex) = lCP.getReserves();
+        lObs = _oracleCaller.observation(lCP, lIndex);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantRawPrice), 3494e18, 0.01e18);
+        // but clamped price is at 2.98M
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantClampedPrice), 2984969e18, 0.01e18);
+
+        uint256 lCounter;
+        while (LogCompression.fromLowResLog(lObs.logInstantClampedPrice) > 3495e18) {
+            _stepTime(1);
+            lCP.sync();
+            (,,, lIndex) = lCP.getReserves();
+            lObs = _oracleCaller.observation(lCP, lIndex);
+            console.log(LogCompression.fromLowResLog(lObs.logInstantClampedPrice));
+            ++lCounter;
+        }
+        console.log("it took", lCounter, "secs to get the clamped price to the true price");
+    }
 }
