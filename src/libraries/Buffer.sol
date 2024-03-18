@@ -35,13 +35,17 @@ library Buffer {
      * @dev Returns the index of an element `offset` slots after the one pointed by `index`.
      */
     function add(uint16 index, uint16 offset) internal pure returns (uint16) {
-        return (index + offset) % SIZE;
+        unchecked {
+            return (index + offset) % SIZE;
+        }
     }
 
     /**
      * @dev Returns the index of an element `offset` slots before the one pointed by `index`.
      */
     function sub(uint16 index, uint16 offset) internal pure returns (uint16) {
-        return (index + SIZE - offset) % SIZE;
+        unchecked {
+            return (index + SIZE - offset) % SIZE;
+        }
     }
 }
