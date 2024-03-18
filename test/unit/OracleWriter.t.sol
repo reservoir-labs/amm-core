@@ -543,23 +543,24 @@ contract OracleWriterTest is BaseTest {
         // sanity - instant price is 3M
         (,,, uint16 lIndex) = lCP.getReserves();
         Observation memory lObs = _oracleCaller.observation(lCP, lIndex);
-        assertApproxEqRel(
-            LogCompression.fromLowResLog(lObs.logInstantClampedPrice),
-            3_000_000e18,
-            0.0001e18
-        );
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantClampedPrice), 3_000_000e18, 0.0001e18);
 
         // act - arbitrage happens that make the price go to around 3500 USD / ETH in one trade
         _stepTime(10);
         _tokenC.mint(address(lCP), 0.0000283e18);
-        lCP.swap(address(lCP.token0()) == address(_tokenC) ? int256(0.0000283e18) : -int256(0.0000283e18), true, address(this), "");
+        lCP.swap(
+            address(lCP.token0()) == address(_tokenC) ? int256(0.0000283e18) : -int256(0.0000283e18),
+            true,
+            address(this),
+            ""
+        );
 
         // the instant raw price now is at 3494 USD
         (,,, lIndex) = lCP.getReserves();
         lObs = _oracleCaller.observation(lCP, lIndex);
         assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantRawPrice), 3494e18, 0.01e18);
         // but clamped price is at 2.98M
-        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantClampedPrice), 2984969e18, 0.01e18);
+        assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantClampedPrice), 2_984_969e18, 0.01e18);
 
         uint256 lCounter;
         while (LogCompression.fromLowResLog(lObs.logInstantClampedPrice) > 3495e18) {
