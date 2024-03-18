@@ -576,25 +576,17 @@ abstract contract ReservoirPair is IAssetManagedPair, ReservoirERC20 {
             (rClampedPrice, rClampedLogPrice) = (aCurrRawPrice, aCurrLogRawPrice);
         } else {
             // clamp the price
-            // multiplication of maxChangeRate and aTimeElapsed would not overflow as
+            // multiplication of maxChangeRate and aTimeElapsed will not overflow as
             // maxChangeRate <= 0.01e18 (50 bits)
             // aTimeElapsed <= 32 bits
+            uint256 lLowerRateOfChange = (maxChangeRate * aTimeElapsed).min(maxChangePerTrade);
             if (aCurrRawPrice > aPrevClampedPrice) {
-                uint256 lRateLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangeRate * aTimeElapsed, 1e18);
-                uint256 lPerTradeLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 + maxChangePerTrade, 1e18);
-                rClampedPrice = lRateLimitedPrice.min(lPerTradeLimitedPrice);
+                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 + lLowerRateOfChange, 1e18);
                 assert(rClampedPrice < aCurrRawPrice);
             } else {
-                // make sure that the time elapsed is not too long, else the subtraction from 1e18 will underflow
-                // if the time elapsed is too long, then we only depend on the per trade limited price
-                uint256 lChangeElapsed = maxChangeRate * aTimeElapsed;
-                if (lChangeElapsed > 1e18) {
-                    lChangeElapsed = 1e18;
-                }
-                uint256 lRateLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - lChangeElapsed, 1e18);
-                // subtraction will not underflow as maxChangePerTrade is limited by MAX_CHANGE_PER_TRADE
-                uint256 lPerTradeLimitedPrice = aPrevClampedPrice.fullMulDiv(1e18 - maxChangePerTrade, 1e18);
-                rClampedPrice = lRateLimitedPrice.max(lPerTradeLimitedPrice);
+                // subtraction will not underflow as it is limited by the max possible value of maxChangePerTrade
+                // which is MAX_CHANGE_PER_TRADE
+                rClampedPrice = aPrevClampedPrice.fullMulDiv(1e18 - lLowerRateOfChange, 1e18);
                 assert(rClampedPrice > aCurrRawPrice);
             }
             rClampedLogPrice = LogCompression.toLowResLog(rClampedPrice);
