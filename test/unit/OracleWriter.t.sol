@@ -318,11 +318,76 @@ contract OracleWriterTest is BaseTest {
         assertLt(lObs.logInstantRawPrice, lObs.logInstantClampedPrice); // the log of the raw price should be more negative than the log of the clamped price
     }
 
-    function testUpdateOracle_DecreasePrice_ExceedMaxChangeRate() external allPairs { }
+    function testUpdateOracle_DecreasePrice_ExceedMaxChangeRate() external allPairs {
+        // arrange - set maxChangeRate to a very small number
+        uint256 lFastForward = 10;
+        uint256 lOriginalPrice = 1e18;
+        _stepTime(lFastForward);
+        vm.prank(address(_factory));
+        _pair.setClampParams(0.00001e18, 0.1e18);
 
-    function testUpdateOracle_DecreasePrice_ExceedMaxChangePerTrade() external allPairs { }
+        // act
+        _tokenA.mint(address(_pair), 50e18);
+        _pair.swap(50e18, true, address(this), "");
 
-    function testUpdateOracle_DecreasePrice_ExceedBothMaxChangeRateAndMaxChangePerTrade() external allPairs { }
+        // assert
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        uint256 lMaxChangeRate = _pair.maxChangeRate();
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logInstantClampedPrice),
+            lOriginalPrice.fullMulDiv(1e18 - lMaxChangeRate * lFastForward, 1e18),
+            0.0001e18
+        );
+    }
+
+    function testUpdateOracle_DecreasePrice_ExceedMaxChangePerTrade() external allPairs {
+        // arrange - set maxChangePerTrade to a very small number
+        uint256 lFastForward = 10;
+        uint256 lOriginalPrice = 1e18;
+        _stepTime(lFastForward);
+        vm.prank(address(_factory));
+        _pair.setClampParams(0.001e18, 0.000001e18);
+
+        // act
+        _tokenA.mint(address(_pair), 50e18);
+        _pair.swap(50e18, true, address(this), "");
+
+        // assert
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        uint256 lMaxChangePerTrade = _pair.maxChangePerTrade();
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logInstantClampedPrice),
+            lOriginalPrice.fullMulDiv(1e18 - lMaxChangePerTrade, 1e18),
+            0.0001e18
+        );
+    }
+
+    function testUpdateOracle_DecreasePrice_ExceedBothMaxChangeRateAndMaxChangePerTrade() external allPairs {
+        // arrange
+        uint256 lFastForward = 100 days;
+        uint256 lOriginalPrice = 1e18;
+        _stepTime(lFastForward);
+
+        // act
+        uint256 lAmtToSwap = type(uint104).max / 2;
+        _tokenA.mint(address(_pair), lAmtToSwap);
+        _pair.swap(int256(lAmtToSwap), true, address(this), "");
+
+        // assert
+        (,,, uint16 lIndex) = _pair.getReserves();
+        Observation memory lObs = _oracleCaller.observation(_pair, lIndex);
+        uint256 lMaxChangeRate = _pair.maxChangeRate();
+        uint256 lMaxChangePerTrade = _pair.maxChangePerTrade();
+
+        uint256 lLowerRateOfChange = lMaxChangePerTrade.min(lMaxChangeRate * lFastForward);
+        assertApproxEqRel(
+            LogCompression.fromLowResLog(lObs.logInstantClampedPrice),
+            lOriginalPrice.fullMulDiv(1e18 - lLowerRateOfChange, 1e18),
+            0.0001e18
+        );
+    }
 
     function testOracle_SameReservesDiffPrice(uint32 aNewStartTime) external randomizeStartTime(aNewStartTime) {
         // arrange
