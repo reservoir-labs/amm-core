@@ -14,35 +14,34 @@
 pragma solidity ^0.8.0;
 
 library Buffer {
-    // The buffer is a circular storage structure with 1024 slots.
-    // solhint-disable-next-line private-vars-leading-underscore
-    uint256 internal constant SIZE = 1024;
+    // The buffer is a circular storage structure with 2048 (2 ** 11) slots.
+    uint16 public constant SIZE = 2048;
 
     /**
      * @dev Returns the index of the element before the one pointed by `index`.
      */
-    function prev(uint256 index) internal pure returns (uint256) {
+    function prev(uint16 index) internal pure returns (uint16) {
         return sub(index, 1);
     }
 
     /**
      * @dev Returns the index of the element after the one pointed by `index`.
      */
-    function next(uint256 index) internal pure returns (uint256) {
+    function next(uint16 index) internal pure returns (uint16) {
         return add(index, 1);
     }
 
     /**
      * @dev Returns the index of an element `offset` slots after the one pointed by `index`.
      */
-    function add(uint256 index, uint256 offset) internal pure returns (uint256) {
+    function add(uint16 index, uint16 offset) internal pure returns (uint16) {
         return (index + offset) % SIZE;
     }
 
     /**
      * @dev Returns the index of an element `offset` slots before the one pointed by `index`.
      */
-    function sub(uint256 index, uint256 offset) internal pure returns (uint256) {
+    function sub(uint16 index, uint16 offset) internal pure returns (uint16) {
         return (index + SIZE - offset) % SIZE;
     }
 }
