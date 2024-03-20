@@ -17,12 +17,12 @@ contract ReservoirDeployer {
     uint256 public step = 0;
 
     // Bytecode hashes.
-    bytes32 public constant FACTORY_HASH = bytes32(0xab6a26d7fb7b6df7e81d9f9354f8b767b5ac11b732f1b3f2e9d6e5b69a7d0754);
+    bytes32 public constant FACTORY_HASH = bytes32(0x84e232ec0f6ea2ec4c9e4cfa7e5469dab805cb65ffaab4a7ee9c7c602f91345a);
     bytes32 public constant CONSTANT_PRODUCT_HASH =
-        bytes32(0x7b0f16c5cf2f4e78c4f697bfefb1365008f8865aaaa942f46ced4e0dea45c42a);
-    bytes32 public constant STABLE_HASH = bytes32(0xc5b9d3031f577510c547b9465241780111ad9d25a80dbe2292d1dc4290d9cd5a);
+        bytes32(0xbd78fb88c65e9a8804773c3a0e0350627ae244d6daf312a549fc1e08ef9bf56e);
+    bytes32 public constant STABLE_HASH = bytes32(0x24174b50e2a4c46e25d5367496b6a2ca38bf33dceb07ef3aba32e2c1266a6bf1);
     bytes32 public constant ORACLE_CALLER_HASH =
-        bytes32(0x0d71d4a05b676bfbccd00e8422375c347a056fb93cc502cc962d5e6912213b04);
+        bytes32(0xed0f7d96dcba353321d583022005b03c09088f7de3800703dc8324b1da6c77a6);
 
     // Deployment addresses.
     GenericFactory public factory;
@@ -70,6 +70,7 @@ contract ReservoirDeployer {
         factory.write("Shared::platformFeeTo", address(this));
         factory.write("Shared::recoverer", address(this));
         factory.write("Shared::maxChangeRate", Constants.DEFAULT_MAX_CHANGE_RATE);
+        factory.write("Shared::maxChangePerTrade", Constants.DEFAULT_MAX_CHANGE_PER_TRADE);
 
         // Step complete.
         step += 1;
