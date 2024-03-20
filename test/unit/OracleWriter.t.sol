@@ -537,8 +537,11 @@ contract OracleWriterTest is BaseTest {
         _tokenC.mint(address(lCP), 0.000001e18);
         _tokenD.mint(address(lCP), 3e6);
         lCP.mint(address(this));
-        vm.prank(address(_factory));
+        vm.startPrank(address(_factory));
         lCP.setCustomSwapFee(0);
+        // set to 0.25 bp/s and 2% per trade
+        lCP.setClampParams(0.000025e18, 0.02e18);
+        vm.stopPrank();
 
         // sanity - instant price is 3M
         (,,, uint16 lIndex) = lCP.getReserves();
@@ -562,15 +565,14 @@ contract OracleWriterTest is BaseTest {
         // but clamped price is at 2.98M
         assertApproxEqRel(LogCompression.fromLowResLog(lObs.logInstantClampedPrice), 2_984_969e18, 0.01e18);
 
-        uint256 lCounter;
+        uint256 lTimeStart = block.timestamp;
         while (LogCompression.fromLowResLog(lObs.logInstantClampedPrice) > 3495e18) {
-            _stepTime(1);
+            _stepTime(30);
             lCP.sync();
             (,,, lIndex) = lCP.getReserves();
             lObs = _oracleCaller.observation(lCP, lIndex);
             console.log(LogCompression.fromLowResLog(lObs.logInstantClampedPrice));
-            ++lCounter;
         }
-        console.log("it took", lCounter, "secs to get the clamped price to the true price");
+        console.log("it took", block.timestamp - lTimeStart, "secs to get the clamped price to the true price");
     }
 }
