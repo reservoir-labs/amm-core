@@ -17,6 +17,7 @@ fs_permissions = [
     { access = "write", path = "./script/unoptimized-deployer-meta" },
 ]
 ignored_error_codes = []
+extra_output_files = ["metadata"]
 
 [profile.default.fuzz]
 seed = "0xd679d565cc78d6c78308f18282cb070e065bf4c517fbd552922d47f2127a2bbc"
