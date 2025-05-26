@@ -3,9 +3,12 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 
 import { LogExpMath } from "src/libraries/LogExpMath.sol";
+import { LogExpMathWrapper } from "test/__mocks/LogExpMathWrapper.sol";
 
 contract LogExpMathTest is Test {
     address private _balancerLogExpMath = address(100);
+
+    LogExpMathWrapper internal _logExpMathWrapper = new LogExpMathWrapper();
 
     constructor() {
         // we use getDeployedCode since the library contract is stateless
@@ -22,12 +25,12 @@ contract LogExpMathTest is Test {
 
         // assert
         if (lSuccess) {
-            uint256 lLocalRes = LogExpMath.pow(aX, aY);
+            uint256 lLocalRes = _logExpMathWrapper.pow(aX, aY);
             uint256 lDecoded = abi.decode(lRes, (uint256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
-            LogExpMath.pow(aX, aY);
+            _logExpMathWrapper.pow(aX, aY);
         }
     }
 
@@ -37,12 +40,12 @@ contract LogExpMathTest is Test {
 
         // assert
         if (lSuccess) {
-            int256 lLocalRes = LogExpMath.exp(aX);
+            int256 lLocalRes = _logExpMathWrapper.exp(aX);
             int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
-            LogExpMath.exp(aX);
+            _logExpMathWrapper.exp(aX);
         }
     }
 
@@ -53,12 +56,12 @@ contract LogExpMathTest is Test {
 
         // assert
         if (lSuccess) {
-            int256 lLocalRes = LogExpMath.log(aArg, aBase);
+            int256 lLocalRes = _logExpMathWrapper.log(aArg, aBase);
             int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
-            LogExpMath.log(aArg, aBase);
+            _logExpMathWrapper.log(aArg, aBase);
         }
     }
 
@@ -68,12 +71,12 @@ contract LogExpMathTest is Test {
 
         // assert
         if (lSuccess) {
-            int256 lLocalRes = LogExpMath.ln(aArg);
+            int256 lLocalRes = _logExpMathWrapper.ln(aArg);
             int256 lDecoded = abi.decode(lRes, (int256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
-            LogExpMath.ln(aArg);
+            _logExpMathWrapper.ln(aArg);
         }
     }
 }
