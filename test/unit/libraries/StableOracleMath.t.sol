@@ -12,6 +12,8 @@ contract StableOracleMathTest is Test {
 
     uint256 internal _defaultAmp = Constants.DEFAULT_AMP_COEFF * StableMath.A_PRECISION;
 
+    StableOracleMathCanonical internal stableOracleMathCanonical = new StableOracleMathCanonical();
+
     // estimates the spot price by giving a very small input to simulate dx (an infinitesimally small x)
     function estimateSpotPrice(
         uint256 reserve0,
@@ -56,7 +58,7 @@ contract StableOracleMathTest is Test {
 
         // act & assert - reverts when the amount is very small
         vm.expectRevert();
-        StableOracleMathCanonical.calcSpotPrice(_defaultAmp, lToken0Amt, lToken1Amt);
+        stableOracleMathCanonical.calcSpotPrice(_defaultAmp, lToken0Amt, lToken1Amt);
     }
 
     function testCalcSpotPrice_VerySmallAmounts(uint256 aToken0Amt, uint256 aToken1Amt) external {

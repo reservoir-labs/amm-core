@@ -6,7 +6,7 @@ import { StableMath } from "src/libraries/StableMath.sol";
 
 // the original implementation without safeguards as implemented by balancer
 // https://github.com/balancer/balancer-v2-monorepo/blob/903d34e491a5e9c5d59dabf512c7addf1ccf9bbd/pkg/pool-stable/contracts/meta/StableOracleMath.sol
-library StableOracleMathCanonical {
+library StableOracleMathCanonicalLib {
     using FixedPointMathLib for uint256;
 
     function calcSpotPrice(uint256 amplificationParameter, uint256 reserve0, uint256 reserve1)
@@ -42,5 +42,20 @@ library StableOracleMathCanonical {
         // space. We use `divWadUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
         spotPrice = derivativeX.divWadUp(derivativeY);
+    }
+}
+
+contract StableOracleMathCanonical {
+    /// @notice Calculates the spot price of a stable pool given the amplification parameter and reserves.
+    /// @param amplificationParameter The amplification parameter of the pool.
+    /// @param reserve0 The reserve of token 0.
+    /// @param reserve1 The reserve of token 1.
+    /// @return spotPrice The calculated spot price.
+    function calcSpotPrice(
+        uint256 amplificationParameter,
+        uint256 reserve0,
+        uint256 reserve1
+    ) external view returns (uint256 spotPrice) {
+        return StableOracleMathCanonicalLib.calcSpotPrice(amplificationParameter, reserve0, reserve1);
     }
 }

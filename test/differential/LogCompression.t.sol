@@ -2,10 +2,13 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 
-import { LogCompression, LogExpMath } from "src/libraries/LogCompression.sol";
+import { LogExpMath } from "src/libraries/LogCompression.sol";
+import { LogCompressionWrapper } from "test/__mocks/LogCompressionWrapper.sol";
 
 contract LogCompressionTest is Test {
     address private _balancerLogCompression = address(200);
+
+    LogCompressionWrapper internal _logCompressionWrapper = new LogCompressionWrapper();
 
     constructor() {
         // we use getDeployedCode since the library contract is stateless
@@ -22,7 +25,7 @@ contract LogCompressionTest is Test {
 
         // assert
         if (lSuccess) {
-            int256 lLocalRes = LogCompression.toLowResLog(aValue);
+            int256 lLocalRes = _logCompressionWrapper.toLowResLog(aValue);
             int256 lDecoded = abi.decode(lRes, (int256));
 
             if (lDecoded > LogExpMath.MAX_NATURAL_EXPONENT / 1e14) {
@@ -34,7 +37,7 @@ contract LogCompressionTest is Test {
             }
         } else {
             vm.expectRevert();
-            LogCompression.toLowResLog(aValue);
+            _logCompressionWrapper.toLowResLog(aValue);
         }
     }
 
@@ -45,12 +48,12 @@ contract LogCompressionTest is Test {
 
         // assert
         if (lSuccess) {
-            uint256 lLocalRes = LogCompression.fromLowResLog(aValue);
+            uint256 lLocalRes = _logCompressionWrapper.fromLowResLog(aValue);
             uint256 lDecoded = abi.decode(lRes, (uint256));
             assertEq(lLocalRes, lDecoded);
         } else {
             vm.expectRevert();
-            LogCompression.fromLowResLog(aValue);
+            _logCompressionWrapper.fromLowResLog(aValue);
         }
     }
 }

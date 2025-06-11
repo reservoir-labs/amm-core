@@ -142,11 +142,21 @@ contract EulerIntegrationTest is BaseTest {
     function setUp() external {
         _networks.push(
             Network(
-                vm.rpcUrl("mainnet"),
+                "https://eth.llamarpc.com",
                 21_272_382, // pin to this block number
                 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
                 0xE982615d461DD5cD06575BbeA87624fda4e3de17,
                 0x797DD80692c3b2dAdabCe8e30C07fDE5307D48a9, // Euler Prime USDC vault
+                0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae
+            )
+        );
+        _networks.push(
+            Network(
+                "https://api.avax.network/ext/bc/C/rpc",
+                62_739_141,
+                0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E, // USDC on Avalanche
+                0xB7887FED5E2f9dc1A66fBb65f76BA3731d82341A, // master minter for USDC on Avalanche
+                0x39dE0f00189306062D79eDEC6DcA5bb6bFd108f9, // K3 cluster USDC vault on Avalanche
                 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae
             )
         );
@@ -245,9 +255,7 @@ contract EulerIntegrationTest is BaseTest {
         // act
         vm.expectRevert(EulerV2Manager.NoVaultForAsset.selector);
         _manager.adjustManagement(
-            _pair,
-            lToken0 == USDC ? int256(0) : aAmountToManage,
-            lToken0 == USDC ? aAmountToManage : int256(0)
+            _pair, lToken0 == USDC ? int256(0) : aAmountToManage, lToken0 == USDC ? aAmountToManage : int256(0)
         );
 
         // assert
@@ -355,7 +363,7 @@ contract EulerIntegrationTest is BaseTest {
         // act & assert - manual adjustments to increase management should fail
         vm.expectRevert(EulerV2Manager.InvestmentAttemptDuringWindDown.selector);
         _manager.adjustManagement(
-            _pair, lToken0 == USDC ? lIncreaseAmt : int256(0), lToken0 == USDC ?  int256(0) : lIncreaseAmt
+            _pair, lToken0 == USDC ? lIncreaseAmt : int256(0), lToken0 == USDC ? int256(0) : lIncreaseAmt
         );
         vm.expectRevert(EulerV2Manager.InvestmentAttemptDuringWindDown.selector);
         _manager.adjustManagement(
@@ -580,9 +588,7 @@ contract EulerIntegrationTest is BaseTest {
         _pair.burn(address(this));
         vm.expectRevert(EulerV2Manager.InvestmentAttemptDuringWindDown.selector);
         _manager.adjustManagement(
-            _pair,
-            lToken0 == USDC ? int256(100e6) : int256(0),
-            lToken0 == USDC ? int256(0) : int256(100e6)
+            _pair, lToken0 == USDC ? int256(100e6) : int256(0), lToken0 == USDC ? int256(0) : int256(100e6)
         );
         assertEq(_manager.getBalance(_pair, USDC), lAmtManaged);
         // a call to decrease management should have an effect
@@ -624,7 +630,11 @@ contract EulerIntegrationTest is BaseTest {
         _pair.transfer(address(_pair), lAmtToBurn);
 
         // act - simulate a failure in withdrawing during `afterLiquidityEvent`
-        vm.mockCallRevert(address(lVault), bytes4(IERC4626.withdraw.selector), abi.encodePacked(bytes4(keccak256("E_InsufficientCash()"))));
+        vm.mockCallRevert(
+            address(lVault),
+            bytes4(IERC4626.withdraw.selector),
+            abi.encodePacked(bytes4(keccak256("E_InsufficientCash()")))
+        );
         vm.expectEmit(false, false, false, true);
         emit AfterLiquidityEventFailed(abi.encodePacked(bytes4(keccak256("E_InsufficientCash()"))));
         _pair.burn(address(this));
@@ -1126,6 +1136,9 @@ contract EulerIntegrationTest is BaseTest {
         // pin block to certain as it is before the user has claimed the reward
         // this is a replay of
         // https://etherscan.io/tx/0x2cc0e0161f84594ff755b8aac235efcf8ce59c1f9d63655356d9d5f09021ef5f
+        // only do this test on ETH mainnet for now as getting the proofs is tedious
+        if (block.chainid != 1) return;
+
         vm.rollFork(21_197_813);
         address lVaultUser = address(0x00236feEAC26ef92552e3981096350D136084C64);
         uint256 lUSDCBalanceBefore = USDC.balanceOf(lVaultUser);
