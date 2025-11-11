@@ -9,9 +9,6 @@
       ],
       "sourceType": "module"
     },
-    "extends": [
-      "@proxima-oss/eslint-config/style/standard"
-    ],
     "overrides": [
       {
         "files": [
@@ -82,7 +79,6 @@
     "test:unit": "script/coverage_patch_deployer.sh && forge test"
   },
   "devDependencies": {
-    "@proxima-oss/eslint-config": "6.0.1",
     "markdownlint-cli": "0.31.1",
     "prettier": "2.6.2",
     "solhint": "5.0.5",
