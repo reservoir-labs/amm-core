@@ -36,6 +36,7 @@ jobs:
       - run: npm run test:unit
 
   test-integration:
+    if: ${{ false }} # Skip temporarily due to bug in forge for pinning block
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
