@@ -97,6 +97,8 @@ jobs:
       - run: ./script/coverage_patch_deployer.sh && forge coverage --report lcov
         env:
           FOUNDRY_PROFILE: coverage
+      - run: cat script/unoptimized-deployer-meta
+        if: always()
       - run: sudo apt install -y lcov
       - run: lcov -r lcov.info "src/libraries/*" -o lcov.info
       - run: lcov -r lcov.info "src/asset-management/*" -o lcov.info
