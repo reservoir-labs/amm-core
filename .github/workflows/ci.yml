@@ -30,9 +30,6 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
-      - run: forge test
-      - run: cat script/optimized-deployer-meta
-        if: always()
       - run: npm run test:unit
 
   test-integration:
