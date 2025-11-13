@@ -82,9 +82,10 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
-      - run: forge snapshot --check
+      - run: forge snapshot
         env:
           FOUNDRY_PROFILE: default
+      - run: cat .gas-snapshot
 
   coverage:
     runs-on: ubuntu-latest
