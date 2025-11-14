@@ -9,9 +9,6 @@
       ],
       "sourceType": "module"
     },
-    "extends": [
-      "@proxima-oss/eslint-config/style/standard"
-    ],
     "overrides": [
       {
         "files": [
@@ -28,7 +25,6 @@
   "scripts": {
     "build": "forge build",
     "build:balancer": "cd reference/balancer-v2-monorepo/pkg/solidity-utils && yarn build",
-    "ci": "forge build --force && npm run lint:check && npm run test:unit && npm run gas:check && npm run slither:check",
     "clean": "forge clean",
     "coverage": "export FOUNDRY_PROFILE=coverage && script/coverage_patch_deployer.sh && forge coverage --report lcov",
     "coverage:integration": "export FOUNDRY_PROFILE=coverage-integration && script/coverage_patch_deployer.sh && forge coverage --report lcov",
@@ -48,7 +44,6 @@
     "gas:snapshot": "forge snapshot",
     "gas:check": "forge snapshot --check",
     "generate": "typechain --target ethers-v5 --out-dir typings 'out/**/*.json'",
-    "install": "npm run install:balancer",
     "install:balancer": "cd reference/balancer-v2-monorepo && yarn && yarn workspace @balancer-labs/balancer-js build",
     "lint": "npm run lint:check",
     "lint:check": "npm run solhint:check && npm run prettier:check && npm run mdlint:check",
@@ -82,7 +77,6 @@
     "test:unit": "script/coverage_patch_deployer.sh && forge test"
   },
   "devDependencies": {
-    "@proxima-oss/eslint-config": "6.0.1",
     "markdownlint-cli": "0.31.1",
     "prettier": "2.6.2",
     "solhint": "5.0.5",
